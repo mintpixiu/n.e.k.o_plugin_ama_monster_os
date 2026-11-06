@@ -1,0 +1,66 @@
+[plugin]
+id = "ama_monster_os"
+name = "N.E.K.O Ama Monster OS"
+description = "《N.E.K.O Ama Monster OS》0.1.0 Beta：给 N.E.K.O 的猫娘风格系统壳窗口，带实时状态、系统桥契约与为未来独立软件预留的内置系统接口。当前版本是可运行的窗口预览，不冒充完整操作系统。"
+short_description = "A NEKO-styled OS shell window for N.E.K.O, with a versioned system-bridge seam for a future standalone build."
+keywords = [
+    "ama monster os",
+    "ama os",
+    "monster os",
+    "neko os",
+    "系统壳",
+    "桌面壳",
+    "插件窗口",
+    "系统窗口",
+    "shell preview",
+    "system bridge",
+]
+version = "0.1.0-beta"
+type = "plugin"
+entry = "plugin.plugins.ama_monster_os:AmaMonsterOsPlugin"
+
+[plugin.author]
+name = "mintpixiu"
+
+[plugin.sdk]
+recommended = ">=0.1.0,<0.2.0"
+supported = ">=0.1.0,<0.3.0"
+
+[plugin.i18n]
+default_locale = "en"
+locales_dir = "i18n"
+
+[plugin.ui]
+enabled = true
+
+[[plugin.ui.panel]]
+id = "os_shell"
+title = "Ama Monster OS"
+entry = "ui/panel.tsx"
+context = "os_shell"
+permissions = [
+    "state:read",
+    "action:call",
+]
+
+[[plugin.ui.guide]]
+id = "quickstart"
+title = "Ama Monster OS 快速开始"
+entry = "docs/quickstart.md"
+permissions = [
+    "state:read",
+]
+
+[[plugin.ui.docs]]
+id = "system_contract"
+title = "System Bridge v1"
+entry = "docs/system-contract.md"
+permissions = [
+    "state:read",
+]
+
+[plugin_runtime]
+enabled = true
+auto_start = false
+timeout = 15
+startup_failure = "warn"

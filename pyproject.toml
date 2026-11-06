@@ -1,0 +1,4 @@
+[project]
+name = "ama_monster_os"
+version = "0.1.0"
+dependencies = []
