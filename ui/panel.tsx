@@ -1,7 +1,7 @@
 import { FileDownload, useState } from "@neko/plugin-ui"
 import type { HostedAction, PluginSurfaceProps } from "@neko/plugin-ui"
 
-type ViewId = "home" | "web" | "core" | "bridge" | "about"
+type ViewId = "home" | "web" | "steam" | "core" | "bridge" | "about"
 type ChromeMode = "normal" | "max" | "min" | "asleep"
 type ThemeMode = "light" | "dark"
 
@@ -75,6 +75,41 @@ type WebInfo = {
   fallback?: boolean
 }
 
+type SteamPrice = {
+  game_id?: string
+  steam_app_id?: string
+  title?: string
+  currency?: string
+  current?: {
+    price?: string
+    retail_price?: string
+    savings_percent?: number
+    store?: string
+  }
+  history?: {
+    lowest?: string
+    date?: string
+    currency?: string
+  }
+  gap_to_low?: string
+  is_at_low?: boolean
+  source?: string
+}
+
+type SteamInfo = {
+  available?: boolean
+  status?: string
+  query?: string
+  count?: number
+  results?: SteamPrice[]
+  provider?: string
+  currency?: string
+  at?: string | null
+  error?: string
+  account_linked?: boolean
+  account_mode?: string
+}
+
 type BootEvent = { name?: string; at?: string; detail?: string }
 
 type ShellState = {
@@ -85,6 +120,7 @@ type ShellState = {
   telemetry?: TelemetryInfo
   pulse?: PulseInfo
   web?: WebInfo
+  steam?: SteamInfo
   events?: BootEvent[]
   preview?: boolean
 }
@@ -95,6 +131,7 @@ type WebStatus = "idle" | "searching" | "success" | "empty" | "error"
 const VIEWS: Array<{ id: ViewId; key: string; glyph: string }> = [
   { id: "home", key: "nav.home", glyph: "⌂" },
   { id: "web", key: "nav.web", glyph: "◎" },
+  { id: "steam", key: "nav.steam", glyph: "◈" },
   { id: "core", key: "nav.core", glyph: "✦" },
   { id: "bridge", key: "nav.bridge", glyph: "⇄" },
   { id: "about", key: "nav.about", glyph: "♡" },
@@ -136,6 +173,18 @@ function moduleTone(tone?: string): string {
 function isHttpUrl(value: any): boolean {
   if (typeof value !== "string" || value.length > 2048) return false
   return /^https?:\/\//i.test(value.trim())
+}
+
+function usd(value: any): string {
+  const number = Number(value)
+  return Number.isFinite(number) ? `$${number.toFixed(2)}` : "—"
+}
+
+function usdGap(value: any): string {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return "—"
+  const sign = number > 0 ? "+" : number < 0 ? "−" : ""
+  return `${sign}$${Math.abs(number).toFixed(2)}`
 }
 
 function webDomain(result: WebResult): string {
@@ -763,6 +812,38 @@ const STYLES = `
 .ama-web-spinner { width: 20px; height: 20px; border: 2px solid var(--line-strong); border-top-color: var(--sky); border-radius: 50%; animation: ama-spin .8s linear infinite; }
 .ama-web-provider { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px; border-radius: 6px; background: var(--panel-2); color: var(--muted); font-size: 8px; font-weight: 700; }
 .ama-web-provider.is-fallback { color: var(--peach-ink); background: color-mix(in srgb, var(--peach) 22%, transparent); }
+.ama-steam-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--card), color-mix(in srgb, var(--sky-soft) 42%, transparent));
+}
+.ama-steam-account-icon { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 auto; border-radius: 10px; background: #223b52; color: #dff6ff; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 14px; font-weight: 900; }
+.ama-steam-account-main { min-width: 0; }
+.ama-steam-account-title { margin: 0; color: var(--ink-soft); font-size: 10px; font-weight: 850; }
+.ama-steam-account-note { margin: 2px 0 0; color: var(--muted); font-size: 8.5px; line-height: 1.5; }
+.ama-steam-account .ama-badge { margin-left: auto; flex: 0 0 auto; }
+.ama-steam-hero { background: linear-gradient(140deg, var(--hero-1), color-mix(in srgb, var(--sky-soft) 55%, var(--hero-2))); }
+.ama-steam-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ama-steam-card { display: flex; flex-direction: column; min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 15px; background: var(--card); transition: border-color .16s ease, transform .16s ease; }
+.ama-steam-card:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.ama-steam-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.ama-steam-app { color: var(--muted); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 8px; font-weight: 700; letter-spacing: .04em; }
+.ama-steam-title { margin: 3px 0 0; font-size: 13px; font-weight: 850; line-height: 1.35; overflow-wrap: anywhere; }
+.ama-steam-low { flex: 0 0 auto; padding: 3px 7px; border-radius: 999px; background: var(--panel-2); color: var(--muted); font-size: 8px; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+.ama-steam-low.is-low { background: color-mix(in srgb, var(--mint) 30%, transparent); color: var(--mint-ink); }
+.ama-steam-prices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 11px; }
+.ama-steam-price { min-width: 0; padding: 8px; border-radius: 9px; background: var(--panel-2); }
+.ama-steam-price > span { display: block; color: var(--muted); font-size: 8px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ama-steam-price > strong { display: block; margin-top: 3px; color: var(--ink); font-size: 14px; font-weight: 850; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ama-steam-price.is-low > strong { color: var(--mint-ink); }
+.ama-steam-price > small { display: block; margin-top: 2px; color: var(--muted); font-size: 7.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ama-steam-meta { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 9px; padding-top: 8px; border-top: 1px dashed var(--line); color: var(--muted); font-size: 8px; }
+.ama-steam-meta span { white-space: nowrap; }
 .ama-boot-list { display: grid; gap: 1px; margin-top: 4px; }
 .ama-boot-row { display: grid; grid-template-columns: 50px 6px minmax(0, 1fr); align-items: center; gap: 7px; padding: 4px 0; font-size: 9px; }
 .ama-boot-time { color: var(--muted); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 8px; }
@@ -849,7 +930,7 @@ const STYLES = `
 @keyframes ama-blink { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
 @keyframes ama-spin { to { transform: rotate(360deg); } }
 @media (max-width: 980px) {
-  .ama-columns, .ama-split { grid-template-columns: 1fr; }
+  .ama-columns, .ama-split, .ama-steam-grid { grid-template-columns: 1fr; }
   .ama-hero { grid-template-columns: minmax(0, 1fr) 180px; }
   .ama-orb { width: 168px; height: 168px; }
   .ama-cat { transform: scale(.86); }
@@ -878,6 +959,10 @@ const STYLES = `
   .ama-web-submit { min-height: 38px; }
   .ama-web-result { grid-template-columns: 22px minmax(0, 1fr); gap: 7px; padding: 10px; }
   .ama-web-rank { width: 21px; height: 21px; }
+  .ama-steam-prices { grid-template-columns: 1fr; }
+  .ama-steam-price { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .ama-steam-price > strong { margin-top: 0; font-size: 13px; }
+  .ama-steam-account { align-items: flex-start; }
   .ama-about-card { grid-template-columns: 1fr; gap: 4px; }
   .ama-about-orb { min-height: 150px; }
   .ama-view-title { font-size: 23px; }
@@ -911,6 +996,8 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const pulseInfo = safeState.pulse || {}
   const webInfo = safeState.web || {}
   const initialWebResults = Array.isArray(webInfo.results) ? webInfo.results : []
+  const steamInfo = safeState.steam || {}
+  const initialSteamResults = Array.isArray(steamInfo.results) ? steamInfo.results : []
   const modules = Array.isArray(safeState.modules) ? safeState.modules : []
   const events = Array.isArray(safeState.events) ? safeState.events.slice(-5) : []
   const capabilities = safeStringArray(bridge.capabilities)
@@ -922,6 +1009,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
   const webSearchAction = actionById(actions || [], "ama_web_search")
+  const steamSearchAction = actionById(actions || [], "ama_steam_search")
 
   const [view, setView] = props.useLocalState<ViewId>("ama.view", "home")
   const [chrome, setChrome] = props.useLocalState<ChromeMode>("ama.chrome", "normal")
@@ -945,13 +1033,25 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           : "idle",
   )
   const [webMessage, setWebMessage] = useState("")
+  const [steamQuery, setSteamQuery] = useState(String(steamInfo.query || ""))
+  const [steamResults, setSteamResults] = useState<SteamPrice[]>(initialSteamResults)
+  const [steamStatus, setSteamStatus] = useState<WebStatus>(
+    steamInfo.status === "error"
+      ? "error"
+      : initialSteamResults.length > 0
+        ? "success"
+        : steamInfo.status === "empty"
+          ? "empty"
+          : "idle",
+  )
+  const [steamMessage, setSteamMessage] = useState("")
 
   const tr = (key: string, fallback: string): string => {
     const value = t(key)
     return value && value !== key ? value : fallback
   }
 
-  const validViews: ViewId[] = ["home", "web", "core", "bridge", "about"]
+  const validViews: ViewId[] = ["home", "web", "steam", "core", "bridge", "about"]
   const activeView: ViewId = validViews.indexOf(view) >= 0 ? view : "home"
   const validChrome: ChromeMode[] = ["normal", "max", "min", "asleep"]
   const activeChrome: ChromeMode = validChrome.indexOf(chrome) >= 0 ? chrome : "normal"
@@ -1007,6 +1107,15 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     }
   }
 
+  function currentSteamQuery(): string {
+    try {
+      const input = document.querySelector(".ama-steam-input") as HTMLInputElement | null
+      return input && typeof input.value === "string" ? input.value : steamQuery
+    } catch (_error) {
+      return steamQuery
+    }
+  }
+
   async function runPulse() {
     if (!pulseAction || pulse.status === "running") {
       setPulse({
@@ -1048,6 +1157,57 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       })
     } finally {
       setRefreshing(false)
+    }
+  }
+
+  async function runSteamSearch(rawQuery?: string) {
+    const query = String(rawQuery ?? steamQuery).trim()
+    if (!query) {
+      setSteamStatus("error")
+      setSteamMessage(tr("steam.emptyQuery", "Type a game name or Steam AppID."))
+      return
+    }
+    if (!steamSearchAction) {
+      setSteamStatus("error")
+      setSteamMessage(tr("steam.offline", "Price service is unavailable right now."))
+      return
+    }
+    setSteamQuery(query)
+    setSteamStatus("searching")
+    setSteamMessage(tr("steam.searching", "Checking prices..."))
+    try {
+      const result = unwrapResult(
+        await props.api.call(
+          steamSearchAction.id || "ama_steam_search",
+          { query, max_results: 3 },
+          { timeoutMs: 45000 },
+        ),
+      )
+      if (result.ok === false) {
+        setSteamResults([])
+        setSteamStatus("error")
+        setSteamMessage(
+          String(result.error || "") === "empty_query"
+            ? tr("steam.emptyQuery", "Type a game name or Steam AppID.")
+            : String(result.error || "") === "unavailable"
+              ? tr("steam.offline", "Price service is unavailable right now.")
+              : tr("steam.error", "Price lookup failed. Check your connection and try again."),
+        )
+        return
+      }
+      const results = Array.isArray(result.results) ? result.results : []
+      setSteamResults(results)
+      setSteamStatus(results.length > 0 ? "success" : "empty")
+      setSteamMessage(results.length > 0 ? "" : tr("steam.empty", "No Steam games found. Try a full title or a numeric AppID."))
+      try {
+        await props.api.refresh()
+      } catch (_error) {
+        // The price result is already in hand; a context refresh failure is not a lookup failure.
+      }
+    } catch (_error) {
+      setSteamResults([])
+      setSteamStatus("error")
+      setSteamMessage(tr("steam.error", "Price lookup failed. Check your connection and try again."))
     }
   }
 
@@ -1148,6 +1308,11 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     tr("web.suggestions.news", "technology news today"),
     tr("web.suggestions.ama", "Ama Monster OS N.E.K.O"),
   ]
+  const steamCount = steamResults.length
+  const steamReady = steamInfo.available !== false
+  const steamReadyText = steamReady
+    ? tr("steam.ready", "Prices ready")
+    : tr("steam.offline", "Price service is unavailable right now.")
 
   const nav = VIEWS.map((item) => (
     <button
@@ -1311,7 +1476,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       {bridgeRows}
       {capabilities.length > 0 ? (
         <div className="ama-chips">
-          {capabilities.slice(0, 5).map((capability) => <span className="ama-chip" key={capability}>{capability}</span>)}
+          {capabilities.slice(0, 6).map((capability) => <span className="ama-chip" key={capability}>{capability}</span>)}
         </div>
       ) : null}
     </section>
@@ -1520,6 +1685,147 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     </>
   )
 
+  const steamView = (
+    <>
+      <div className="ama-view-head">
+        <div>
+          <div className="ama-kicker"><span className="ama-kicker-line" />{tr("steam.kicker", "STORE WATCH")}</div>
+          <h1 className="ama-view-title">{tr("steam.title", "Steam price room")}</h1>
+          <p className="ama-view-sub">{tr("steam.subtitle", "Check the current lowest price and CheapShark's all-time low.")}</p>
+        </div>
+        <span className={`ama-badge ${steamReady ? "is-mint" : "is-peach"}`}>{steamReadyText}</span>
+      </div>
+      <div className="ama-steam-account">
+        <div className="ama-steam-account-icon" aria-hidden="true">S</div>
+        <div className="ama-steam-account-main">
+          <p className="ama-steam-account-title">{tr("steam.account.title", "Steam account")}</p>
+          <p className="ama-steam-account-note">{tr("steam.account.note", "This build never asks for a Steam password.")}</p>
+        </div>
+        <span className="ama-badge is-peach">{tr("steam.account.status", "Login deferred")}</span>
+      </div>
+      <section className="ama-web-hero ama-steam-hero">
+        <div className="ama-web-form">
+          <div
+            className="ama-web-input-wrap"
+            onKeyDown={(event: any) => {
+              if (event.key === "Enter") {
+                event.preventDefault()
+                runSteamSearch(currentSteamQuery())
+              }
+            }}
+          >
+            <span className="ama-web-glyph" aria-hidden="true">◈</span>
+            <input
+              className="ama-web-input ama-steam-input"
+              type="search"
+              value={steamQuery}
+              maxLength={100}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={tr("steam.placeholder", "Game name or Steam AppID...")}
+              aria-label={tr("steam.placeholder", "Game name or Steam AppID...")}
+              onChange={(event: any) => setSteamQuery(event.target.value)}
+            />
+          </div>
+          <button
+            type="button"
+            className="ama-btn ama-btn-primary ama-web-submit"
+            disabled={steamStatus === "searching"}
+            aria-busy={steamStatus === "searching"}
+            onClick={() => runSteamSearch(currentSteamQuery())}
+          >
+            {steamStatus === "searching" ? tr("steam.searching", "Checking prices...") : tr("steam.search", "Check price")}
+          </button>
+        </div>
+        <div className="ama-web-suggestions">
+          <span className="ama-web-suggestions-label">{tr("steam.suggestionsLabel", "Try")}</span>
+          {["Portal 2", "Hades", "Stardew Valley"].map((game) => (
+            <button type="button" className="ama-web-chip" key={game} onClick={() => runSteamSearch(game)}>{game}</button>
+          ))}
+        </div>
+        <p className="ama-web-note">{tr("steam.sourceNote", "Prices come from CheapShark in USD.")}</p>
+      </section>
+
+      {steamCount > 0 ? (
+        <div className="ama-web-meta">
+          <strong>{tr("steam.results", "{count} games").replace("{count}", String(steamCount))}</strong>
+          <span className="ama-web-provider">{tr("steam.source", "Source")} · CheapShark · USD</span>
+          <span className="ama-badge is-muted">{tr("steam.ready", "Prices ready")}</span>
+        </div>
+      ) : null}
+
+      {steamStatus === "searching" ? (
+        <div className="ama-web-state" role="status">
+          <div className="ama-web-spinner" aria-hidden="true" />
+          <h3>{tr("steam.searching", "Checking prices...")}</h3>
+          <p>{tr("steam.sourceNote", "Prices come from CheapShark in USD.")}</p>
+        </div>
+      ) : steamStatus === "error" ? (
+        <div className="ama-web-state is-error" role="alert">
+          <div className="ama-web-state-glyph" aria-hidden="true">!</div>
+          <h3>{tr("steam.title", "Steam price room")}</h3>
+          <p>{steamMessage || tr("steam.error", "Price lookup failed. Check your connection and try again.")}</p>
+        </div>
+      ) : steamStatus === "empty" ? (
+        <div className="ama-web-state">
+          <div className="ama-web-state-glyph" aria-hidden="true">◈</div>
+          <h3>{tr("steam.empty", "No Steam games found.")}</h3>
+          <p>{tr("steam.sourceNote", "Prices come from CheapShark in USD.")}</p>
+        </div>
+      ) : steamResults.length === 0 ? (
+        <div className="ama-web-state">
+          <div className="ama-web-state-glyph" aria-hidden="true">◈</div>
+          <h3>{tr("steam.ready", "Prices ready")}</h3>
+          <p>{tr("steam.subtitle", "Check the current lowest price and CheapShark's all-time low.")}</p>
+        </div>
+      ) : (
+        <div className="ama-steam-grid">
+          {steamResults.map((game, index) => {
+            const current = game.current || {}
+            const history = game.history || {}
+            const isLow = game.is_at_low === true
+            return (
+              <article className="ama-steam-card" key={`${game.game_id || game.steam_app_id || "game"}-${index}`}>
+                <div className="ama-steam-head">
+                  <div>
+                    <div className="ama-steam-app">{tr("steam.appId", "App")} {game.steam_app_id || "—"}</div>
+                    <h3 className="ama-steam-title">{game.title || "—"}</h3>
+                  </div>
+                  <span className={`ama-steam-low${isLow ? " is-low" : ""}`}>
+                    {isLow ? tr("steam.atLow", "At the low") : tr("steam.aboveLow", "Above the low")}
+                  </span>
+                </div>
+                <div className="ama-steam-prices">
+                  <div className="ama-steam-price">
+                    <span>{tr("steam.current", "Current lowest")}</span>
+                    <strong>{usd(current.price)}</strong>
+                    <small>{current.store || "—"}</small>
+                  </div>
+                  <div className="ama-steam-price is-low">
+                    <span>{tr("steam.history", "All-time low")}</span>
+                    <strong>{usd(history.lowest)}</strong>
+                    <small>{history.date || "—"}</small>
+                  </div>
+                  <div className="ama-steam-price">
+                    <span>{tr("steam.gap", "Above low")}</span>
+                    <strong>{usdGap(game.gap_to_low)}</strong>
+                    <small>{tr("steam.currency", "Currency")} USD</small>
+                  </div>
+                </div>
+                <div className="ama-steam-meta">
+                  <span>{tr("steam.retail", "Retail")} {usd(current.retail_price)}</span>
+                  <span>{tr("steam.savings", "Save")} {Number(current.savings_percent) || 0}%</span>
+                  <span>{tr("steam.store", "Store")} {current.store || "—"}</span>
+                  <span>{tr("steam.source", "Source")} {game.source || "CheapShark"} · {game.currency || "USD"}</span>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
+    </>
+  )
+
   const coreView = (
     <>
       <div className="ama-view-head">
@@ -1648,7 +1954,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     </>
   )
 
-  const content = activeView === "web" ? webView : activeView === "core" ? coreView : activeView === "bridge" ? bridgeView : activeView === "about" ? aboutView : homeView
+  const content = activeView === "web" ? webView : activeView === "steam" ? steamView : activeView === "core" ? coreView : activeView === "bridge" ? bridgeView : activeView === "about" ? aboutView : homeView
 
   const footer = (
     <footer className="ama-footer">

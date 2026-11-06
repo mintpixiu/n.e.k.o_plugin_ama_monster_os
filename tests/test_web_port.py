@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from system_port import (
     NekoHostSystemPort,
+    _build_price_entry,
     _clean_results,
     _fallback_query,
     _is_http_url,
@@ -58,4 +59,48 @@ def test_port_manifest_advertises_web_search() -> None:
     port = NekoHostSystemPort(object())
     manifest = port.manifest()
     assert "web.search" in manifest["capabilities"]
+    assert "steam.prices" in manifest["capabilities"]
     assert "web.fetch" in {item["id"] for item in manifest["reserved"]}
+    assert "steam.account" in {item["id"] for item in manifest["reserved"]}
+
+
+def test_cheapshark_detail_is_normalized() -> None:
+    candidate = {
+        "gameID": "36",
+        "steamAppID": "620",
+        "external": "Portal 2",
+        "cheapest": "9.99",
+        "thumb": "https://example.com/thumb.jpg",
+    }
+    detail = {
+        "info": {"title": "Portal 2", "steamAppID": "620", "thumb": "https://example.com/thumb.jpg"},
+        "cheapestPriceEver": {"price": "0.99", "date": 1561485700},
+        "deals": [{
+            "storeID": "1",
+            "dealID": "abc",
+            "price": "9.99",
+            "retailPrice": "19.99",
+            "savings": "50.000000",
+        }],
+    }
+    entry = _build_price_entry(candidate, detail, {"1": "Steam"})
+    assert entry is not None
+    assert entry["title"] == "Portal 2"
+    assert entry["steam_app_id"] == "620"
+    assert entry["current"]["price"] == "9.99"
+    assert entry["current"]["store"] == "Steam"
+    assert entry["current"]["savings_percent"] == 50
+    assert entry["history"]["lowest"] == "0.99"
+    assert entry["history"]["date"] == "2019-06-25"
+    assert entry["gap_to_low"] == "+9.00"
+    assert entry["is_at_low"] is False
+    assert entry["currency"] == "USD"
+
+
+def test_cheapshark_entry_rejects_non_steam_game() -> None:
+    entry = _build_price_entry(
+        {"gameID": "12", "external": "No Steam"},
+        {"info": {"title": "No Steam"}},
+        {},
+    )
+    assert entry is None

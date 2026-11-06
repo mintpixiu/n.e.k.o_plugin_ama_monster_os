@@ -23,7 +23,9 @@ from the first version.
 
 - One real Hosted TSX window with title bar, sidebar navigation, Home/Web/Core/Bridge/About views, minimize/expand/sleep states, and a working pulse action.
 - A Web room that performs live internet searches, shows sanitized results, and opens result links through the Hosted UI external-open bridge.
+- A Steam price room using CheapShark for current lowest price, all-time low, low date, gap, and discount; USD only.
 - A two-provider search chain: N.E.K.O `web_search` first, fixed Bing RSS fallback second.
+- Steam account login is deliberately deferred; the UI says so and never asks for a password.
 - Live, privacy-filtered bridge/telemetry snapshot from the plugin.
 - A versioned system contract (`ama.system.bridge` v1.0.0) and documented `SystemPort` seam for the future built-in app.
 - Eight locale files: `en`, `es`, `ja`, `ko`, `pt`, `ru`, `zh-CN`, `zh-TW`.
@@ -31,6 +33,7 @@ from the first version.
 ## Out of Scope
 
 - A general browser or arbitrary-URL reader; only search is implemented.
+- Steam account login, Steam library, achievements, or wallet in 0.1.0 Beta. Login is deferred until a safe OpenID/API path can be tested.
 - Native desktop windows, process control, filesystem browsing, voice pipeline, real chat/memory/tool/style modules.
 - Any claim that the preview is a complete operating system.
 - Publishing to the N.E.K.O Market. The repository owner publishes manually.
@@ -40,10 +43,11 @@ from the first version.
 - SDK surfaces: `NekoPluginBase`, `neko_plugin`, `plugin_entry`, `lifecycle`, `tr`, `ui.context`, `ui.action`, `get_os_activity_snapshot`
 - cross-plugin: `self.plugins.call_entry("web_search:search", ...)` when available
 - network fallback: fixed Bing RSS URL through stdlib `urllib.request`, executed via `asyncio.to_thread`
+- price data: fixed CheapShark API URLs through stdlib `urllib.request`; USD only
 - UI surfaces: one `panel` (`ui/panel.tsx`), one Markdown guide, one Markdown docs page
-- state/config: read-only snapshot plus in-memory last search; no persistent config in 0.1.0 Beta
+- state/config: read-only snapshot plus in-memory last search and price lookup; no persistent config in 0.1.0 Beta
 - lifecycle/background work: startup/shutdown only; no timers or background tasks
-- external integrations: N.E.K.O web search plugin and Bing RSS fallback
+- external integrations: N.E.K.O web search plugin, Bing RSS fallback, CheapShark price API
 
 ## Read Context Plan
 
@@ -68,6 +72,11 @@ plugins such as `lifekit` and `mcp_adapter`.
 - The Bing fallback is intentionally limited to one fixed endpoint and does not
   follow result pages, which prevents arbitrary-URL SSRF but reduces quality
   compared with the host's multi-engine search.
+- Steam account login is deferred because Steam Community/API are unreachable on
+  the current network and passwords must never be collected by a plugin. The UI
+  states this plainly; no fake login is included.
+- CheapShark prices are USD and its all-time low is cross-store, not an official
+  Steam regional low. The UI carries both labels.
 - Window chrome controls are presentation state inside one hosted panel; they
   do not control the N.E.K.O application window.
 - Version `0.1.0-beta` is a pre-release; the user publishes manually with their

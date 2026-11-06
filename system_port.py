@@ -17,11 +17,14 @@ from __future__ import annotations
 
 import asyncio
 import html
+import json
 import platform
 import re
+import time
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 from typing import Any, Mapping
 
 try:  # package-relative imports when loaded as plugin.plugins.ama_monster_os
@@ -30,6 +33,7 @@ try:  # package-relative imports when loaded as plugin.plugins.ama_monster_os
         CAPABILITY_ACTIVITY,
         CAPABILITY_ENVIRONMENT,
         CAPABILITY_EVENTS,
+        CAPABILITY_STEAM_PRICES,
         CAPABILITY_WEB_SEARCH,
         MODE_HOSTED_PLUGIN,
         build_manifest,
@@ -41,6 +45,7 @@ except ImportError:  # pragma: no cover - direct test import fallback
         CAPABILITY_ACTIVITY,
         CAPABILITY_ENVIRONMENT,
         CAPABILITY_EVENTS,
+        CAPABILITY_STEAM_PRICES,
         CAPABILITY_WEB_SEARCH,
         MODE_HOSTED_PLUGIN,
         build_manifest,
@@ -48,12 +53,20 @@ except ImportError:  # pragma: no cover - direct test import fallback
     )
 
 _BING_RSS = "https://www.bing.com/search"
+_CHEAPSHARK_API = "https://www.cheapshark.com/api/1.0"
 _MAX_QUERY_CHARS = 200
+_MAX_PRICE_QUERY_CHARS = 100
 _MAX_HTTP_BYTES = 512 * 1024
+_MAX_PRICE_HTTP_BYTES = 1024 * 1024
 _HTTP_TIMEOUT_SECONDS = 12.0
+_PRICE_CACHE_SECONDS = 600.0
 _USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+)
+_PRICE_USER_AGENT = (
+    "NekoAmaMonsterOS/0.1.0 "
+    "(+https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os)"
 )
 _DOTTED_ACRONYM = re.compile(r"\b(?:[A-Za-z]\.){2,}[A-Za-z]\b")
 _TAG = re.compile(r"<[^>]+>")
@@ -189,6 +202,177 @@ def _search_bing_sync(query: str, limit: int) -> dict[str, Any]:
     }
 
 
+def _money(value: Any) -> str:
+    try:
+        return f"{float(value):.2f}"
+    except (TypeError, ValueError):
+        return ""
+
+
+def _date_from_epoch(value: Any) -> str:
+    try:
+        stamp = float(value)
+        if stamp <= 0:
+            return ""
+        return datetime.fromtimestamp(stamp, tz=timezone.utc).date().isoformat()
+    except (TypeError, ValueError, OverflowError, OSError):
+        return ""
+
+
+def _http_json(url: str, *, max_bytes: int, user_agent: str) -> Any:
+    request = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": user_agent,
+            "Accept": "application/json",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:
+        payload = response.read(max_bytes + 1)
+    if len(payload) > max_bytes:
+        raise ValueError("response_too_large")
+    return json.loads(payload.decode("utf-8"))
+
+
+def _build_price_entry(
+    candidate: Mapping[str, Any],
+    detail: Mapping[str, Any],
+    stores: Mapping[str, str],
+) -> dict[str, Any] | None:
+    info = detail.get("info") if isinstance(detail.get("info"), Mapping) else {}
+    title = _clean_text(info.get("title") or candidate.get("external"), 200)
+    app_id = str(info.get("steamAppID") or candidate.get("steamAppID") or "").strip()
+    game_id = str(candidate.get("gameID") or "").strip()
+    if not title or not app_id or not game_id.isdigit():
+        return None
+
+    deals = detail.get("deals") if isinstance(detail.get("deals"), list) else []
+    usable: list[Mapping[str, Any]] = [item for item in deals if isinstance(item, Mapping)]
+    current = min(
+        usable,
+        key=lambda item: float(item.get("price") or "999999"),
+        default=None,
+    )
+    current_price = _money(current.get("price")) if current else _money(candidate.get("cheapest"))
+    retail_price = _money(current.get("retailPrice")) if current else ""
+    savings_percent = 0
+    if current:
+        try:
+            savings_percent = max(0, int(round(float(current.get("savings") or 0))))
+        except (TypeError, ValueError):
+            savings_percent = 0
+    store_id = str(current.get("storeID") or "") if current else ""
+    store_name = stores.get(store_id) or ("CheapShark best" if current_price else "")
+
+    ever = detail.get("cheapestPriceEver") if isinstance(detail.get("cheapestPriceEver"), Mapping) else {}
+    ever_price = _money(ever.get("price"))
+    ever_date = _date_from_epoch(ever.get("date"))
+    gap = ""
+    if ever_price and current_price:
+        try:
+            gap = f"{float(current_price) - float(ever_price):+.2f}"
+        except ValueError:
+            gap = ""
+
+    thumb = str(info.get("thumb") or candidate.get("thumb") or "").strip()
+    if not _is_http_url(thumb):
+        thumb = ""
+    return {
+        "game_id": game_id,
+        "steam_app_id": app_id,
+        "title": title,
+        "thumb": thumb,
+        "currency": "USD",
+        "current": {
+            "price": current_price,
+            "retail_price": retail_price,
+            "savings_percent": savings_percent,
+            "store": _clean_text(store_name, 80),
+        },
+        "history": {
+            "lowest": ever_price,
+            "date": ever_date,
+            "currency": "USD",
+        },
+        "gap_to_low": gap,
+        "is_at_low": bool(ever_price and current_price and float(current_price) <= float(ever_price)),
+        "source": "CheapShark",
+    }
+
+
+def _search_cheapshark_sync(
+    query: str,
+    limit: int,
+    stores: Mapping[str, str],
+) -> dict[str, Any]:
+    params = (
+        {"steamAppID": query}
+        if query.isdigit()
+        else {"title": query, "limit": str(max(5, limit * 2))}
+    )
+    url = f"{_CHEAPSHARK_API}/games?{urllib.parse.urlencode(params)}"
+    try:
+        payload = _http_json(url, max_bytes=_MAX_PRICE_HTTP_BYTES, user_agent=_PRICE_USER_AGENT)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "available": False,
+            "provider": "CheapShark",
+            "currency": "USD",
+            "error": f"request_failed:{type(exc).__name__}",
+            "results": [],
+        }
+
+    if not isinstance(payload, list):
+        return {
+            "ok": False,
+            "available": False,
+            "provider": "CheapShark",
+            "currency": "USD",
+            "error": "invalid_response",
+            "results": [],
+        }
+
+    candidates = [
+        item for item in payload
+        if isinstance(item, Mapping)
+        and str(item.get("steamAppID") or "").strip()
+        and str(item.get("external") or "").strip()
+    ][:limit]
+
+    results: list[dict[str, Any]] = []
+    for candidate in candidates:
+        game_id = str(candidate.get("gameID") or "").strip()
+        detail: Mapping[str, Any] = {}
+        if game_id.isdigit():
+            try:
+                detail_payload = _http_json(
+                    f"{_CHEAPSHARK_API}/games?id={urllib.parse.quote(game_id)}",
+                    max_bytes=_MAX_PRICE_HTTP_BYTES,
+                    user_agent=_PRICE_USER_AGENT,
+                )
+                if isinstance(detail_payload, Mapping):
+                    detail = detail_payload
+            except Exception:
+                detail = {}
+            time.sleep(0.12)
+        entry = _build_price_entry(candidate, detail, stores)
+        if entry is not None:
+            results.append(entry)
+
+    return {
+        "ok": bool(results),
+        "available": True,
+        "provider": "CheapShark",
+        "currency": "USD",
+        "query": query,
+        "count": len(results),
+        "results": results,
+        "error": "" if results else "no_results",
+        "at": utc_now_iso(),
+    }
+
+
 class NekoHostSystemPort:
     """Read-only host adapter used by the N.E.K.O plugin build.
 
@@ -205,11 +389,15 @@ class NekoHostSystemPort:
         CAPABILITY_ACTIONS,
         CAPABILITY_EVENTS,
         CAPABILITY_WEB_SEARCH,
+        CAPABILITY_STEAM_PRICES,
     )
 
     def __init__(self, plugin: Any) -> None:
         self._plugin = plugin
         self._events: list[dict[str, str]] = []
+        self._price_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+        self._store_names: dict[str, str] = {}
+        self._store_names_at = 0.0
 
     def manifest(self) -> Mapping[str, Any]:
         return build_manifest(
@@ -358,8 +546,65 @@ class NekoHostSystemPort:
             "error": "",
         }
 
+    def _load_store_names_sync(self) -> Mapping[str, str]:
+        now = time.monotonic()
+        if self._store_names and (now - self._store_names_at) < 86400.0:
+            return self._store_names
+        try:
+            payload = _http_json(
+                f"{_CHEAPSHARK_API}/stores",
+                max_bytes=_MAX_PRICE_HTTP_BYTES,
+                user_agent=_PRICE_USER_AGENT,
+            )
+            if isinstance(payload, list):
+                self._store_names = {
+                    str(item.get("storeID")): _clean_text(item.get("storeName"), 80)
+                    for item in payload
+                    if isinstance(item, Mapping) and str(item.get("storeID") or "")
+                }
+                self._store_names_at = now
+        except Exception:
+            pass
+        return dict(self._store_names)
+
+    async def search_game_prices(self, query: str, max_results: int = 3) -> Mapping[str, Any]:
+        text = str(query or "").strip()
+        if not text:
+            return {
+                "ok": False,
+                "available": True,
+                "provider": "CheapShark",
+                "currency": "USD",
+                "error": "empty_query",
+                "results": [],
+            }
+        if len(text) > _MAX_PRICE_QUERY_CHARS:
+            return {
+                "ok": False,
+                "available": True,
+                "provider": "CheapShark",
+                "currency": "USD",
+                "error": "query_too_long",
+                "results": [],
+            }
+        limit = max(3, min(5, int(max_results or 3)))
+        cache_key = f"{text.casefold()}|{limit}"
+        cached = self._price_cache.get(cache_key)
+        if cached is not None and (time.monotonic() - cached[0]) < _PRICE_CACHE_SECONDS:
+            return dict(cached[1])
+
+        stores = await asyncio.to_thread(self._load_store_names_sync)
+        raw = await asyncio.to_thread(_search_cheapshark_sync, text, limit, stores)
+        if len(self._price_cache) >= 32:
+            oldest = min(self._price_cache, key=lambda key: self._price_cache[key][0])
+            self._price_cache.pop(oldest, None)
+        self._price_cache[cache_key] = (time.monotonic(), dict(raw))
+        return raw
+
     async def close(self) -> None:
         self._events.clear()
+        self._price_cache.clear()
+        self._store_names.clear()
 
 
 __all__ = ["NekoHostSystemPort"]

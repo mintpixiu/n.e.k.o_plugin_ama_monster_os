@@ -35,6 +35,7 @@ class SystemPort(Protocol):
     async def environment(self) -> Mapping[str, Any]: ...
     async def activity(self) -> Mapping[str, Any] | None: ...
     async def search_web(self, query: str, max_results: int = 5) -> Mapping[str, Any]: ...
+    async def search_game_prices(self, query: str, max_results: int = 3) -> Mapping[str, Any]: ...
     def record_event(self, name: str, detail: str = "") -> None: ...
     async def close(self) -> None: ...
 ```
@@ -110,6 +111,54 @@ Rules:
 - `available: false` means the shell should show an offline state, not fake
   results.
 
+### `search_game_prices()`
+
+Return a game's current lowest price and all-time low. The shipped adapter uses
+CheapShark and never asks for a Steam password:
+
+```json
+{
+  "ok": true,
+  "available": true,
+  "provider": "CheapShark",
+  "currency": "USD",
+  "query": "Portal 2",
+  "count": 1,
+  "results": [
+    {
+      "game_id": "36",
+      "steam_app_id": "620",
+      "title": "Portal 2",
+      "currency": "USD",
+      "current": {
+        "price": "9.99",
+        "retail_price": "9.99",
+        "savings_percent": 0,
+        "store": "Steam"
+      },
+      "history": {
+        "lowest": "0.99",
+        "date": "2019-06-25",
+        "currency": "USD"
+      },
+      "gap_to_low": "+9.00",
+      "is_at_low": false,
+      "source": "CheapShark"
+    }
+  ]
+}
+```
+
+Rules:
+
+- Use a fixed price endpoint; do not accept an arbitrary URL.
+- Require a non-empty Steam AppID on every result.
+- Label currency explicitly. CheapShark is USD; do not present it as CNY or as
+  an official Steam regional price.
+- The all-time low is CheapShark's cross-store record. Keep that attribution.
+- Steam account linking is out of scope for this method. It is the reserved
+  `steam.account` seam and must never store a password.
+
 ### `record_event()`
 
 Best-effort host journal. It must never raise. A failing journal must not break
@@ -136,7 +185,8 @@ Release provider resources. Must be idempotent.
     "activity.privacy",
     "actions.invoke",
     "events.record",
-    "web.search"
+    "web.search",
+    "steam.prices"
   ],
   "reserved": [
     {
@@ -149,6 +199,7 @@ Release provider resources. Must be idempotent.
     "context": "os_shell",
     "pulse": "ama_pulse",
     "web_search": "ama_web_search",
+    "steam_search": "ama_steam_search",
     "contract": "ama_system_contract"
   }
 }
@@ -171,6 +222,7 @@ Modes:
 | `vault.storage` | reserved | User-scoped settings and secrets from the desktop vault. |
 | `voice.pipeline` | reserved | Speech input/output handoff. |
 | `web.fetch` | reserved | Read a specific page with an SSRF-safe URL policy and size limit. |
+| `steam.account` | reserved | Steam OpenID or a user-supplied API key; never store passwords. |
 | `module.registry` | reserved | Additional OS modules beyond the preview. |
 
 A reserved seam is declared, not implemented. A provider must not advertise a
@@ -185,7 +237,8 @@ capability it cannot serve.
    written against the Hosted UI bridge; a desktop build can reuse the visual
    design, but must provide its own renderer or bundle.
 5. Call `runtime.pulse()` for the pulse button, `runtime.search_web(query)` for
-   the Web room, and `runtime.contract()` for the bridge page.
+   the Web room, `runtime.search_game_prices(query)` for the Steam price room,
+   and `runtime.contract()` for the bridge page.
 6. Call `await runtime.stop()` before exiting.
 7. Keep `contract_version` at `1.0.0` for additions that do not break v1. Bump
    the major version and update the schema for breaking changes.
@@ -212,5 +265,6 @@ The shipped tests cover:
 - `SystemPort` protocol conformance of the N.E.K.O adapter shape;
 - private activity not leaking category/idle time;
 - RSS parsing, URL validation, HTML stripping, and dotted-acronym query fallback;
-- runtime boot, pulse, web search, shutdown, and degraded-host behaviour;
+- CheapShark normalization, historical-low date/price, and non-Steam filtering;
+- runtime boot, pulse, web search, Steam price lookup, shutdown, and degraded-host behaviour;
 - serializability of the complete snapshot.

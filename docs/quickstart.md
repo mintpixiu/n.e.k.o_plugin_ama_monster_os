@@ -13,11 +13,26 @@
 ## 窗口里能做什么
 
 - **网络房间**：输入关键词联网搜索，查看结果并在浏览器中打开。
+- **Steam 价格房**：按游戏名或 Steam AppID 查询当前最低价、历史最低价、低点日期和价差。
 - **脉冲检查**：真正调用 Python 插件，等待一次回应，并刷新窗口状态。
 - **刷新**：重新拉取 Hosted UI context。
 - **最小化 / 展开 / 睡眠**：只改变窗口预览的显示状态，不会关闭 N.E.K.O。
 - **日光 / 月光**：切换窗口配色。
-- 首页、网络、核心、系统桥、关于五个页面分别展示不同层的信息。
+- 首页、网络、Steam、核心、系统桥、关于六个页面分别展示不同层的信息。
+
+## Steam 价格房怎么工作
+
+- 搜索游戏名称或数字 Steam AppID。
+- 数据来自 **CheapShark**，当前最低价和全站历史最低价均以 **USD** 显示。
+- 历史最低是 CheapShark 的全站记录，不等同于 Steam 国区官方史低。
+- 点击结果卡片上的查询会重新发起价格查询；搜索成功会刷新窗口状态。
+- 需要网络；Steam 商店官方接口和 Steam 登录当前不可达。
+
+### Steam 登录现在为什么没有做
+
+Steam 密码不能交给第三方插件；Steam 登录页也不能放进 iframe。当前网络下
+Steam Community / Steam API 均超时。因此 0.1.0 Beta 只显示 **登录暂缓**，
+不提供假登录框；后续可接安全 OpenID 或用户自己的 Web API Key。
 
 ## 网络搜索怎么工作
 
@@ -52,6 +67,7 @@
 - `@ui.context(id="os_shell")` → 窗口状态
 - `@ui.action(id="ama_pulse")` → 脉冲按钮
 - `@ui.action(id="ama_web_search")` → 网络搜索
+- `@ui.action(id="ama_steam_search")` → Steam 价格与历史最低
 - `@plugin_entry(id="ama_system_contract")` → 读取系统桥契约
 - `docs/system-contract.md` → 未来内置软件的接入说明
 
@@ -63,6 +79,8 @@
 | 脉冲按钮报错 | 插件日志；确认 `ama_pulse` 已注册 |
 | 搜索没有结果 | 换一个更短的关键词；查看内置 web_search 插件是否运行，或等待 Bing 回退 |
 | 搜索显示不可用 | 检查网络连接；确认内置网络搜索插件或 Bing RSS 至少一个可用 |
+| Steam 价格没有结果 | 换完整游戏名或数字 AppID；确认网络可访问 CheapShark |
+| Steam 账号显示登录暂缓 | 0.1.0 Beta 未启用登录；不会收集密码，后续使用 OpenID/Web API Key |
 | 活动隐私显示不可用 | 当前宿主没有提供 OS 活动信号；窗口会安全降级 |
 | 看不到窗口 | 插件详情的 UI 分区；确认 `[plugin.ui]` 已启用 |
 

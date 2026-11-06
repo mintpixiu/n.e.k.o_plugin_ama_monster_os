@@ -1,7 +1,8 @@
 # N.E.K.O Ama Monster OS
 
 > **0.1.0 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
-> web search and a versioned system bridge reserved for a future standalone build.
+> web search, a Steam price radar, and a versioned system bridge reserved for a
+> future standalone build.
 
 ![Ama Monster OS shell preview](docs/preview.png)
 
@@ -11,12 +12,14 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
 
 ## What is real in this version
 
-- A working Hosted TSX window: cat-ear title bar, Home/Web/Core/Bridge/About
+- A working Hosted TSX window: cat-ear title bar, Home/Web/Steam/Core/Bridge/About
   views, minimize, expand, sleep/wake, day/moon theme, and responsive layout.
 - A live snapshot from the plugin: uptime, boot count, bridge health, host
   platform, Python/SDK versions, and privacy-filtered activity.
 - A **Web room** with live internet search, result cards, and links that open in
   the user's browser.
+- A **Steam price room** with current lowest price, all-time low, low date,
+  store, discount, and gap-to-low data from CheapShark (USD).
 - A **Pulse check** action that calls the Python plugin and refreshes the
   context through the real Hosted UI bridge.
 - A stable, versioned contract (`ama.system.bridge` v1.0.0) and a `SystemPort`
@@ -40,10 +43,34 @@ official Hosted UI external-open bridge and leaves N.E.K.O for your browser.
 
 ![Ama Monster OS web search](docs/preview-web.png)
 
+## Steam price radar
+
+The Steam room searches by game title or numeric Steam AppID and enriches each
+match with CheapShark price data:
+
+- current lowest price and store
+- all-time low and its date
+- gap to the all-time low
+- retail price and current discount
+- explicit **USD** and **CheapShark cross-store** labeling
+
+![Ama Monster OS Steam price room](docs/preview-steam.png)
+
+**Steam account login is deliberately not enabled in 0.1.0 Beta.** This build
+does not ask for a Steam password and does not put Steam's login page inside an
+iframe. The account card says **Login deferred** instead of pretending to be
+connected. A future safe integration can use Steam OpenID (browser redirect,
+no password handled by the plugin) or a user-supplied Web API key.
+
+The all-time low is CheapShark's cross-store record, not an official Steam
+regional low. Steam Community and the Steam Store API were unreachable from the
+test network, so they are not used.
+
 ## What is deliberately not here yet
 
 - A general browser or arbitrary-URL reader. This is a search room, not an
   embedded Chromium.
+- Steam account login, Steam library, achievements, or wallet.
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
@@ -72,6 +99,7 @@ AmaOsRuntime (shell_runtime.py)  ← no N.E.K.O imports
 SystemPort (system_contract.py)
         ├── environment / activity
         ├── web.search
+        ├── steam.prices
         └── events
         │
 NekoHostSystemPort (system_port.py)   now
@@ -99,6 +127,7 @@ ama_monster_os/
 ├── docs/system-contract.v1.schema.json
 ├── docs/preview.png             shell preview
 ├── docs/preview-web.png         web room preview
+├── docs/preview-steam.png       Steam price room preview
 ├── i18n/                       8 locale files
 └── tests/                      contract, runtime, web, manifest, i18n, UI checks
 ```

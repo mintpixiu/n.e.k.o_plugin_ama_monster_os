@@ -127,6 +127,19 @@ class AmaOsRuntime:
             "error": "",
             "fallback": False,
         }
+        self._steam: dict[str, Any] = {
+            "available": True,
+            "status": "idle",
+            "query": "",
+            "count": 0,
+            "results": [],
+            "provider": "CheapShark",
+            "currency": "USD",
+            "at": None,
+            "error": "",
+            "account_linked": False,
+            "account_mode": "deferred",
+        }
 
     @property
     def port(self) -> SystemPort:
@@ -259,6 +272,7 @@ class AmaOsRuntime:
                 "server_ms": round(self._last_pulse_ms, 3),
             },
             "web": {**self._web, "results": list(self._web.get("results") or [])},
+            "steam": {**self._steam, "results": list(self._steam.get("results") or [])},
             "events": [event.as_dict() for event in self._events[-8:]],
             "preview": True,
         }
@@ -411,6 +425,118 @@ class AmaOsRuntime:
             "provider": provider,
             "error": error or "unavailable",
             "summary": "Web search is unavailable right now.",
+        }
+
+    async def search_game_prices(self, query: str, max_results: int = 3) -> dict[str, Any]:
+        text = str(query or "").strip()
+        if not text:
+            return {
+                "ok": False,
+                "status": "error",
+                "query": "",
+                "count": 0,
+                "results": [],
+                "provider": "CheapShark",
+                "currency": "USD",
+                "error": "empty_query",
+                "summary": "Game name or Steam app ID is empty.",
+            }
+        text = text[:_MAX_QUERY_CHARS]
+        limit = max(3, min(5, int(max_results or 3)))
+        caller = getattr(self._port, "search_game_prices", None)
+        if caller is None:
+            result: Mapping[str, Any] = {
+                "ok": False,
+                "available": False,
+                "provider": "CheapShark",
+                "currency": "USD",
+                "error": "unavailable",
+                "results": [],
+            }
+        else:
+            try:
+                raw = await asyncio.wait_for(caller(text, limit), timeout=35.0)
+                result = raw if isinstance(raw, Mapping) else {
+                    "ok": False,
+                    "available": False,
+                    "provider": "CheapShark",
+                    "currency": "USD",
+                    "error": "invalid_response",
+                    "results": [],
+                }
+            except asyncio.TimeoutError:
+                result = {
+                    "ok": False,
+                    "available": False,
+                    "provider": "CheapShark",
+                    "currency": "USD",
+                    "error": "timeout",
+                    "results": [],
+                }
+            except Exception:
+                result = {
+                    "ok": False,
+                    "available": False,
+                    "provider": "CheapShark",
+                    "currency": "USD",
+                    "error": "search_failed",
+                    "results": [],
+                }
+
+        raw_results = result.get("results")
+        results = [
+            dict(item) for item in raw_results
+            if isinstance(item, Mapping) and item.get("title") and item.get("steam_app_id")
+        ][:limit] if isinstance(raw_results, list) else []
+        provider = str(result.get("provider") or "CheapShark")[:80]
+        success = bool(result.get("ok")) or str(result.get("error") or "") == "no_results"
+        error = str(result.get("error") or "")[:120]
+        if success:
+            status = "ok" if results else "empty"
+            self._record("steam.price", f"{len(results)} game(s)")
+            error = ""
+        else:
+            status = "error"
+            self._record("steam.price.failed", error or "unknown")
+        self._steam = {
+            "available": bool(result.get("available", True)),
+            "status": status,
+            "query": text,
+            "count": len(results),
+            "results": results,
+            "provider": provider,
+            "currency": str(result.get("currency") or "USD")[:8],
+            "at": str(utc_now_iso()),
+            "error": error,
+            "account_linked": False,
+            "account_mode": "deferred",
+        }
+        try:
+            self._port.record_event("steam.price", str(len(results)))
+        except Exception:
+            self._degraded = True
+
+        if success:
+            return {
+                "ok": True,
+                "status": status,
+                "query": text,
+                "count": len(results),
+                "results": results,
+                "provider": provider,
+                "currency": self._steam["currency"],
+                "summary": f'Price lookup for "{text[:80]}" returned {len(results)} game(s).',
+            }
+        return {
+            "ok": False,
+            "status": "error",
+            "query": text,
+            "count": 0,
+            "results": [],
+            "provider": provider,
+            "currency": self._steam["currency"],
+            "error": error or "unavailable",
+            "summary": "Price lookup is unavailable right now.",
         }
 
 

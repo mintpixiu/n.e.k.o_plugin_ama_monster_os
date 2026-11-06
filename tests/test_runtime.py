@@ -79,6 +79,39 @@ class FakePort:
             "at": "2026-01-01T00:00:00Z",
         }
 
+    async def search_game_prices(self, query: str, max_results: int = 3) -> dict[str, Any]:
+        if self.fail:
+            raise RuntimeError("price search unavailable")
+        return {
+            "ok": True,
+            "available": True,
+            "provider": "CheapShark",
+            "currency": "USD",
+            "query": query,
+            "count": 1,
+            "results": [{
+                "game_id": "36",
+                "steam_app_id": "620",
+                "title": "Portal 2",
+                "currency": "USD",
+                "current": {
+                    "price": "9.99",
+                    "retail_price": "19.99",
+                    "savings_percent": 50,
+                    "store": "Steam",
+                },
+                "history": {
+                    "lowest": "0.99",
+                    "date": "2019-06-25",
+                    "currency": "USD",
+                },
+                "gap_to_low": "+9.00",
+                "is_at_low": False,
+                "source": "CheapShark",
+            }],
+            "at": "2026-01-01T00:00:00Z",
+        }
+
     async def close(self) -> None:
         self.closed = True
 
@@ -156,7 +189,9 @@ def test_contract_validates() -> None:
     assert manifest["reserved"]
     assert manifest["entrypoints"]["context"] == "os_shell"
     assert manifest["entrypoints"]["web_search"] == "ama_web_search"
+    assert manifest["entrypoints"]["steam_search"] == "ama_steam_search"
     assert "web.search" in manifest["capabilities"]
+    assert "steam.prices" in manifest["capabilities"]
     assert "web.fetch" in {item["id"] for item in manifest["reserved"]}
 
 
@@ -193,3 +228,38 @@ def test_web_search_failure_is_reported_without_crashing() -> None:
     assert result["ok"] is False
     assert result["status"] == "error"
     assert snapshot["web"]["status"] == "error"
+
+
+def test_steam_prices_store_history_and_snapshot() -> None:
+    runtime = AmaOsRuntime(FakePort())
+
+    async def scenario() -> tuple[dict[str, Any], dict[str, Any]]:
+        found = await runtime.search_game_prices("Portal 2", 3)
+        snapshot = await runtime.snapshot()
+        return found, snapshot
+
+    found, snapshot = asyncio.run(scenario())
+
+    assert found["ok"] is True
+    assert found["currency"] == "USD"
+    assert found["results"][0]["history"]["lowest"] == "0.99"
+    assert snapshot["steam"]["status"] == "ok"
+    assert snapshot["steam"]["account_mode"] == "deferred"
+    assert snapshot["steam"]["results"][0]["steam_app_id"] == "620"
+    assert [event["name"] for event in snapshot["events"]][-1] == "steam.price"
+
+
+def test_steam_prices_reject_empty_query() -> None:
+    runtime = AmaOsRuntime(FakePort())
+    result = asyncio.run(runtime.search_game_prices("  ", 3))
+    assert result["ok"] is False
+    assert result["error"] == "empty_query"
+
+
+def test_steam_prices_failure_is_reported_without_crashing() -> None:
+    runtime = AmaOsRuntime(FakePort(fail=True))
+    result = asyncio.run(runtime.search_game_prices("Portal 2", 3))
+    snapshot = asyncio.run(runtime.snapshot())
+    assert result["ok"] is False
+    assert result["status"] == "error"
+    assert snapshot["steam"]["status"] == "error"

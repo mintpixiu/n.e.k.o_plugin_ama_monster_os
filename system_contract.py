@@ -27,12 +27,14 @@ CAPABILITY_ACTIVITY = "activity.privacy"
 CAPABILITY_ACTIONS = "actions.invoke"
 CAPABILITY_EVENTS = "events.record"
 CAPABILITY_WEB_SEARCH = "web.search"
+CAPABILITY_STEAM_PRICES = "steam.prices"
 HOSTED_CAPABILITIES = (
     CAPABILITY_ENVIRONMENT,
     CAPABILITY_ACTIVITY,
     CAPABILITY_ACTIONS,
     CAPABILITY_EVENTS,
     CAPABILITY_WEB_SEARCH,
+    CAPABILITY_STEAM_PRICES,
 )
 
 # These are deliberately declared, but not advertised as implemented yet.
@@ -65,6 +67,11 @@ RESERVED_SEAMS = (
         "summary": "Read a specific page through an SSRF-safe URL policy and size limit.",
     },
     {
+        "id": "steam.account",
+        "state": "reserved",
+        "summary": "Link a Steam account through Steam OpenID or a user-supplied Web API key; never store passwords.",
+    },
+    {
         "id": "module.registry",
         "state": "reserved",
         "summary": "Load additional OS modules beyond the preview shell.",
@@ -75,6 +82,7 @@ ENTRYPOINTS = {
     "context": "os_shell",
     "pulse": "ama_pulse",
     "web_search": "ama_web_search",
+    "steam_search": "ama_steam_search",
     "contract": "ama_system_contract",
 }
 
@@ -118,6 +126,13 @@ class SystemPort(Protocol):
 
         The provider owns the engine choice and must return only HTTP(S)
         result URLs.  It must never fetch arbitrary result pages.
+        """
+
+    async def search_game_prices(self, query: str, max_results: int = 3) -> Mapping[str, Any]:
+        """Look up a game's current lowest price and all-time low.
+
+        The provider must use a fixed price-data endpoint and must not require
+        a Steam password.  Account linking is a separate reserved capability.
         """
 
     def record_event(self, name: str, detail: str = "") -> None:
@@ -180,7 +195,7 @@ def validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
     if not isinstance(entrypoints, dict):
         errors.append("entrypoints must be an object")
     else:
-        for key in ("context", "pulse", "web_search", "contract"):
+        for key in ("context", "pulse", "web_search", "steam_search", "contract"):
             if not isinstance(entrypoints.get(key), str) or not entrypoints.get(key):
                 errors.append(f"entrypoints.{key} is missing")
     return errors
@@ -192,6 +207,7 @@ __all__ = [
     "CAPABILITY_ACTIVITY",
     "CAPABILITY_ENVIRONMENT",
     "CAPABILITY_EVENTS",
+    "CAPABILITY_STEAM_PRICES",
     "CAPABILITY_WEB_SEARCH",
     "CONTRACT_ID",
     "CONTRACT_VERSION",

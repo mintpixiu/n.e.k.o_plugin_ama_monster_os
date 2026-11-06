@@ -54,6 +54,24 @@ WEB_SEARCH_SCHEMA: dict[str, Any] = {
     "required": ["query"],
 }
 
+STEAM_SEARCH_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "query": {
+            "type": "string",
+            "description": "Game title or numeric Steam AppID, e.g. Hades or 1145360.",
+        },
+        "max_results": {
+            "type": "integer",
+            "minimum": 3,
+            "maximum": 5,
+            "default": 3,
+            "description": "Number of game matches to enrich with price history (3-5).",
+        },
+    },
+    "required": ["query"],
+}
+
 
 @neko_plugin
 class AmaMonsterOsPlugin(NekoPluginBase):
@@ -160,6 +178,43 @@ class AmaMonsterOsPlugin(NekoPluginBase):
         except (TypeError, ValueError):
             limit = 5
         result = await self._runtime.search_web(query, limit)
+        return Ok(result)
+
+    @ui.action(
+        id="ama_steam_search",
+        label=tr("actions.steam_search.label", default="Steam price check"),
+        icon="search",
+        tone="default",
+        order=30,
+        refresh_context=True,
+    )
+    @plugin_entry(
+        id="ama_steam_search",
+        name=tr("entries.steam_search.name", default="Steam price check"),
+        description=tr(
+            "entries.steam_search.description",
+            default="Look up current lowest prices and all-time lows for Steam games via CheapShark (USD).",
+        ),
+        input_schema=STEAM_SEARCH_SCHEMA,
+        llm_result_fields=["summary"],
+        timeout=45,
+    )
+    async def ama_steam_search(self, query: Any = "", max_results: Any = 3, **_):
+        if not isinstance(query, str) or not query.strip():
+            return Ok({
+                "ok": False,
+                "status": "error",
+                "query": "",
+                "count": 0,
+                "results": [],
+                "error": "empty_query",
+                "summary": self.i18n.t("steam.emptyQuery", default="Game name or Steam AppID is empty."),
+            })
+        try:
+            limit = int(max_results)
+        except (TypeError, ValueError):
+            limit = 3
+        result = await self._runtime.search_game_prices(query, limit)
         return Ok(result)
 
     # ------------------------------------------------------------------
