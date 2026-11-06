@@ -58,7 +58,7 @@ def test_ui_and_python_translation_keys_exist() -> None:
 def test_every_module_key_exists() -> None:
     catalogs = _catalogs()
     baseline = catalogs["en"]
-    from app import MODULES
+    from shell_runtime import MODULES
 
     for module in MODULES:
         assert module.name_key in baseline

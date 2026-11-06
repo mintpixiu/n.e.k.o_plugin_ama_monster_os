@@ -2,7 +2,7 @@
 
 The hosted N.E.K.O plugin is the first provider of this contract.  A future
 standalone Ama Monster OS build can implement the same :class:`SystemPort`
-protocol and reuse :class:`app.AmaOsRuntime` and the hosted shell without
+protocol and reuse :class:`shell_runtime.AmaOsRuntime` and the hosted shell without
 touching plugin code.  Keep this module dependency-free so it can be imported
 by that future host as well.
 """

@@ -21,7 +21,7 @@ from plugin.sdk.plugin import (
     ui,
 )
 
-from .app import SHELL_CHANNEL, SHELL_DISPLAY_VERSION, SHELL_NAME, AmaOsRuntime
+from .shell_runtime import SHELL_CHANNEL, SHELL_DISPLAY_VERSION, SHELL_NAME, AmaOsRuntime
 from .system_port import NekoHostSystemPort
 
 PULSE_SCHEMA: dict[str, Any] = {

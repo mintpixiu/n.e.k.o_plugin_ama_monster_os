@@ -46,7 +46,7 @@ Hosted TSX panel (ui/panel.tsx)
         │  props.state / props.api.call
 AmaMonsterOsPlugin (__init__.py)
         │
-AmaOsRuntime (app.py)  ← no N.E.K.O imports
+AmaOsRuntime (shell_runtime.py)  ← no N.E.K.O imports
         │
 SystemPort (system_contract.py)
         │
@@ -66,7 +66,7 @@ privacy rules, reserved seams, and integration sequence.
 ama_monster_os/
 ├── plugin.toml                 manifest and Hosted UI surfaces
 ├── __init__.py                 SDK facade, context, entries, lifecycle
-├── app.py                      host-free shell runtime
+├── shell_runtime.py            host-free shell runtime
 ├── system_contract.py          contract v1 + SystemPort protocol
 ├── system_port.py              N.E.K.O adapter (read-only)
 ├── ui/panel.tsx                the NEKO-style window

@@ -13,14 +13,14 @@ plugin facade.
 ```text
 ui/panel.tsx                  presentation only; Hosted UI props
 __init__.py                   N.E.K.O SDK facade
-app.py                        host-free runtime; JSON in / JSON out
+shell_runtime.py              host-free runtime; JSON in / JSON out
 system_contract.py            protocol + manifest + validation
 system_port.py                N.E.K.O adapter
 DesktopSystemPort             future built-in adapter (not in this repo)
 ```
 
 `AmaOsRuntime` and `system_contract.py` use only the Python standard library.
-`app.py` must stay free of N.E.K.O imports. If a change needs a host API, add it
+`shell_runtime.py` must stay free of N.E.K.O imports. If a change needs a host API, add it
 to `SystemPort` rather than importing the host into the runtime.
 
 ## 2. SystemPort protocol

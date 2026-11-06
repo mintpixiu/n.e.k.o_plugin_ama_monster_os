@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from app import AmaOsRuntime
+from shell_runtime import AmaOsRuntime
 from system_contract import (
     CONTRACT_VERSION,
     MODE_HOSTED_PLUGIN,

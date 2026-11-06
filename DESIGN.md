@@ -17,7 +17,7 @@ from the first version.
 ## Package Type and Capabilities
 - package type: `plugin`
 - capabilities: Hosted TSX panel, lifecycle hooks, one UI action, two callable entries, eight-locale i18n
-- inferred architecture: thin SDK facade → host-free `AmaOsRuntime` → `SystemPort` → `NekoHostSystemPort`
+- inferred architecture: thin SDK facade → host-free `AmaOsRuntime` (`shell_runtime.py`) → `SystemPort` → `NekoHostSystemPort`
 
 ## First Version Scope
 
