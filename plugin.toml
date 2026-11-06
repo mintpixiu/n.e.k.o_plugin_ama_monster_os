@@ -1,8 +1,8 @@
 [plugin]
 id = "ama_monster_os"
 name = "N.E.K.O Ama Monster OS"
-description = "《N.E.K.O Ama Monster OS》0.1.0 Beta：给 N.E.K.O 的猫娘风格系统壳窗口，带实时状态、系统桥契约与为未来独立软件预留的内置系统接口。当前版本是可运行的窗口预览，不冒充完整操作系统。"
-short_description = "A NEKO-styled OS shell window for N.E.K.O, with a versioned system-bridge seam for a future standalone build."
+description = "《N.E.K.O Ama Monster OS》0.1.0 Beta：给 N.E.K.O 的猫娘风格系统壳窗口，带实时状态、联网搜索、系统桥契约，以及为未来独立软件预留的内置系统接口。搜索优先调用 N.E.K.O 的 web_search 插件，并在其未运行时使用固定 Bing RSS 回退；只发送查询文字，不自动抓取网页。当前版本是可运行的窗口预览，不冒充完整操作系统。"
+short_description = "A NEKO-styled OS shell window with live status, web search, and a versioned system-bridge seam for a future standalone build."
 keywords = [
     "ama monster os",
     "ama os",
@@ -12,6 +12,11 @@ keywords = [
     "桌面壳",
     "插件窗口",
     "系统窗口",
+    "联网",
+    "网络搜索",
+    "搜索网页",
+    "internet",
+    "web search",
     "shell preview",
     "system bridge",
 ]

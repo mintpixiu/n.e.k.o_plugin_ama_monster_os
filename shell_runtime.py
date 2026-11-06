@@ -8,6 +8,7 @@ embedded in the future standalone application by supplying a different
 from __future__ import annotations
 
 import asyncio
+import re
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -31,6 +32,7 @@ SHELL_VERSION = "0.1.0-beta"
 SHELL_DISPLAY_VERSION = "0.1.0 Beta"
 SHELL_CHANNEL = "Beta"
 SHELL_CODENAME = "Ama-01"
+_MAX_QUERY_CHARS = 200
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,6 +116,17 @@ class AmaOsRuntime:
             "idle_seconds": None,
         }
         self._environment: dict[str, Any] = {}
+        self._web: dict[str, Any] = {
+            "available": True,
+            "status": "idle",
+            "query": "",
+            "count": 0,
+            "results": [],
+            "provider": "",
+            "at": None,
+            "error": "",
+            "fallback": False,
+        }
 
     @property
     def port(self) -> SystemPort:
@@ -245,6 +258,7 @@ class AmaOsRuntime:
                 "last_at": self._last_pulse_at,
                 "server_ms": round(self._last_pulse_ms, 3),
             },
+            "web": {**self._web, "results": list(self._web.get("results") or [])},
             "events": [event.as_dict() for event in self._events[-8:]],
             "preview": True,
         }
@@ -267,6 +281,136 @@ class AmaOsRuntime:
                 "server_ms": round(self._last_pulse_ms, 3),
             },
             "summary": f"Pulse #{self._pulse_count} acknowledged.",
+        }
+
+    @staticmethod
+    def _clean_results(raw_items: Any) -> list[dict[str, str]]:
+        if not isinstance(raw_items, list):
+            return []
+        results: list[dict[str, str]] = []
+        seen: set[str] = set()
+        for item in raw_items[:8]:
+            if not isinstance(item, Mapping):
+                continue
+            url = str(item.get("url") or "").strip()
+            if not url.startswith(("http://", "https://")) or len(url) > 2048 or url in seen:
+                continue
+            seen.add(url)
+            title = re.sub(r"\s+", " ", str(item.get("title") or "")).strip()[:300]
+            snippet = re.sub(r"\s+", " ", str(item.get("snippet") or "")).strip()[:700]
+            if not title:
+                continue
+            results.append({
+                "title": title,
+                "url": url,
+                "snippet": snippet,
+                "domain": str(item.get("domain") or "")[:80],
+            })
+        return results
+
+    async def search_web(self, query: str, max_results: int = 5) -> dict[str, Any]:
+        text = str(query or "").strip()
+        if not text:
+            return {
+                "ok": False,
+                "status": "error",
+                "query": "",
+                "count": 0,
+                "results": [],
+                "provider": "",
+                "error": "empty_query",
+                "summary": "Search query is empty.",
+            }
+        text = text[:_MAX_QUERY_CHARS]
+        limit = max(3, min(8, int(max_results or 5)))
+        caller = getattr(self._port, "search_web", None)
+        if caller is None:
+            result: Mapping[str, Any] = {
+                "ok": False,
+                "available": False,
+                "provider": "none",
+                "error": "unavailable",
+                "results": [],
+            }
+        else:
+            try:
+                raw = await asyncio.wait_for(caller(text, limit), timeout=50.0)
+                result = raw if isinstance(raw, Mapping) else {
+                    "ok": False,
+                    "available": False,
+                    "provider": "none",
+                    "error": "invalid_response",
+                    "results": [],
+                }
+            except asyncio.TimeoutError:
+                result = {
+                    "ok": False,
+                    "available": False,
+                    "provider": "none",
+                    "error": "timeout",
+                    "results": [],
+                }
+            except Exception:
+                result = {
+                    "ok": False,
+                    "available": False,
+                    "provider": "none",
+                    "error": "search_failed",
+                    "results": [],
+                }
+
+        results = self._clean_results(result.get("results"))
+        provider = str(result.get("provider") or "none")[:80]
+        available = bool(result.get("available", True))
+        error = str(result.get("error") or "")[:120]
+        success = bool(result.get("ok")) or error == "no_results"
+        if success:
+            status = "ok" if results else "empty"
+            self._record("web.search", f"{len(results)} result(s)")
+            error = ""
+        else:
+            status = "error"
+            self._record("web.search.failed", error or "unknown")
+        self._web = {
+            "available": available,
+            "status": status,
+            "query": text,
+            "count": len(results),
+            "results": results,
+            "provider": provider,
+            "at": str(utc_now_iso()),
+            "error": error,
+            "fallback": bool(result.get("fallback")),
+        }
+        try:
+            self._port.record_event("web.search", str(len(results)))
+        except Exception:
+            self._degraded = True
+
+        if success:
+            summary = (
+                f'Web search for "{text[:80]}" returned {len(results)} result(s)'
+                f"{' via ' + provider if provider and provider != 'none' else ''}."
+            )
+            return {
+                "ok": True,
+                "status": status,
+                "query": text,
+                "count": len(results),
+                "results": results,
+                "provider": provider,
+                "fallback": bool(result.get("fallback")),
+                "summary": summary,
+            }
+        return {
+            "ok": False,
+            "status": "error",
+            "query": text,
+            "count": 0,
+            "results": [],
+            "provider": provider,
+            "error": error or "unavailable",
+            "summary": "Web search is unavailable right now.",
         }
 
 

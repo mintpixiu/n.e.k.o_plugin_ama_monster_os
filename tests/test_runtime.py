@@ -61,6 +61,24 @@ class FakePort:
         assert self.events is not None
         self.events.append(name)
 
+    async def search_web(self, query: str, max_results: int = 5) -> dict[str, Any]:
+        if self.fail:
+            raise RuntimeError("search unavailable")
+        return {
+            "ok": True,
+            "available": True,
+            "provider": "test-search",
+            "query": query,
+            "count": 1,
+            "results": [{
+                "title": "A test result",
+                "url": "https://example.com/page",
+                "snippet": "A small snippet.",
+                "domain": "example.com",
+            }],
+            "at": "2026-01-01T00:00:00Z",
+        }
+
     async def close(self) -> None:
         self.closed = True
 
@@ -137,3 +155,41 @@ def test_contract_validates() -> None:
     assert manifest["api_level"] == 1
     assert manifest["reserved"]
     assert manifest["entrypoints"]["context"] == "os_shell"
+    assert manifest["entrypoints"]["web_search"] == "ama_web_search"
+    assert "web.search" in manifest["capabilities"]
+    assert "web.fetch" in {item["id"] for item in manifest["reserved"]}
+
+
+def test_web_search_stores_last_result() -> None:
+    runtime = AmaOsRuntime(FakePort())
+
+    async def scenario() -> tuple[dict[str, Any], dict[str, Any]]:
+        found = await runtime.search_web("N.E.K.O 插件", 5)
+        snapshot = await runtime.snapshot()
+        return found, snapshot
+
+    found, snapshot = asyncio.run(scenario())
+
+    assert found["ok"] is True
+    assert found["count"] == 1
+    assert found["results"][0]["domain"] == "example.com"
+    assert snapshot["web"]["status"] == "ok"
+    assert snapshot["web"]["query"] == "N.E.K.O 插件"
+    assert snapshot["web"]["provider"] == "test-search"
+    assert [event["name"] for event in snapshot["events"]][-1] == "web.search"
+
+
+def test_web_search_rejects_empty_query() -> None:
+    runtime = AmaOsRuntime(FakePort())
+    result = asyncio.run(runtime.search_web("   ", 5))
+    assert result["ok"] is False
+    assert result["error"] == "empty_query"
+
+
+def test_web_search_failure_is_reported_without_crashing() -> None:
+    runtime = AmaOsRuntime(FakePort(fail=True))
+    result = asyncio.run(runtime.search_web("anything", 5))
+    snapshot = asyncio.run(runtime.snapshot())
+    assert result["ok"] is False
+    assert result["status"] == "error"
+    assert snapshot["web"]["status"] == "error"

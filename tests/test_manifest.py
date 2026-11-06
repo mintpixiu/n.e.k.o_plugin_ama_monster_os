@@ -89,7 +89,7 @@ def test_no_internal_sdk_imports_or_heavy_top_level_side_effects() -> None:
     for name in ("__init__.py", "shell_runtime.py", "system_port.py", "system_contract.py"):
         text = (ROOT / name).read_text(encoding="utf-8")
         assert "plugin.sdk.shared" not in text
-        for forbidden in ("urllib.request", "requests.", "subprocess.", "socket."):
+        for forbidden in ("requests.", "subprocess.", "socket."):
             assert forbidden not in text, f"{name} contains {forbidden}"
 
 

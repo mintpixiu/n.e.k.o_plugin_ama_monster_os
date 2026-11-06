@@ -26,11 +26,13 @@ CAPABILITY_ENVIRONMENT = "telemetry.environment"
 CAPABILITY_ACTIVITY = "activity.privacy"
 CAPABILITY_ACTIONS = "actions.invoke"
 CAPABILITY_EVENTS = "events.record"
+CAPABILITY_WEB_SEARCH = "web.search"
 HOSTED_CAPABILITIES = (
     CAPABILITY_ENVIRONMENT,
     CAPABILITY_ACTIVITY,
     CAPABILITY_ACTIONS,
     CAPABILITY_EVENTS,
+    CAPABILITY_WEB_SEARCH,
 )
 
 # These are deliberately declared, but not advertised as implemented yet.
@@ -58,6 +60,11 @@ RESERVED_SEAMS = (
         "summary": "Handoff to the host's speech input and voice output pipeline.",
     },
     {
+        "id": "web.fetch",
+        "state": "reserved",
+        "summary": "Read a specific page through an SSRF-safe URL policy and size limit.",
+    },
+    {
         "id": "module.registry",
         "state": "reserved",
         "summary": "Load additional OS modules beyond the preview shell.",
@@ -67,6 +74,7 @@ RESERVED_SEAMS = (
 ENTRYPOINTS = {
     "context": "os_shell",
     "pulse": "ama_pulse",
+    "web_search": "ama_web_search",
     "contract": "ama_system_contract",
 }
 
@@ -104,6 +112,13 @@ class SystemPort(Protocol):
 
     async def activity(self) -> Mapping[str, Any] | None:
         """Return privacy-filtered activity, or ``None`` when unavailable."""
+
+    async def search_web(self, query: str, max_results: int = 5) -> Mapping[str, Any]:
+        """Search the web for a user-entered query.
+
+        The provider owns the engine choice and must return only HTTP(S)
+        result URLs.  It must never fetch arbitrary result pages.
+        """
 
     def record_event(self, name: str, detail: str = "") -> None:
         """Record an event in the host journal.  Must never raise."""
@@ -165,7 +180,7 @@ def validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
     if not isinstance(entrypoints, dict):
         errors.append("entrypoints must be an object")
     else:
-        for key in ("context", "pulse", "contract"):
+        for key in ("context", "pulse", "web_search", "contract"):
             if not isinstance(entrypoints.get(key), str) or not entrypoints.get(key):
                 errors.append(f"entrypoints.{key} is missing")
     return errors
@@ -177,6 +192,7 @@ __all__ = [
     "CAPABILITY_ACTIVITY",
     "CAPABILITY_ENVIRONMENT",
     "CAPABILITY_EVENTS",
+    "CAPABILITY_WEB_SEARCH",
     "CONTRACT_ID",
     "CONTRACT_VERSION",
     "ENTRYPOINTS",

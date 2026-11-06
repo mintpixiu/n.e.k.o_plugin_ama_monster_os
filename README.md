@@ -1,7 +1,7 @@
 # N.E.K.O Ama Monster OS
 
-> **0.1.0 Beta** · a NEKO-styled shell window for Project N.E.K.O, with a
-> versioned system bridge reserved for a future standalone build.
+> **0.1.0 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
+> web search and a versioned system bridge reserved for a future standalone build.
 
 ![Ama Monster OS shell preview](docs/preview.png)
 
@@ -11,18 +11,39 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
 
 ## What is real in this version
 
-- A working Hosted TSX window: cat-ear title bar, Home/Core/Bridge/About views,
-  minimize, expand, sleep/wake, day/moon theme, and responsive layout.
+- A working Hosted TSX window: cat-ear title bar, Home/Web/Core/Bridge/About
+  views, minimize, expand, sleep/wake, day/moon theme, and responsive layout.
 - A live snapshot from the plugin: uptime, boot count, bridge health, host
   platform, Python/SDK versions, and privacy-filtered activity.
+- A **Web room** with live internet search, result cards, and links that open in
+  the user's browser.
 - A **Pulse check** action that calls the Python plugin and refreshes the
   context through the real Hosted UI bridge.
 - A stable, versioned contract (`ama.system.bridge` v1.0.0) and a `SystemPort`
   seam designed for the future built-in desktop app.
 - Eight locales: `en`, `es`, `ja`, `ko`, `pt`, `ru`, `zh-CN`, `zh-TW`.
 
+## Web search and internet access
+
+The Web room uses a two-step provider chain:
+
+1. **N.E.K.O `web_search`** when that built-in plugin is running. This keeps
+   the host's regional engine choice, caching, and retry policy.
+2. **Bing RSS fallback** using only the Python standard library when the host
+   plugin is stopped or unavailable.
+
+Only the query text leaves the plugin. The window never fetches an arbitrary
+URL, never follows a result page automatically, and never opens a link without
+a click. The fallback targets one fixed Bing RSS endpoint; result URLs are
+validated as `http`/`https` before they are rendered. Opening a result uses the
+official Hosted UI external-open bridge and leaves N.E.K.O for your browser.
+
+![Ama Monster OS web search](docs/preview-web.png)
+
 ## What is deliberately not here yet
 
+- A general browser or arbitrary-URL reader. This is a search room, not an
+  embedded Chromium.
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
@@ -49,6 +70,9 @@ AmaMonsterOsPlugin (__init__.py)
 AmaOsRuntime (shell_runtime.py)  ← no N.E.K.O imports
         │
 SystemPort (system_contract.py)
+        ├── environment / activity
+        ├── web.search
+        └── events
         │
 NekoHostSystemPort (system_port.py)   now
 DesktopSystemPort                      future built-in app
@@ -73,8 +97,10 @@ ama_monster_os/
 ├── docs/quickstart.md           user guide
 ├── docs/system-contract.md      future built-in integration guide
 ├── docs/system-contract.v1.schema.json
+├── docs/preview.png             shell preview
+├── docs/preview-web.png         web room preview
 ├── i18n/                       8 locale files
-└── tests/                      contract, runtime, manifest, i18n, UI checks
+└── tests/                      contract, runtime, web, manifest, i18n, UI checks
 ```
 
 ## Development

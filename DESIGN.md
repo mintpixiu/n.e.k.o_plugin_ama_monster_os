@@ -21,13 +21,16 @@ from the first version.
 
 ## First Version Scope
 
-- One real Hosted TSX window with title bar, sidebar navigation, Home/Core/Bridge/About views, minimize/expand/sleep states, and a working pulse action.
+- One real Hosted TSX window with title bar, sidebar navigation, Home/Web/Core/Bridge/About views, minimize/expand/sleep states, and a working pulse action.
+- A Web room that performs live internet searches, shows sanitized results, and opens result links through the Hosted UI external-open bridge.
+- A two-provider search chain: N.E.K.O `web_search` first, fixed Bing RSS fallback second.
 - Live, privacy-filtered bridge/telemetry snapshot from the plugin.
 - A versioned system contract (`ama.system.bridge` v1.0.0) and documented `SystemPort` seam for the future built-in app.
 - Eight locale files: `en`, `es`, `ja`, `ko`, `pt`, `ru`, `zh-CN`, `zh-TW`.
 
 ## Out of Scope
 
+- A general browser or arbitrary-URL reader; only search is implemented.
 - Native desktop windows, process control, filesystem browsing, voice pipeline, real chat/memory/tool/style modules.
 - Any claim that the preview is a complete operating system.
 - Publishing to the N.E.K.O Market. The repository owner publishes manually.
@@ -35,10 +38,12 @@ from the first version.
 ## Inferred Technical Needs
 - plugin.toml sections: `[plugin]`, `[plugin.author]`, `[plugin.sdk]`, `[plugin.i18n]`, `[plugin.ui]`, `[plugin_runtime]`
 - SDK surfaces: `NekoPluginBase`, `neko_plugin`, `plugin_entry`, `lifecycle`, `tr`, `ui.context`, `ui.action`, `get_os_activity_snapshot`
+- cross-plugin: `self.plugins.call_entry("web_search:search", ...)` when available
+- network fallback: fixed Bing RSS URL through stdlib `urllib.request`, executed via `asyncio.to_thread`
 - UI surfaces: one `panel` (`ui/panel.tsx`), one Markdown guide, one Markdown docs page
-- state/config: read-only snapshot; no persistent config in 0.1.0 Beta
+- state/config: read-only snapshot plus in-memory last search; no persistent config in 0.1.0 Beta
 - lifecycle/background work: startup/shutdown only; no timers or background tasks
-- external integrations: none; activity data comes from the host SDK's privacy-filtered snapshot
+- external integrations: N.E.K.O web search plugin and Bing RSS fallback
 
 ## Read Context Plan
 
@@ -57,6 +62,12 @@ plugins such as `lifekit` and `mcp_adapter`.
   contract are guaranteed reusable.
 - `get_os_activity_snapshot` may be unavailable on older hosts; the adapter
   degrades to `unavailable` rather than failing the UI.
+- Search depends on either the host `web_search` plugin or the fixed Bing RSS
+  endpoint. Users may be offline or blocked by the search provider; the window
+  reports that instead of fabricating results.
+- The Bing fallback is intentionally limited to one fixed endpoint and does not
+  follow result pages, which prevents arbitrary-URL SSRF but reduces quality
+  compared with the host's multi-engine search.
 - Window chrome controls are presentation state inside one hosted panel; they
   do not control the N.E.K.O application window.
 - Version `0.1.0-beta` is a pre-release; the user publishes manually with their

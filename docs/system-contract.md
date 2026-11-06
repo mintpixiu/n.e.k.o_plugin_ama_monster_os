@@ -34,6 +34,7 @@ class SystemPort(Protocol):
     def manifest(self) -> Mapping[str, Any]: ...
     async def environment(self) -> Mapping[str, Any]: ...
     async def activity(self) -> Mapping[str, Any] | None: ...
+    async def search_web(self, query: str, max_results: int = 5) -> Mapping[str, Any]: ...
     def record_event(self, name: str, detail: str = "") -> None: ...
     async def close(self) -> None: ...
 ```
@@ -74,6 +75,41 @@ Allowed `privacy` values: `visible`, `private`, `unavailable`. When the state is
 `private`, `category` and `idle_seconds` MUST be omitted or `null`. A future host
 must preserve this rule; the shell itself also drops them defensively.
 
+### `search_web()`
+
+Return a structured search result. The shipped adapter first calls the running
+N.E.K.O `web_search` plugin and falls back to a fixed Bing RSS endpoint:
+
+```json
+{
+  "ok": true,
+  "available": true,
+  "provider": "N.E.K.O web_search",
+  "query": "N.E.K.O 插件开发",
+  "count": 2,
+  "results": [
+    {
+      "title": "开发指南",
+      "url": "https://project-neko.online/zh-CN/guide",
+      "snippet": "N.E.K.O. Docs...",
+      "domain": "project-neko.online"
+    }
+  ],
+  "fallback": false,
+  "at": "2026-11-06T11:30:00Z"
+}
+```
+
+Rules:
+
+- Send only the query text. Do not auto-fetch a result URL, follow redirects
+  recursively, or open a browser tab.
+- Result URLs MUST be `http` or `https`; reject everything else.
+- Treat titles/snippets as untrusted external text; strip HTML and clamp size.
+- The fallback endpoint is fixed in code. Do not accept a user-supplied URL.
+- `available: false` means the shell should show an offline state, not fake
+  results.
+
 ### `record_event()`
 
 Best-effort host journal. It must never raise. A failing journal must not break
@@ -99,7 +135,8 @@ Release provider resources. Must be idempotent.
     "telemetry.environment",
     "activity.privacy",
     "actions.invoke",
-    "events.record"
+    "events.record",
+    "web.search"
   ],
   "reserved": [
     {
@@ -111,6 +148,7 @@ Release provider resources. Must be idempotent.
   "entrypoints": {
     "context": "os_shell",
     "pulse": "ama_pulse",
+    "web_search": "ama_web_search",
     "contract": "ama_system_contract"
   }
 }
@@ -132,6 +170,7 @@ Modes:
 | `process.supervision` | reserved | Start/stop/health-check companion processes with consent. |
 | `vault.storage` | reserved | User-scoped settings and secrets from the desktop vault. |
 | `voice.pipeline` | reserved | Speech input/output handoff. |
+| `web.fetch` | reserved | Read a specific page with an SSRF-safe URL policy and size limit. |
 | `module.registry` | reserved | Additional OS modules beyond the preview. |
 
 A reserved seam is declared, not implemented. A provider must not advertise a
@@ -145,8 +184,8 @@ capability it cannot serve.
 4. Render `runtime.snapshot()` in an equivalent shell view. The current TSX is
    written against the Hosted UI bridge; a desktop build can reuse the visual
    design, but must provide its own renderer or bundle.
-5. Call `runtime.pulse()` for the pulse button and `runtime.contract()` for the
-   bridge page.
+5. Call `runtime.pulse()` for the pulse button, `runtime.search_web(query)` for
+   the Web room, and `runtime.contract()` for the bridge page.
 6. Call `await runtime.stop()` before exiting.
 7. Keep `contract_version` at `1.0.0` for additions that do not break v1. Bump
    the major version and update the schema for breaking changes.
@@ -172,5 +211,6 @@ The shipped tests cover:
 - manifest validation and reserved ids;
 - `SystemPort` protocol conformance of the N.E.K.O adapter shape;
 - private activity not leaking category/idle time;
-- runtime boot, pulse, shutdown, and degraded-host behaviour;
+- RSS parsing, URL validation, HTML stripping, and dotted-acronym query fallback;
+- runtime boot, pulse, web search, shutdown, and degraded-host behaviour;
 - serializability of the complete snapshot.

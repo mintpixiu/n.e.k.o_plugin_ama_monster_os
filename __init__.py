@@ -36,6 +36,24 @@ CONTRACT_SCHEMA: dict[str, Any] = {
     "required": [],
 }
 
+WEB_SEARCH_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "query": {
+            "type": "string",
+            "description": "Search query. Keep the user's original language; do not translate it.",
+        },
+        "max_results": {
+            "type": "integer",
+            "minimum": 3,
+            "maximum": 8,
+            "default": 5,
+            "description": "Number of results to request (3-8).",
+        },
+    },
+    "required": ["query"],
+}
+
 
 @neko_plugin
 class AmaMonsterOsPlugin(NekoPluginBase):
@@ -105,6 +123,43 @@ class AmaMonsterOsPlugin(NekoPluginBase):
     )
     async def ama_pulse(self, **_):
         result = await self._runtime.pulse()
+        return Ok(result)
+
+    @ui.action(
+        id="ama_web_search",
+        label=tr("actions.web_search.label", default="Web search"),
+        icon="search",
+        tone="primary",
+        order=20,
+        refresh_context=True,
+    )
+    @plugin_entry(
+        id="ama_web_search",
+        name=tr("entries.web_search.name", default="Web search"),
+        description=tr(
+            "entries.web_search.description",
+            default="Search the web through the host's search service, with a direct fallback.",
+        ),
+        input_schema=WEB_SEARCH_SCHEMA,
+        llm_result_fields=["summary"],
+        timeout=60,
+    )
+    async def ama_web_search(self, query: Any = "", max_results: Any = 5, **_):
+        if not isinstance(query, str) or not query.strip():
+            return Ok({
+                "ok": False,
+                "status": "error",
+                "query": "",
+                "count": 0,
+                "results": [],
+                "error": "empty_query",
+                "summary": self.i18n.t("web.emptyQuery", default="Search query is empty."),
+            })
+        try:
+            limit = int(max_results)
+        except (TypeError, ValueError):
+            limit = 5
+        result = await self._runtime.search_web(query, limit)
         return Ok(result)
 
     # ------------------------------------------------------------------

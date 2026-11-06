@@ -1,7 +1,7 @@
-import { useState } from "@neko/plugin-ui"
+import { FileDownload, useState } from "@neko/plugin-ui"
 import type { HostedAction, PluginSurfaceProps } from "@neko/plugin-ui"
 
-type ViewId = "home" | "core" | "bridge" | "about"
+type ViewId = "home" | "web" | "core" | "bridge" | "about"
 type ChromeMode = "normal" | "max" | "min" | "asleep"
 type ThemeMode = "light" | "dark"
 
@@ -56,6 +56,25 @@ type PulseInfo = {
   server_ms?: number
 }
 
+type WebResult = {
+  title?: string
+  url?: string
+  snippet?: string
+  domain?: string
+}
+
+type WebInfo = {
+  available?: boolean
+  status?: string
+  query?: string
+  count?: number
+  results?: WebResult[]
+  provider?: string
+  at?: string | null
+  error?: string
+  fallback?: boolean
+}
+
 type BootEvent = { name?: string; at?: string; detail?: string }
 
 type ShellState = {
@@ -65,14 +84,17 @@ type ShellState = {
   bridge?: BridgeInfo
   telemetry?: TelemetryInfo
   pulse?: PulseInfo
+  web?: WebInfo
   events?: BootEvent[]
   preview?: boolean
 }
 
 type PulseStatus = "idle" | "running" | "success" | "error"
+type WebStatus = "idle" | "searching" | "success" | "empty" | "error"
 
 const VIEWS: Array<{ id: ViewId; key: string; glyph: string }> = [
   { id: "home", key: "nav.home", glyph: "⌂" },
+  { id: "web", key: "nav.web", glyph: "◎" },
   { id: "core", key: "nav.core", glyph: "✦" },
   { id: "bridge", key: "nav.bridge", glyph: "⇄" },
   { id: "about", key: "nav.about", glyph: "♡" },
@@ -109,6 +131,20 @@ function safeStringArray(value: any): string[] {
 function moduleTone(tone?: string): string {
   if (tone === "peach" || tone === "mint" || tone === "lilac" || tone === "sky") return tone
   return "sky"
+}
+
+function isHttpUrl(value: any): boolean {
+  if (typeof value !== "string" || value.length > 2048) return false
+  return /^https?:\/\//i.test(value.trim())
+}
+
+function webDomain(result: WebResult): string {
+  if (result.domain) return result.domain
+  try {
+    return new URL(String(result.url || "")).hostname.replace(/^www\./, "")
+  } catch (_error) {
+    return ""
+  }
 }
 
 const STYLES = `
@@ -609,6 +645,124 @@ const STYLES = `
 .ama-code { max-height: 210px; overflow: auto; margin: 8px 0 0; padding: 11px; border: 1px solid var(--line); border-radius: 11px; background: var(--code-bg); color: var(--ink-soft); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 8.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .ama-details { margin-top: 8px; }
 .ama-details summary { cursor: pointer; color: var(--sky-deep); font-size: 9.5px; font-weight: 750; }
+.ama-web-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 88% 14%, rgba(255, 183, 210, 0.16), transparent 27%),
+    linear-gradient(140deg, var(--hero-1), var(--hero-2));
+}
+.ama-web-hero::after {
+  content: "";
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  right: -90px;
+  bottom: -120px;
+  border-radius: 50%;
+  border: 1px dashed var(--line-strong);
+  pointer-events: none;
+}
+.ama-web-form {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 7px;
+  align-items: stretch;
+  margin-top: 14px;
+}
+.ama-web-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--paper);
+  box-shadow: 0 5px 16px rgba(58, 146, 197, 0.06);
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.ama-web-input-wrap:focus-within { border-color: var(--sky); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sky) 15%, transparent); }
+.ama-web-glyph { flex: 0 0 auto; color: var(--sky-deep); font-size: 17px; line-height: 1; }
+.ama-web-input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+}
+.ama-web-input::placeholder { color: var(--muted); }
+.ama-web-submit { flex: 0 0 auto; min-width: 78px; }
+.ama-web-suggestions { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 10px; }
+.ama-web-suggestions-label { color: var(--muted); font-size: 8.5px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.ama-web-chip {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--card);
+  color: var(--muted);
+  font: inherit;
+  font-size: 8.5px;
+  cursor: pointer;
+  transition: border-color .16s ease, color .16s ease, background .16s ease;
+}
+.ama-web-chip:hover { border-color: var(--sky); background: var(--sky-soft); color: var(--sky-deep); }
+.ama-web-note { position: relative; z-index: 1; margin: 11px 0 0; color: var(--muted); font-size: 8.5px; line-height: 1.55; }
+.ama-web-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin: 12px 1px 7px; min-height: 18px; color: var(--muted); font-size: 9px; }
+.ama-web-meta strong { color: var(--ink-soft); font-weight: 800; }
+.ama-web-meta .ama-badge { margin-left: auto; }
+.ama-web-list { display: grid; gap: 7px; }
+.ama-web-result {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--card);
+  transition: border-color .16s ease, transform .16s ease;
+}
+.ama-web-result:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.ama-web-rank { display: grid; place-items: center; align-self: start; width: 24px; height: 24px; border-radius: 8px; background: var(--panel-2); color: var(--sky-deep); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 9px; font-weight: 800; }
+.ama-web-result-body { min-width: 0; }
+.ama-web-result-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ama-web-domain { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--sky-deep); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 8px; font-weight: 750; }
+.ama-web-result-title { margin: 4px 0 0; font-size: 12px; font-weight: 800; line-height: 1.4; overflow-wrap: anywhere; }
+.ama-web-snippet { margin: 4px 0 0; color: var(--muted); font-size: 9.5px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ama-web-actions { display: flex; align-items: center; gap: 7px; margin-top: 7px; min-width: 0; }
+.ama-web-url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 8px; opacity: .8; }
+.ama-web-open.neko-button, .ama-web-open.neko-download {
+  flex: 0 0 auto;
+  min-height: 0;
+  padding: 4px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--sky-soft);
+  color: var(--sky-deep);
+  box-shadow: none;
+  font: inherit;
+  font-size: 8.5px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+.ama-web-open.neko-button:hover, .ama-web-open.neko-download:hover { background: var(--hover); color: var(--sky-deep); }
+.ama-web-state { display: grid; place-items: center; min-height: 170px; padding: 24px; text-align: center; border: 1px dashed var(--line-strong); border-radius: 15px; background: var(--panel-2); }
+.ama-web-state-glyph { display: grid; place-items: center; width: 45px; height: 45px; border-radius: 14px; background: var(--sky-soft); color: var(--sky-deep); font-size: 21px; }
+.ama-web-state h3 { margin: 10px 0 3px; font-size: 13px; }
+.ama-web-state p { max-width: 350px; margin: 0; color: var(--muted); font-size: 9.5px; line-height: 1.6; }
+.ama-web-state.is-error .ama-web-state-glyph { background: color-mix(in srgb, var(--error) 12%, transparent); color: var(--error); }
+.ama-web-spinner { width: 20px; height: 20px; border: 2px solid var(--line-strong); border-top-color: var(--sky); border-radius: 50%; animation: ama-spin .8s linear infinite; }
+.ama-web-provider { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px; border-radius: 6px; background: var(--panel-2); color: var(--muted); font-size: 8px; font-weight: 700; }
+.ama-web-provider.is-fallback { color: var(--peach-ink); background: color-mix(in srgb, var(--peach) 22%, transparent); }
 .ama-boot-list { display: grid; gap: 1px; margin-top: 4px; }
 .ama-boot-row { display: grid; grid-template-columns: 50px 6px minmax(0, 1fr); align-items: center; gap: 7px; padding: 4px 0; font-size: 9px; }
 .ama-boot-time { color: var(--muted); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 8px; }
@@ -693,6 +847,7 @@ const STYLES = `
 @keyframes ama-twinkle { 0%, 100% { opacity: .35; transform: scale(.92); } 50% { opacity: .95; transform: scale(1.08); } }
 @keyframes ama-drift { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(10px); } }
 @keyframes ama-blink { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+@keyframes ama-spin { to { transform: rotate(360deg); } }
 @media (max-width: 980px) {
   .ama-columns, .ama-split { grid-template-columns: 1fr; }
   .ama-hero { grid-template-columns: minmax(0, 1fr) 180px; }
@@ -719,6 +874,10 @@ const STYLES = `
   .ama-cat { transform: scale(.74); }
   .ama-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ama-module-grid { grid-template-columns: 1fr; }
+  .ama-web-form { flex-direction: column; }
+  .ama-web-submit { min-height: 38px; }
+  .ama-web-result { grid-template-columns: 22px minmax(0, 1fr); gap: 7px; padding: 10px; }
+  .ama-web-rank { width: 21px; height: 21px; }
   .ama-about-card { grid-template-columns: 1fr; gap: 4px; }
   .ama-about-orb { min-height: 150px; }
   .ama-view-title { font-size: 23px; }
@@ -750,6 +909,8 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const bridge = safeState.bridge || {}
   const telemetry = safeState.telemetry || {}
   const pulseInfo = safeState.pulse || {}
+  const webInfo = safeState.web || {}
+  const initialWebResults = Array.isArray(webInfo.results) ? webInfo.results : []
   const modules = Array.isArray(safeState.modules) ? safeState.modules : []
   const events = Array.isArray(safeState.events) ? safeState.events.slice(-5) : []
   const capabilities = safeStringArray(bridge.capabilities)
@@ -760,6 +921,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
+  const webSearchAction = actionById(actions || [], "ama_web_search")
 
   const [view, setView] = props.useLocalState<ViewId>("ama.view", "home")
   const [chrome, setChrome] = props.useLocalState<ChromeMode>("ama.chrome", "normal")
@@ -769,13 +931,27 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     message: "",
   })
   const [refreshing, setRefreshing] = useState(false)
+  const [webQuery, setWebQuery] = useState(String(webInfo.query || ""))
+  const [webResults, setWebResults] = useState<WebResult[]>(initialWebResults)
+  const [webProvider, setWebProvider] = useState(String(webInfo.provider || ""))
+  const [webFallback, setWebFallback] = useState(Boolean(webInfo.fallback))
+  const [webStatus, setWebStatus] = useState<WebStatus>(
+    webInfo.status === "error"
+      ? "error"
+      : initialWebResults.length > 0
+        ? "success"
+        : webInfo.status === "empty"
+          ? "empty"
+          : "idle",
+  )
+  const [webMessage, setWebMessage] = useState("")
 
   const tr = (key: string, fallback: string): string => {
     const value = t(key)
     return value && value !== key ? value : fallback
   }
 
-  const validViews: ViewId[] = ["home", "core", "bridge", "about"]
+  const validViews: ViewId[] = ["home", "web", "core", "bridge", "about"]
   const activeView: ViewId = validViews.indexOf(view) >= 0 ? view : "home"
   const validChrome: ChromeMode[] = ["normal", "max", "min", "asleep"]
   const activeChrome: ChromeMode = validChrome.indexOf(chrome) >= 0 ? chrome : "normal"
@@ -822,6 +998,15 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setTheme(activeTheme === "dark" ? "light" : "dark")
   }
 
+  function currentWebQuery(): string {
+    try {
+      const input = document.querySelector(".ama-web-input") as HTMLInputElement | null
+      return input && typeof input.value === "string" ? input.value : webQuery
+    } catch (_error) {
+      return webQuery
+    }
+  }
+
   async function runPulse() {
     if (!pulseAction || pulse.status === "running") {
       setPulse({
@@ -866,6 +1051,62 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     }
   }
 
+  async function runWebSearch(rawQuery?: string) {
+    const query = String(rawQuery ?? webQuery).trim()
+    if (!query) {
+      setWebStatus("error")
+      setWebMessage(tr("web.emptyQuery", "Type something to search."))
+      return
+    }
+    if (!webSearchAction) {
+      setWebStatus("error")
+      setWebMessage(tr("web.offline", "Search is unavailable right now."))
+      return
+    }
+    setWebQuery(query)
+    setWebStatus("searching")
+    setWebMessage(tr("web.searching", "Searching..."))
+    try {
+      const result = unwrapResult(
+        await props.api.call(
+          webSearchAction.id || "ama_web_search",
+          { query, max_results: 5 },
+          { timeoutMs: 60000 },
+        ),
+      )
+      if (result.ok === false) {
+        const error = String(result.error || "")
+        setWebResults([])
+        setWebProvider(String(result.provider || ""))
+        setWebFallback(Boolean(result.fallback))
+        setWebStatus("error")
+        setWebMessage(
+          error === "empty_query"
+            ? tr("web.emptyQuery", "Type something to search.")
+            : error === "unavailable"
+              ? tr("web.offline", "Search is unavailable right now.")
+              : tr("web.error", "Search failed. Check your connection or the web_search plugin."),
+        )
+        return
+      }
+      const results = Array.isArray(result.results) ? result.results : []
+      setWebResults(results)
+      setWebProvider(String(result.provider || ""))
+      setWebFallback(Boolean(result.fallback))
+      setWebStatus(results.length > 0 ? "success" : "empty")
+      setWebMessage(results.length > 0 ? "" : tr("web.empty", "No results. Try a shorter or different query."))
+      try {
+        await props.api.refresh()
+      } catch (_error) {
+        // The search result is already in hand; a context refresh failure is not a search failure.
+      }
+    } catch (_error) {
+      setWebResults([])
+      setWebStatus("error")
+      setWebMessage(tr("web.error", "Search failed. Check your connection or the web_search plugin."))
+    }
+  }
+
   function bootLabel(name?: string): string {
     if (!name) return tr("boot.unknown", "System event")
     const value = t(`boot.${name}`)
@@ -894,6 +1135,19 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     bridge.health === "degraded" ? tr("bridge.degraded", "Degraded") : tr("bridge.ready", "Ready")
   const uptimeValue = formatUptime(Number(shell.uptime_seconds) || 0)
   const pulseValue = String(pulseCount)
+  const webCount = webResults.length
+  const webReady = webInfo.available !== false
+  const webProviderLabel =
+    webFallback || webProvider === "Bing RSS"
+      ? tr("web.fallback", "Bing RSS fallback")
+      : webProvider === "N.E.K.O web_search"
+        ? tr("web.viaNeko", "via N.E.K.O web_search")
+        : webProvider
+  const webSuggestions: string[] = [
+    tr("web.suggestions.docs", "N.E.K.O plugin documentation"),
+    tr("web.suggestions.news", "technology news today"),
+    tr("web.suggestions.ama", "Ama Monster OS N.E.K.O"),
+  ]
 
   const nav = VIEWS.map((item) => (
     <button
@@ -1057,7 +1311,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       {bridgeRows}
       {capabilities.length > 0 ? (
         <div className="ama-chips">
-          {capabilities.slice(0, 4).map((capability) => <span className="ama-chip" key={capability}>{capability}</span>)}
+          {capabilities.slice(0, 5).map((capability) => <span className="ama-chip" key={capability}>{capability}</span>)}
         </div>
       ) : null}
     </section>
@@ -1113,6 +1367,9 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           <button type="button" className="ama-btn ama-btn-ghost" onClick={refreshShell} disabled={refreshing} aria-busy={refreshing}>
             <span aria-hidden="true">↺</span>{tr("refresh.label", "Refresh")}
           </button>
+          <button type="button" className="ama-btn ama-btn-ghost" onClick={() => changeView("web")}>
+            <span aria-hidden="true">◎</span>{tr("web.title", "Web room")}
+          </button>
         </div>
         <p className={`ama-pulse-line${pulse.status === "success" ? " is-success" : pulse.status === "error" ? " is-error" : pulse.status === "running" ? " is-running" : ""}`} aria-live="polite">
           <span className="ama-pulse-dot" />{pulseMessage}
@@ -1134,6 +1391,132 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           {bridgePanel}
         </div>
       </div>
+    </>
+  )
+
+  const webView = (
+    <>
+      <div className="ama-view-head">
+        <div>
+          <div className="ama-kicker"><span className="ama-kicker-line" />{tr("web.kicker", "NETWORK")}</div>
+          <h1 className="ama-view-title">{tr("web.title", "Web room")}</h1>
+          <p className="ama-view-sub">{tr("web.subtitle", "A tiny internet window for Ama. Search without leaving the shell.")}</p>
+        </div>
+        <span className={`ama-badge ${webReady ? "is-mint" : "is-peach"}`}>
+          {webReady ? tr("web.ready", "Search ready") : tr("web.offline", "Search is unavailable right now.")}
+        </span>
+      </div>
+      <section className="ama-web-hero">
+        <div className="ama-web-form">
+          <div
+            className="ama-web-input-wrap"
+            onKeyDown={(event: any) => {
+              if (event.key === "Enter") {
+                event.preventDefault()
+                runWebSearch(currentWebQuery())
+              }
+            }}
+          >
+            <span className="ama-web-glyph" aria-hidden="true">⌕</span>
+            <input
+              className="ama-web-input"
+              type="search"
+              value={webQuery}
+              maxLength={200}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={tr("web.placeholder", "Search the internet...")}
+              aria-label={tr("web.placeholder", "Search the internet...")}
+              onChange={(event: any) => setWebQuery(event.target.value)}
+            />
+          </div>
+          <button
+            type="button"
+            className="ama-btn ama-btn-primary ama-web-submit"
+            disabled={webStatus === "searching"}
+            aria-busy={webStatus === "searching"}
+            onClick={() => runWebSearch(currentWebQuery())}
+          >
+            {webStatus === "searching" ? tr("web.searching", "Searching...") : tr("web.search", "Search")}
+          </button>
+        </div>
+        <div className="ama-web-suggestions">
+          <span className="ama-web-suggestions-label">{tr("web.suggestionsLabel", "Try")}</span>
+          {webSuggestions.map((suggestion) => (
+            <button
+              type="button"
+              className="ama-web-chip"
+              key={suggestion}
+              onClick={() => runWebSearch(suggestion)}
+            >{suggestion}</button>
+          ))}
+        </div>
+        <p className="ama-web-note">{tr("web.privacy", "Only the query leaves this window. No page is fetched automatically; opening a result uses your browser.")}</p>
+      </section>
+
+      {webCount > 0 ? (
+        <div className="ama-web-meta">
+          <strong>{tr("web.results", "{count} results").replace("{count}", String(webCount))}</strong>
+          {webProviderLabel ? (
+            <span className={`ama-web-provider${webFallback || webProvider === "Bing RSS" ? " is-fallback" : ""}`}>
+              {webProviderLabel}
+            </span>
+          ) : null}
+          <span className="ama-badge is-muted">{tr("web.ready", "Search ready")}</span>
+        </div>
+      ) : null}
+
+      {webStatus === "searching" ? (
+        <div className="ama-web-state" role="status">
+          <div className="ama-web-spinner" aria-hidden="true" />
+          <h3>{tr("web.searching", "Searching...")}</h3>
+          <p>{tr("web.privacy", "Only the query leaves this window. No page is fetched automatically; opening a result uses your browser.")}</p>
+        </div>
+      ) : webStatus === "error" ? (
+        <div className="ama-web-state is-error" role="alert">
+          <div className="ama-web-state-glyph" aria-hidden="true">!</div>
+          <h3>{tr("web.title", "Web room")}</h3>
+          <p>{webMessage || tr("web.error", "Search failed. Check your connection or the web_search plugin.")}</p>
+        </div>
+      ) : webStatus === "empty" ? (
+        <div className="ama-web-state">
+          <div className="ama-web-state-glyph" aria-hidden="true">⌕</div>
+          <h3>{tr("web.empty", "No results. Try a shorter or different query.")}</h3>
+          <p>{tr("web.sourceNote", "Results are third-party content. Opening one leaves N.E.K.O.")}</p>
+        </div>
+      ) : webResults.length === 0 ? (
+        <div className="ama-web-state">
+          <div className="ama-web-state-glyph" aria-hidden="true">◎</div>
+          <h3>{tr("web.ready", "Search ready")}</h3>
+          <p>{tr("web.subtitle", "A tiny internet window for Ama. Search without leaving the shell.")}</p>
+        </div>
+      ) : (
+        <div className="ama-web-list">
+          {webResults.map((result, index) => (
+            <article className="ama-web-result" key={`${result.url || result.title || "result"}-${index}`}>
+              <div className="ama-web-rank" aria-hidden="true">{String(index + 1).padStart(2, "0")}</div>
+              <div className="ama-web-result-body">
+                <div className="ama-web-result-top">
+                  <span className="ama-web-domain">{webDomain(result) || "web"}</span>
+                </div>
+                <h3 className="ama-web-result-title">{String(result.title || result.url || "")}</h3>
+                {result.snippet ? <p className="ama-web-snippet">{String(result.snippet)}</p> : null}
+                <div className="ama-web-actions">
+                  {isHttpUrl(result.url) ? (
+                    <FileDownload
+                      href={String(result.url)}
+                      label={tr("web.open", "Open")}
+                      className="ama-web-open"
+                    />
+                  ) : null}
+                  <span className="ama-web-url">{String(result.url || "")}</span>
+                </div>
+              </div>
+            </article>
+          ))}
+          <p className="ama-web-note">{tr("web.sourceNote", "Results are third-party content. Opening one leaves N.E.K.O.")}</p>
+        </div>
+      )}
     </>
   )
 
@@ -1265,7 +1648,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     </>
   )
 
-  const content = activeView === "core" ? coreView : activeView === "bridge" ? bridgeView : activeView === "about" ? aboutView : homeView
+  const content = activeView === "web" ? webView : activeView === "core" ? coreView : activeView === "bridge" ? bridgeView : activeView === "about" ? aboutView : homeView
 
   const footer = (
     <footer className="ama-footer">

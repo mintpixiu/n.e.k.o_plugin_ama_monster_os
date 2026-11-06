@@ -44,10 +44,11 @@
     "entrypoints": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["context", "pulse", "contract"],
+      "required": ["context", "pulse", "web_search", "contract"],
       "properties": {
         "context": { "type": "string", "minLength": 1 },
         "pulse": { "type": "string", "minLength": 1 },
+        "web_search": { "type": "string", "minLength": 1 },
         "contract": { "type": "string", "minLength": 1 }
       }
     }
