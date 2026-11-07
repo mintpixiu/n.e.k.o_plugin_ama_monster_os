@@ -91,9 +91,21 @@ type SteamPrice = {
     date?: string
     currency?: string
   }
+  cn?: SteamCNPrice
   gap_to_low?: string
   is_at_low?: boolean
   source?: string
+}
+
+type SteamCNPrice = {
+  available?: boolean
+  currency?: string
+  price?: string
+  initial?: string
+  discount_percent?: number
+  formatted?: string
+  source?: string
+  reason?: string
 }
 
 type SteamInfo = {
@@ -921,6 +933,9 @@ const STYLES = `
 .ama-deal-price-row { display: flex; align-items: baseline; gap: 7px; margin-top: 6px; }
 .ama-deal-price-row strong { color: var(--sky-deep); font-size: 17px; font-weight: 900; letter-spacing: -.03em; }
 .ama-deal-price-row s { color: var(--muted); font-size: 9px; }
+.ama-deal-cn { display: flex; align-items: baseline; gap: 5px; margin-top: 3px; color: var(--peach-ink); font-size: 8px; }
+.ama-deal-cn strong { font-size: 11px; font-weight: 850; }
+.ama-deal-cn small { color: var(--muted); font-size: 7.5px; }
 .ama-deal-meta { display: grid; gap: 2px; margin-top: 7px; padding-top: 7px; border-top: 1px dashed var(--line); color: var(--muted); font-size: 8px; }
 .ama-deal-meta span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ama-deal-actions { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 8px; }
@@ -955,11 +970,12 @@ const STYLES = `
 .ama-steam-title { margin: 3px 0 0; font-size: 13px; font-weight: 850; line-height: 1.35; overflow-wrap: anywhere; }
 .ama-steam-low { flex: 0 0 auto; padding: 3px 7px; border-radius: 999px; background: var(--panel-2); color: var(--muted); font-size: 8px; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
 .ama-steam-low.is-low { background: color-mix(in srgb, var(--mint) 30%, transparent); color: var(--mint-ink); }
-.ama-steam-prices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 11px; }
+.ama-steam-prices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 11px; }
 .ama-steam-price { min-width: 0; padding: 8px; border-radius: 9px; background: var(--panel-2); }
 .ama-steam-price > span { display: block; color: var(--muted); font-size: 8px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ama-steam-price > strong { display: block; margin-top: 3px; color: var(--ink); font-size: 14px; font-weight: 850; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ama-steam-price.is-low > strong { color: var(--mint-ink); }
+.ama-steam-price.is-cn > strong { color: var(--peach-ink); }
 .ama-steam-price > small { display: block; margin-top: 2px; color: var(--muted); font-size: 7.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ama-steam-meta { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 9px; padding-top: 8px; border-top: 1px dashed var(--line); color: var(--muted); font-size: 8px; }
 .ama-steam-meta span { white-space: nowrap; }
@@ -2065,6 +2081,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           ))}
         </div>
         <p className="ama-web-note">{tr("steam.sourceNote", "Prices come from CheapShark in USD.")}</p>
+        <p className="ama-web-note">{tr("steam.cn.note", "CN prices are current Steam China store prices in CNY, not historical lows.")}</p>
       </section>
 
       {steamCount > 0 ? (
@@ -2131,6 +2148,15 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                     <span>{tr("steam.gap", "Above low")}</span>
                     <strong>{usdGap(game.gap_to_low)}</strong>
                     <small>{tr("steam.currency", "Currency")} USD</small>
+                  </div>
+                  <div className="ama-steam-price is-cn">
+                    <span>{tr("steam.cn.price", "CN price")}</span>
+                    <strong>{game.cn?.available ? (game.cn.formatted || (game.cn.price ? `¥ ${game.cn.price}` : "—")) : "—"}</strong>
+                    <small>
+                      {game.cn?.available
+                        ? (Number(game.cn.discount_percent) > 0 ? `-${Number(game.cn.discount_percent)}%` : tr("steam.cn.store", "Steam CN"))
+                        : tr("steam.cn.unavailable", "No CN price")}
+                    </small>
                   </div>
                 </div>
                 <div className="ama-steam-meta">
@@ -2208,6 +2234,11 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                         <strong>{usd(current.price)}</strong>
                         <s>{usd(current.retail_price)}</s>
                       </div>
+                      <div className="ama-deal-cn">
+                        <span>{tr("steam.cn.price", "CN price")}</span>
+                        <strong>{deal.cn?.available ? (deal.cn.formatted || (deal.cn.price ? `¥ ${deal.cn.price}` : "—")) : tr("steam.cn.unavailable", "No CN price")}</strong>
+                        {deal.cn?.available && Number(deal.cn.discount_percent) > 0 ? <small>-{Number(deal.cn.discount_percent)}%</small> : null}
+                      </div>
                       <div className="ama-deal-meta">
                         <span>{tr("steam.deals.rating", "Rating")} {Number(deal.deal_rating) || 0}/10{steamPercent ? ` · ${steamPercent}%` : ""}</span>
                         <span>{isLow ? tr("steam.deals.atLow", "At the low") : `${tr("steam.deals.nearLow", "Gap to low")} ${usdGap(deal.gap_to_low)}`}</span>
@@ -2225,6 +2256,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
               </div>
             )}
             <p className="ama-sale-source">{tr("steam.deals.source", "Source: CheapShark · USD")}</p>
+            <p className="ama-sale-source">{tr("steam.cn.note", "CN prices are current Steam China store prices in CNY, not historical lows.")}</p>
           </section>
 
           <section className="ama-free-section">

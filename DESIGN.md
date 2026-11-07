@@ -23,8 +23,9 @@ from the first version.
 
 - One real Hosted TSX window with title bar, sidebar navigation, Home/Web/Core/Bridge/About views, minimize/expand/sleep states, and a working pulse action.
 - A Web room that performs live internet searches, shows sanitized results, and opens result links through the Hosted UI external-open bridge.
-- A Steam price room using CheapShark for current lowest price, all-time low, low date, gap, and discount; USD only.
-- A Steam sale-picks tab with high-discount, well-rated games, historical lows, and a light-hearted hoard flag.
+- A Steam price room using CheapShark for global current lowest price, all-time low, low date, gap, and discount; USD only for the global data.
+- A Steam China current-price lookup from the official Steam Store API (`cc=cn`, CNY). It is explicitly current, not a CN historical low.
+- A Steam sale-picks tab with high-discount, well-rated games, historical lows, CN prices, and a light-hearted hoard flag.
 - A curated, versioned free-to-play shelf with fixed Steam store links.
 - A versioned Steam sale calendar snapshot sourced from Steamworks, with current/next event, next seasonal sale, local countdowns, and an official schedule link.
 - A two-provider search chain: N.E.K.O `web_search` first, fixed Bing RSS fallback second.
@@ -47,6 +48,7 @@ from the first version.
 - cross-plugin: `self.plugins.call_entry("web_search:search", ...)` when available
 - network fallback: fixed Bing RSS URL through stdlib `urllib.request`, executed via `asyncio.to_thread`
 - price data: fixed CheapShark API URLs through stdlib `urllib.request`; USD only
+- CN current price: fixed Steam Store `appdetails` endpoint with `cc=cn` and `filters=price_overview`; CNY only
 - sale picks: fixed CheapShark deals endpoint, filtered and enriched; no paid placement
 - free shelf: versioned `steam_catalog.py` list of permanently free titles
 - sale calendar: versioned `steam_sales.py` snapshot from Steamworks; dates shown in local time; Valve can change them
@@ -83,6 +85,8 @@ plugins such as `lifekit` and `mcp_adapter`.
   states this plainly; no fake login is included.
 - CheapShark prices are USD and its all-time low is cross-store, not an official
   Steam regional low. The UI carries both labels.
+- Steam China prices are current prices in CNY from Valve's store API, not CN
+  historical lows. No SteamDB scraping or password is used.
 - Sale picks are editorial: discount and rating filters, not paid placements.
   The hoard flag is a joke, not a guarantee that a game is worth owning.
 - The free shelf is a static snapshot of permanently free titles, not a

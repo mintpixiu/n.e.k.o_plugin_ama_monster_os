@@ -56,6 +56,7 @@ except ImportError:  # pragma: no cover - direct test import fallback
 
 _BING_RSS = "https://www.bing.com/search"
 _CHEAPSHARK_API = "https://www.cheapshark.com/api/1.0"
+_STEAM_CN_API = "https://store.steampowered.com/api/appdetails"
 _MAX_QUERY_CHARS = 200
 _MAX_PRICE_QUERY_CHARS = 100
 _MAX_HTTP_BYTES = 512 * 1024
@@ -362,6 +363,7 @@ def _search_cheapshark_sync(
         if entry is not None:
             results.append(entry)
 
+    _attach_cn_prices(results)
     return {
         "ok": bool(results),
         "available": True,
@@ -513,6 +515,7 @@ def _fetch_steam_deals_sync(limit: int) -> dict[str, Any]:
             "source": "CheapShark",
         })
 
+    _attach_cn_prices(results)
     return {
         "ok": bool(results),
         "available": True,
@@ -523,6 +526,93 @@ def _fetch_steam_deals_sync(limit: int) -> dict[str, Any]:
         "error": "" if results else "no_results",
         "at": utc_now_iso(),
     }
+
+
+def _fetch_cn_prices_sync(app_ids: list[str]) -> dict[str, Any]:
+    """Read current Steam China prices from the official store API.
+
+    This is a current-price endpoint, not a historical-price database. Steam
+    returns an empty ``data`` array for free or unavailable products when only
+    ``price_overview`` is requested, so those entries are marked unavailable.
+    """
+
+    ids = [str(app_id).strip() for app_id in app_ids if str(app_id).strip().isdigit()]
+    ids = list(dict.fromkeys(ids))[:20]
+    if not ids:
+        return {"ok": True, "prices": {}, "at": utc_now_iso()}
+    params = {
+        "appids": ",".join(ids),
+        "cc": "cn",
+        "l": "schinese",
+        "filters": "price_overview",
+    }
+    url = f"{_STEAM_CN_API}?{urllib.parse.urlencode(params)}"
+    try:
+        payload = _http_json(url, max_bytes=_MAX_PRICE_HTTP_BYTES, user_agent=_PRICE_USER_AGENT)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "prices": {},
+            "error": f"request_failed:{type(exc).__name__}",
+            "at": utc_now_iso(),
+        }
+    if not isinstance(payload, Mapping):
+        return {"ok": False, "prices": {}, "error": "invalid_response", "at": utc_now_iso()}
+
+    prices: dict[str, dict[str, Any]] = {}
+    for app_id in ids:
+        item = payload.get(app_id)
+        overview = None
+        if isinstance(item, Mapping) and item.get("success"):
+            data = item.get("data")
+            if isinstance(data, Mapping):
+                overview = data.get("price_overview")
+        if not isinstance(overview, Mapping):
+            prices[app_id] = {
+                "available": False,
+                "currency": "CNY",
+                "reason": "no_price",
+                "source": "Steam CN",
+            }
+            continue
+        try:
+            final_cents = int(overview.get("final") or 0)
+            initial_cents = int(overview.get("initial") or 0)
+        except (TypeError, ValueError):
+            final_cents = 0
+            initial_cents = 0
+        discount = 0
+        try:
+            discount = max(0, min(100, int(overview.get("discount_percent") or 0)))
+        except (TypeError, ValueError):
+            discount = 0
+        formatted = _clean_text(overview.get("final_formatted"), 40)
+        if not formatted and final_cents >= 0:
+            formatted = f"¥ {final_cents / 100:.2f}"
+        prices[app_id] = {
+            "available": True,
+            "currency": "CNY",
+            "price": f"{final_cents / 100:.2f}",
+            "initial": f"{initial_cents / 100:.2f}",
+            "discount_percent": discount,
+            "formatted": formatted,
+            "source": "Steam CN",
+        }
+    return {"ok": True, "prices": prices, "at": utc_now_iso()}
+
+
+def _attach_cn_prices(entries: list[dict[str, Any]]) -> None:
+    app_ids = [str(item.get("steam_app_id") or "") for item in entries]
+    cn_result = _fetch_cn_prices_sync(app_ids)
+    cn_prices = cn_result.get("prices") if isinstance(cn_result.get("prices"), Mapping) else {}
+    for entry in entries:
+        app_id = str(entry.get("steam_app_id") or "")
+        entry["cn"] = dict(cn_prices.get(app_id) or {
+            "available": False,
+            "currency": "CNY",
+            "reason": "unavailable",
+            "source": "Steam CN",
+        })
 
 
 class NekoHostSystemPort:

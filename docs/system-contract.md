@@ -142,6 +142,15 @@ CheapShark and never asks for a Steam password:
         "date": "2019-06-25",
         "currency": "USD"
       },
+      "cn": {
+        "available": true,
+        "currency": "CNY",
+        "price": "35.00",
+        "initial": "35.00",
+        "discount_percent": 0,
+        "formatted": "¥ 35.00",
+        "source": "Steam CN"
+      },
       "gap_to_low": "+9.00",
       "is_at_low": false,
       "source": "CheapShark"
@@ -156,6 +165,8 @@ Rules:
 - Require a non-empty Steam AppID on every result.
 - Label currency explicitly. CheapShark is USD; do not present it as CNY or as
   an official Steam regional price.
+- The `cn` object is the **current** Steam China store price in CNY from the
+  official `appdetails` API (`cc=cn`). It is not a CN historical low.
 - The all-time low is CheapShark's cross-store record. Keep that attribution.
 - Steam account linking is out of scope for this method. It is the reserved
   `steam.account` seam and must never store a password.
@@ -179,6 +190,7 @@ enriches the top picks with historical lows:
       "title": "Borderlands 2",
       "current": {"price": "1.99", "retail_price": "19.99", "savings_percent": 90, "store": "Steam"},
       "history": {"lowest": "1.99", "date": "2026-11-01", "currency": "USD"},
+      "cn": {"available": true, "currency": "CNY", "price": "6.40", "formatted": "¥ 6.40", "discount_percent": 90, "source": "Steam CN"},
       "gap_to_low": "+0.00",
       "is_at_low": true,
       "hoard_worthy": true,
@@ -198,6 +210,8 @@ Rules:
 - `hoard_worthy` is the light-hearted **"可以不玩，但不能没有"** flag for
   80%+ off, a price at or below US$5, or a historical low.
 - Recommendations are editorial sort order, not paid placements.
+- Each result may include the current Steam China price as `cn`; it is current,
+  not a CN historical low.
 - The provider must not present CheapShark's cross-store low as an official
   Steam regional low.
 

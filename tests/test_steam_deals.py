@@ -34,6 +34,22 @@ def test_cheapshark_deal_picks_are_filtered_and_enriched(monkeypatch) -> None:
     def fake_http(url, max_bytes=0, user_agent="") -> object:
         if "/deals?" in url:
             return deals
+        if "/appdetails?" in url:
+            return {
+                "49520": {
+                    "success": True,
+                    "data": {
+                        "price_overview": {
+                            "currency": "CNY",
+                            "initial": 6400,
+                            "final": 640,
+                            "discount_percent": 90,
+                            "initial_formatted": "¥ 64.00",
+                            "final_formatted": "¥ 6.40",
+                        }
+                    },
+                }
+            }
         if "id=88304" in url:
             return {
                 "cheapestPriceEver": {"price": "1.99", "date": 1793651134},
@@ -54,6 +70,8 @@ def test_cheapshark_deal_picks_are_filtered_and_enriched(monkeypatch) -> None:
     assert pick["history"]["lowest"] == "1.99"
     assert pick["is_at_low"] is True
     assert pick["hoard_worthy"] is True
+    assert pick["cn"]["price"] == "6.40"
+    assert pick["cn"]["discount_percent"] == 90
     assert pick["store_url"] == "https://store.steampowered.com/app/49520/"
 
 

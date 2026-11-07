@@ -107,6 +107,15 @@ class FakePort:
                 },
                 "gap_to_low": "+9.00",
                 "is_at_low": False,
+                "cn": {
+                    "available": True,
+                    "currency": "CNY",
+                    "price": "35.00",
+                    "initial": "35.00",
+                    "discount_percent": 0,
+                    "formatted": "¥ 35.00",
+                    "source": "Steam CN",
+                },
                 "source": "CheapShark",
             }],
             "at": "2026-01-01T00:00:00Z",
@@ -140,6 +149,15 @@ class FakePort:
                 "gap_to_low": "+0.00",
                 "is_at_low": True,
                 "hoard_worthy": True,
+                "cn": {
+                    "available": True,
+                    "currency": "CNY",
+                    "price": "6.40",
+                    "initial": "64.00",
+                    "discount_percent": 90,
+                    "formatted": "¥ 6.40",
+                    "source": "Steam CN",
+                },
                 "deal_rating": 9.5,
                 "steam_rating": "Very Positive",
                 "steam_percent": 90,
@@ -287,6 +305,7 @@ def test_steam_prices_store_history_and_snapshot() -> None:
     assert snapshot["steam"]["status"] == "ok"
     assert snapshot["steam"]["account_mode"] == "deferred"
     assert snapshot["steam"]["results"][0]["steam_app_id"] == "620"
+    assert snapshot["steam"]["results"][0]["cn"]["price"] == "35.00"
     assert snapshot["steam"]["sale"]["source"] == "Steamworks"
     assert snapshot["steam"]["sale"]["updated"] == "2026-11-07"
     assert [event["name"] for event in snapshot["events"]][-1] == "steam.price"
@@ -323,6 +342,7 @@ def test_steam_deals_and_free_shelf_in_snapshot() -> None:
     assert deals["results"][0]["steam_app_id"] == "49520"
     assert snapshot["steam"]["deals"]["status"] == "ok"
     assert snapshot["steam"]["deals"]["results"][0]["history"]["lowest"] == "1.99"
+    assert snapshot["steam"]["deals"]["results"][0]["cn"]["price"] == "6.40"
     assert snapshot["steam"]["free_to_play_updated"] == "2026-11-07"
     assert any(game["app_id"] == "730" for game in snapshot["steam"]["free_to_play"])
     assert [event["name"] for event in snapshot["events"]][-1] == "steam.deals"

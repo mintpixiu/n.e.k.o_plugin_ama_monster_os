@@ -19,9 +19,10 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
 - A **Web room** with live internet search, result cards, and links that open in
   the user's browser.
 - A **Steam price room** with current lowest price, all-time low, low date,
-  store, discount, and gap-to-low data from CheapShark (USD).
+  store, discount, and gap-to-low data from CheapShark (USD), plus the current
+  **Steam China price in CNY** from Valve's store API.
 - A **Steam sale picks** view with high-discount, well-rated games, historical
-  lows, and a playful **“可以不玩，但不能没有”** flag.
+  lows, CN prices, and a playful **“可以不玩，但不能没有”** flag.
 - A **free-to-play shelf** of permanently free Steam titles, versioned as a
   curated snapshot rather than a live catalogue.
 - A **Pulse check** action that calls the Python plugin and refreshes the
@@ -56,7 +57,15 @@ match with CheapShark price data:
 - all-time low and its date
 - gap to the all-time low
 - retail price and current discount
-- explicit **USD** and **CheapShark cross-store** labeling
+- **Steam China current price in CNY** (including its own discount)
+- explicit **USD**, **CNY**, and **CheapShark cross-store** labeling
+
+The CN price is a live current price from the official Steam Store API
+(`cc=cn`). It is **not** a CN historical low: Valve does not publish a public
+regional price-history API, and this build does not scrape SteamDB. The all-time
+low remains CheapShark's cross-store USD record.
+
+![Ama Monster OS Steam CN price](docs/preview-cn-price.png)
 
 ### Sale calendar
 
@@ -91,9 +100,9 @@ The Steam room has two tabs:
 - **促销精选** — a live CheapShark picks list plus the curated free shelf.
 
 Sale picks are filtered to at least **40% off** and a **7/10** CheapShark deal
-rating, then enriched with historical lows. The top six show a
-**“可以不玩，但不能没有”** badge when they are 80%+ off, at or below US$5, or at
-their all-time low. These are editorial picks, not paid placements.
+rating, then enriched with historical lows and current **CNY** prices. The top
+six show a **“可以不玩，但不能没有”** badge when they are 80%+ off, at or below
+US$5, or at their all-time low. These are editorial picks, not paid placements.
 
 The free shelf lists six **permanently free-to-play** titles with fixed Steam
 store links. It is a versioned snapshot (updated **2026-11-07**), not a
@@ -120,6 +129,8 @@ test network, so they are not used.
 - Steam account login, Steam library, achievements, or wallet.
 - A live tracker for every limited-time free-to-keep giveaway. The free shelf is
   a versioned curated snapshot, not a claim of complete coverage.
+- A CN historical-low database. The CN price is current only; Steam does not
+  expose a public regional price-history API, and SteamDB is not scraped.
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
@@ -179,6 +190,7 @@ ama_monster_os/
 ├── docs/preview.png             shell preview
 ├── docs/preview-web.png         web room preview
 ├── docs/preview-steam.png       Steam price room preview
+├── docs/preview-cn-price.png    Steam China current price preview
 ├── docs/preview-sale.png        Steam sale radar preview
 ├── docs/preview-picks.png       sale picks preview
 ├── docs/preview-free.png        free-to-play shelf preview
