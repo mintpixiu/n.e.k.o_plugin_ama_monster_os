@@ -169,8 +169,8 @@ Rules:
 - The `cn` object is the **current** Steam China store price in CNY from the
   official `appdetails` API (`cc=cn`). It is not a CN historical low.
 - `title_cn` prefers a Steam `l=schinese` name containing CJK; for older English-
-  only names a curated alias may be used. Keep `title` as the canonical English
-  name for matching and display it underneath the Chinese title.
+  only names a curated alias may be used. The UI shows the English `title` on
+  top and the Chinese title directly underneath.
 - The all-time low is CheapShark's cross-store record. Keep that attribution.
 - Steam account linking is out of scope for this method. It is the reserved
   `steam.account` seam and must never store a password.

@@ -25,7 +25,7 @@ from the first version.
 - A Web room that performs live internet searches, shows sanitized results, and opens result links through the Hosted UI external-open bridge.
 - A Steam price room using CheapShark for global current lowest price, all-time low, low date, gap, and discount; USD only for the global data.
 - A Steam China current-price lookup from the official Steam Store API (`cc=cn`, CNY). It is explicitly current, not a CN historical low.
-- A Steam sale-picks tab with high-discount, well-rated games, historical lows, CN prices, and Chinese titles with English originals underneath.
+- A Steam sale-picks tab with high-discount, well-rated games, historical lows, CN prices, and Chinese titles shown underneath the English original.
 - A curated Chinese-title map for older Steam games whose official `l=schinese` name remains English.
 - A curated, versioned free-to-play shelf with fixed Steam store links.
 - A versioned Steam sale calendar snapshot sourced from Steamworks, with current/next event, next seasonal sale, local countdowns, and an official schedule link.

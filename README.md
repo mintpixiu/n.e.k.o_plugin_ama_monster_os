@@ -109,8 +109,9 @@ picks, not paid placements.
 
 Chinese titles prefer the official Steam `l=schinese` name. Older games whose
 Steam name stays English use a small curated alias map (for example
-`Borderlands 2` → `无主之地2`, `Sid Meier's Civilization IV` → `文明4`), with the
-English title kept underneath for verification.
+`Borderlands 2` → `无主之地2`, `Sid Meier's Civilization IV` → `文明4`). The
+English original is always the main title, with the Chinese name directly
+underneath.
 
 The free shelf lists six **permanently free-to-play** titles with fixed Steam
 store links. It is a versioned snapshot (updated **2026-11-07**), not a
