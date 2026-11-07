@@ -42,7 +42,6 @@ def test_cheapshark_deal_picks_are_filtered_and_enriched(monkeypatch) -> None:
         return {}
 
     monkeypatch.setattr(system_port, "_http_json", fake_http)
-    monkeypatch.setattr(system_port.time, "sleep", lambda _seconds: None)
 
     result = system_port._fetch_steam_deals_sync(6)
 
