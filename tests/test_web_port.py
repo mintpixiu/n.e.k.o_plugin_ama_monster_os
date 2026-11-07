@@ -60,6 +60,7 @@ def test_port_manifest_advertises_web_search() -> None:
     manifest = port.manifest()
     assert "web.search" in manifest["capabilities"]
     assert "steam.prices" in manifest["capabilities"]
+    assert "steam.deals" in manifest["capabilities"]
     assert "web.fetch" in {item["id"] for item in manifest["reserved"]}
     assert "steam.account" in {item["id"] for item in manifest["reserved"]}
 

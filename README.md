@@ -20,6 +20,10 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
   the user's browser.
 - A **Steam price room** with current lowest price, all-time low, low date,
   store, discount, and gap-to-low data from CheapShark (USD).
+- A **Steam sale picks** view with high-discount, well-rated games, historical
+  lows, and a playful **“可以不玩，但不能没有”** flag.
+- A **free-to-play shelf** of permanently free Steam titles, versioned as a
+  curated snapshot rather than a live catalogue.
 - A **Pulse check** action that calls the Python plugin and refreshes the
   context through the real Hosted UI bridge.
 - A stable, versioned contract (`ama.system.bridge` v1.0.0) and a `SystemPort`
@@ -79,7 +83,25 @@ Sources:
 [Steamworks Upcoming Events](https://partner.steamgames.com/doc/marketing/upcoming_events) ·
 [Steam Winter Sale 2026](https://partner.steamgames.com/doc/marketing/upcoming_events/2026_winter_sale)
 
-![Ama Monster OS Steam price room](docs/preview-steam.png)
+### 值得入手 / 免费即玩
+
+The Steam room has two tabs:
+
+- **价格查询** — the original title/AppID price-history search.
+- **促销精选** — a live CheapShark picks list plus the curated free shelf.
+
+Sale picks are filtered to at least **40% off** and a **7/10** CheapShark deal
+rating, then enriched with historical lows. The top six show a
+**“可以不玩，但不能没有”** badge when they are 80%+ off, at or below US$5, or at
+their all-time low. These are editorial picks, not paid placements.
+
+The free shelf lists six **permanently free-to-play** titles with fixed Steam
+store links. It is a versioned snapshot (updated **2026-11-07**), not a
+limited-time giveaway tracker and not a live full catalogue.
+
+![Ama Monster OS sale picks and free shelf](docs/preview-picks.png)
+
+![Ama Monster OS free-to-play shelf](docs/preview-free.png)
 
 **Steam account login is deliberately not enabled in 0.1.0 Beta.** This build
 does not ask for a Steam password and does not put Steam's login page inside an
@@ -96,6 +118,8 @@ test network, so they are not used.
 - A general browser or arbitrary-URL reader. This is a search room, not an
   embedded Chromium.
 - Steam account login, Steam library, achievements, or wallet.
+- A live tracker for every limited-time free-to-keep giveaway. The free shelf is
+  a versioned curated snapshot, not a claim of complete coverage.
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
@@ -144,6 +168,7 @@ ama_monster_os/
 ├── plugin.toml                 manifest and Hosted UI surfaces
 ├── __init__.py                 SDK facade, context, entries, lifecycle
 ├── shell_runtime.py            host-free shell runtime
+├── steam_catalog.py            versioned free-to-play shelf
 ├── steam_sales.py              versioned Steam sale calendar
 ├── system_contract.py          contract v1 + SystemPort protocol
 ├── system_port.py              N.E.K.O adapter (read-only)
@@ -155,6 +180,8 @@ ama_monster_os/
 ├── docs/preview-web.png         web room preview
 ├── docs/preview-steam.png       Steam price room preview
 ├── docs/preview-sale.png        Steam sale radar preview
+├── docs/preview-picks.png       sale picks preview
+├── docs/preview-free.png        free-to-play shelf preview
 ├── i18n/                       8 locale files
 └── tests/                      contract, runtime, web, manifest, i18n, UI checks
 ```

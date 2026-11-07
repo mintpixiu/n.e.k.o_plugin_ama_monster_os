@@ -44,12 +44,13 @@
     "entrypoints": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["context", "pulse", "web_search", "steam_search", "contract"],
+      "required": ["context", "pulse", "web_search", "steam_search", "steam_deals", "contract"],
       "properties": {
         "context": { "type": "string", "minLength": 1 },
         "pulse": { "type": "string", "minLength": 1 },
         "web_search": { "type": "string", "minLength": 1 },
         "steam_search": { "type": "string", "minLength": 1 },
+        "steam_deals": { "type": "string", "minLength": 1 },
         "contract": { "type": "string", "minLength": 1 }
       }
     }

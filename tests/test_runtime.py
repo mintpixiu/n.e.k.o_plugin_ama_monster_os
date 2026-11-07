@@ -112,6 +112,45 @@ class FakePort:
             "at": "2026-01-01T00:00:00Z",
         }
 
+    async def fetch_steam_deals(self, max_results: int = 6) -> dict[str, Any]:
+        if self.fail:
+            raise RuntimeError("deal search unavailable")
+        return {
+            "ok": True,
+            "available": True,
+            "provider": "CheapShark",
+            "currency": "USD",
+            "count": 1,
+            "results": [{
+                "game_id": "88304",
+                "steam_app_id": "49520",
+                "title": "Borderlands 2",
+                "currency": "USD",
+                "current": {
+                    "price": "1.99",
+                    "retail_price": "19.99",
+                    "savings_percent": 90,
+                    "store": "Steam",
+                },
+                "history": {
+                    "lowest": "1.99",
+                    "date": "2026-11-01",
+                    "currency": "USD",
+                },
+                "gap_to_low": "+0.00",
+                "is_at_low": True,
+                "hoard_worthy": True,
+                "deal_rating": 9.5,
+                "steam_rating": "Very Positive",
+                "steam_percent": 90,
+                "metacritic": 89,
+                "release_year": 2012,
+                "store_url": "https://store.steampowered.com/app/49520/",
+                "source": "CheapShark",
+            }],
+            "at": "2026-01-01T00:00:00Z",
+        }
+
     async def close(self) -> None:
         self.closed = True
 
@@ -190,8 +229,10 @@ def test_contract_validates() -> None:
     assert manifest["entrypoints"]["context"] == "os_shell"
     assert manifest["entrypoints"]["web_search"] == "ama_web_search"
     assert manifest["entrypoints"]["steam_search"] == "ama_steam_search"
+    assert manifest["entrypoints"]["steam_deals"] == "ama_steam_deals"
     assert "web.search" in manifest["capabilities"]
     assert "steam.prices" in manifest["capabilities"]
+    assert "steam.deals" in manifest["capabilities"]
     assert "web.fetch" in {item["id"] for item in manifest["reserved"]}
 
 
@@ -265,3 +306,32 @@ def test_steam_prices_failure_is_reported_without_crashing() -> None:
     assert result["ok"] is False
     assert result["status"] == "error"
     assert snapshot["steam"]["status"] == "error"
+
+
+def test_steam_deals_and_free_shelf_in_snapshot() -> None:
+    runtime = AmaOsRuntime(FakePort())
+
+    async def scenario() -> tuple[dict[str, Any], dict[str, Any]]:
+        deals = await runtime.steam_deals(6)
+        snapshot = await runtime.snapshot()
+        return deals, snapshot
+
+    deals, snapshot = asyncio.run(scenario())
+
+    assert deals["ok"] is True
+    assert deals["results"][0]["hoard_worthy"] is True
+    assert deals["results"][0]["steam_app_id"] == "49520"
+    assert snapshot["steam"]["deals"]["status"] == "ok"
+    assert snapshot["steam"]["deals"]["results"][0]["history"]["lowest"] == "1.99"
+    assert snapshot["steam"]["free_to_play_updated"] == "2026-11-07"
+    assert any(game["app_id"] == "730" for game in snapshot["steam"]["free_to_play"])
+    assert [event["name"] for event in snapshot["events"]][-1] == "steam.deals"
+
+
+def test_steam_deals_failure_is_reported_without_crashing() -> None:
+    runtime = AmaOsRuntime(FakePort(fail=True))
+    result = asyncio.run(runtime.steam_deals(6))
+    snapshot = asyncio.run(runtime.snapshot())
+    assert result["ok"] is False
+    assert result["status"] == "error"
+    assert snapshot["steam"]["deals"]["status"] == "error"

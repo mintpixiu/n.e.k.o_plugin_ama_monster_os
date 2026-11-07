@@ -15,6 +15,7 @@ from datetime import datetime
 from typing import Any, Mapping
 
 try:  # package-relative import used by the N.E.K.O plugin
+    from .steam_catalog import FREE_TO_PLAY_UPDATED, free_to_play_entries
     from .steam_sales import evaluate_sales
     from .system_contract import (
         SystemEvent,
@@ -22,6 +23,7 @@ try:  # package-relative import used by the N.E.K.O plugin
         utc_now_iso,
     )
 except ImportError:  # pragma: no cover - direct test import fallback
+    from steam_catalog import FREE_TO_PLAY_UPDATED, free_to_play_entries  # type: ignore[no-redef]
     from steam_sales import evaluate_sales  # type: ignore[no-redef]
     from system_contract import (  # type: ignore[no-redef]
         SystemEvent,
@@ -141,6 +143,16 @@ class AmaOsRuntime:
             "error": "",
             "account_linked": False,
             "account_mode": "deferred",
+        }
+        self._steam_deals: dict[str, Any] = {
+            "available": True,
+            "status": "idle",
+            "count": 0,
+            "results": [],
+            "provider": "CheapShark",
+            "currency": "USD",
+            "at": None,
+            "error": "",
         }
 
     @property
@@ -274,7 +286,14 @@ class AmaOsRuntime:
                 "server_ms": round(self._last_pulse_ms, 3),
             },
             "web": {**self._web, "results": list(self._web.get("results") or [])},
-            "steam": {**self._steam, "results": list(self._steam.get("results") or []), "sale": evaluate_sales()},
+            "steam": {
+                **self._steam,
+                "results": list(self._steam.get("results") or []),
+                "deals": {**self._steam_deals, "results": list(self._steam_deals.get("results") or [])},
+                "free_to_play": free_to_play_entries(),
+                "free_to_play_updated": FREE_TO_PLAY_UPDATED,
+                "sale": evaluate_sales(),
+            },
             "events": [event.as_dict() for event in self._events[-8:]],
             "preview": True,
         }
@@ -427,6 +446,99 @@ class AmaOsRuntime:
             "provider": provider,
             "error": error or "unavailable",
             "summary": "Web search is unavailable right now.",
+        }
+
+    async def steam_deals(self, max_results: int = 6) -> dict[str, Any]:
+        limit = max(3, min(8, int(max_results or 6)))
+        caller = getattr(self._port, "fetch_steam_deals", None)
+        if caller is None:
+            result: Mapping[str, Any] = {
+                "ok": False,
+                "available": False,
+                "provider": "CheapShark",
+                "currency": "USD",
+                "error": "unavailable",
+                "results": [],
+            }
+        else:
+            try:
+                raw = await asyncio.wait_for(caller(limit), timeout=35.0)
+                result = raw if isinstance(raw, Mapping) else {
+                    "ok": False,
+                    "available": False,
+                    "provider": "CheapShark",
+                    "currency": "USD",
+                    "error": "invalid_response",
+                    "results": [],
+                }
+            except asyncio.TimeoutError:
+                result = {
+                    "ok": False,
+                    "available": False,
+                    "provider": "CheapShark",
+                    "currency": "USD",
+                    "error": "timeout",
+                    "results": [],
+                }
+            except Exception:
+                result = {
+                    "ok": False,
+                    "available": False,
+                    "provider": "CheapShark",
+                    "currency": "USD",
+                    "error": "search_failed",
+                    "results": [],
+                }
+
+        raw_results = result.get("results")
+        results = [
+            dict(item) for item in raw_results
+            if isinstance(item, Mapping) and item.get("title") and item.get("steam_app_id")
+        ][:limit] if isinstance(raw_results, list) else []
+        provider = str(result.get("provider") or "CheapShark")[:80]
+        success = bool(result.get("ok")) or str(result.get("error") or "") == "no_results"
+        error = str(result.get("error") or "")[:120]
+        if success:
+            status = "ok" if results else "empty"
+            self._record("steam.deals", f"{len(results)} game(s)")
+            error = ""
+        else:
+            status = "error"
+            self._record("steam.deals.failed", error or "unknown")
+        self._steam_deals = {
+            "available": bool(result.get("available", True)),
+            "status": status,
+            "count": len(results),
+            "results": results,
+            "provider": provider,
+            "currency": str(result.get("currency") or "USD")[:8],
+            "at": str(utc_now_iso()),
+            "error": error,
+        }
+        try:
+            self._port.record_event("steam.deals", str(len(results)))
+        except Exception:
+            self._degraded = True
+
+        if success:
+            return {
+                "ok": True,
+                "status": status,
+                "count": len(results),
+                "results": results,
+                "provider": provider,
+                "currency": self._steam_deals["currency"],
+                "summary": f"Steam sale picks returned {len(results)} game(s).",
+            }
+        return {
+            "ok": False,
+            "status": "error",
+            "count": 0,
+            "results": [],
+            "provider": provider,
+            "currency": self._steam_deals["currency"],
+            "error": error or "unavailable",
+            "summary": "Steam sale picks are unavailable right now.",
         }
 
     async def search_game_prices(self, query: str, max_results: int = 3) -> dict[str, Any]:

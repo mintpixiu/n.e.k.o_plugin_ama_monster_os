@@ -36,6 +36,7 @@ class SystemPort(Protocol):
     async def activity(self) -> Mapping[str, Any] | None: ...
     async def search_web(self, query: str, max_results: int = 5) -> Mapping[str, Any]: ...
     async def search_game_prices(self, query: str, max_results: int = 3) -> Mapping[str, Any]: ...
+    async def fetch_steam_deals(self, max_results: int = 6) -> Mapping[str, Any]: ...
     def record_event(self, name: str, detail: str = "") -> None: ...
     async def close(self) -> None: ...
 ```
@@ -159,6 +160,51 @@ Rules:
 - Steam account linking is out of scope for this method. It is the reserved
   `steam.account` seam and must never store a password.
 
+### `fetch_steam_deals()`
+
+Return high-discount Steam picks. The shipped adapter uses CheapShark's fixed
+deals endpoint, filters for at least 40% off and a 7/10 deal rating, then
+enriches the top picks with historical lows:
+
+```json
+{
+  "ok": true,
+  "available": true,
+  "provider": "CheapShark",
+  "currency": "USD",
+  "count": 1,
+  "results": [
+    {
+      "steam_app_id": "49520",
+      "title": "Borderlands 2",
+      "current": {"price": "1.99", "retail_price": "19.99", "savings_percent": 90, "store": "Steam"},
+      "history": {"lowest": "1.99", "date": "2026-11-01", "currency": "USD"},
+      "gap_to_low": "+0.00",
+      "is_at_low": true,
+      "hoard_worthy": true,
+      "deal_rating": 9.5,
+      "steam_percent": 90,
+      "release_year": 2012,
+      "store_url": "https://store.steampowered.com/app/49520/",
+      "source": "CheapShark"
+    }
+  ]
+}
+```
+
+Rules:
+
+- Fixed deals endpoint; no arbitrary URL and no Steam password.
+- `hoard_worthy` is the light-hearted **"可以不玩，但不能没有"** flag for
+  80%+ off, a price at or below US$5, or a historical low.
+- Recommendations are editorial sort order, not paid placements.
+- The provider must not present CheapShark's cross-store low as an official
+  Steam regional low.
+
+The runtime also exposes a static `free_to_play` shelf from `steam_catalog.py`
+with fixed Steam store links. It is a versioned snapshot, not a live full
+catalogue of every free game.
+
 ### Sale calendar
 
 The runtime adds `steam.sale` to the snapshot from
@@ -201,7 +247,8 @@ Release provider resources. Must be idempotent.
     "actions.invoke",
     "events.record",
     "web.search",
-    "steam.prices"
+    "steam.prices",
+    "steam.deals"
   ],
   "reserved": [
     {
@@ -215,6 +262,7 @@ Release provider resources. Must be idempotent.
     "pulse": "ama_pulse",
     "web_search": "ama_web_search",
     "steam_search": "ama_steam_search",
+    "steam_deals": "ama_steam_deals",
     "contract": "ama_system_contract"
   }
 }
@@ -253,7 +301,8 @@ capability it cannot serve.
    design, but must provide its own renderer or bundle.
 5. Call `runtime.pulse()` for the pulse button, `runtime.search_web(query)` for
    the Web room, `runtime.search_game_prices(query)` for the Steam price room,
-   and `runtime.contract()` for the bridge page.
+   `runtime.steam_deals()` for sale picks, and `runtime.contract()` for the
+   bridge page.
 6. Call `await runtime.stop()` before exiting.
 7. Keep `contract_version` at `1.0.0` for additions that do not break v1. Bump
    the major version and update the schema for breaking changes.
@@ -281,6 +330,7 @@ The shipped tests cover:
 - private activity not leaking category/idle time;
 - RSS parsing, URL validation, HTML stripping, and dotted-acronym query fallback;
 - CheapShark normalization, historical-low date/price, and non-Steam filtering;
+- Steam deal filtering, hoard-worthy flags, and free-to-play shelf links;
 - Steam sale calendar current/next evaluation, local countdown inputs, and TBD handling;
 - runtime boot, pulse, web search, Steam price lookup, shutdown, and degraded-host behaviour;
 - serializability of the complete snapshot.

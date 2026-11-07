@@ -33,6 +33,7 @@ try:  # package-relative imports when loaded as plugin.plugins.ama_monster_os
         CAPABILITY_ACTIVITY,
         CAPABILITY_ENVIRONMENT,
         CAPABILITY_EVENTS,
+        CAPABILITY_STEAM_DEALS,
         CAPABILITY_STEAM_PRICES,
         CAPABILITY_WEB_SEARCH,
         MODE_HOSTED_PLUGIN,
@@ -45,6 +46,7 @@ except ImportError:  # pragma: no cover - direct test import fallback
         CAPABILITY_ACTIVITY,
         CAPABILITY_ENVIRONMENT,
         CAPABILITY_EVENTS,
+        CAPABILITY_STEAM_DEALS,
         CAPABILITY_STEAM_PRICES,
         CAPABILITY_WEB_SEARCH,
         MODE_HOSTED_PLUGIN,
@@ -58,7 +60,7 @@ _MAX_QUERY_CHARS = 200
 _MAX_PRICE_QUERY_CHARS = 100
 _MAX_HTTP_BYTES = 512 * 1024
 _MAX_PRICE_HTTP_BYTES = 1024 * 1024
-_HTTP_TIMEOUT_SECONDS = 12.0
+_HTTP_TIMEOUT_SECONDS = 15.0
 _PRICE_CACHE_SECONDS = 600.0
 _USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -373,6 +375,156 @@ def _search_cheapshark_sync(
     }
 
 
+def _fetch_steam_deals_sync(limit: int) -> dict[str, Any]:
+    """Fetch high-quality Steam deals and enrich the top picks with lows."""
+
+    params = {
+        "storeID": "1",
+        "onSale": "1",
+        "sortBy": "Deal Rating",
+        "pageSize": "30",
+    }
+    url = f"{_CHEAPSHARK_API}/deals?{urllib.parse.urlencode(params)}"
+    payload: Any = None
+    last_exc: Exception | None = None
+    for attempt in range(2):
+        try:
+            payload = _http_json(url, max_bytes=_MAX_PRICE_HTTP_BYTES, user_agent=_PRICE_USER_AGENT)
+            last_exc = None
+            break
+        except Exception as exc:
+            last_exc = exc
+            if attempt == 0:
+                time.sleep(0.5)
+    if last_exc is not None:
+        return {
+            "ok": False,
+            "available": False,
+            "provider": "CheapShark",
+            "currency": "USD",
+            "error": f"request_failed:{type(last_exc).__name__}",
+            "results": [],
+        }
+    if not isinstance(payload, list):
+        return {
+            "ok": False,
+            "available": False,
+            "provider": "CheapShark",
+            "currency": "USD",
+            "error": "invalid_response",
+            "results": [],
+        }
+
+    candidates: list[tuple[float, Mapping[str, Any]]] = []
+    for item in payload:
+        if not isinstance(item, Mapping):
+            continue
+        app_id = str(item.get("steamAppID") or "").strip()
+        title = _clean_text(item.get("title"), 200)
+        if not app_id or not title:
+            continue
+        try:
+            sale_price = float(item.get("salePrice") or 0)
+            normal_price = float(item.get("normalPrice") or 0)
+            savings = float(item.get("savings") or 0)
+            rating = float(item.get("dealRating") or 0)
+            steam_percent = int(float(item.get("steamRatingPercent") or 0))
+        except (TypeError, ValueError):
+            continue
+        if sale_price <= 0 or normal_price <= sale_price or savings < 40 or rating < 7:
+            continue
+        if steam_percent and steam_percent < 65:
+            continue
+        candidates.append((rating, item))
+    candidates.sort(key=lambda pair: pair[0], reverse=True)
+
+    results: list[dict[str, Any]] = []
+    for deal_rating, item in candidates[:limit]:
+        game_id = str(item.get("gameID") or "").strip()
+        detail: Mapping[str, Any] = {}
+        if game_id.isdigit():
+            try:
+                detail_payload = _http_json(
+                    f"{_CHEAPSHARK_API}/games?id={urllib.parse.quote(game_id)}",
+                    max_bytes=_MAX_PRICE_HTTP_BYTES,
+                    user_agent=_PRICE_USER_AGENT,
+                )
+                if isinstance(detail_payload, Mapping):
+                    detail = detail_payload
+            except Exception:
+                detail = {}
+            time.sleep(0.1)
+
+        title = _clean_text(item.get("title"), 200)
+        app_id = str(item.get("steamAppID") or "").strip()
+        current_price = _money(item.get("salePrice"))
+        retail_price = _money(item.get("normalPrice"))
+        try:
+            savings_percent = max(0, int(round(float(item.get("savings") or 0))))
+        except (TypeError, ValueError):
+            savings_percent = 0
+        ever = detail.get("cheapestPriceEver") if isinstance(detail.get("cheapestPriceEver"), Mapping) else {}
+        ever_price = _money(ever.get("price"))
+        ever_date = _date_from_epoch(ever.get("date"))
+        gap_to_low = ""
+        at_low = False
+        if ever_price and current_price:
+            try:
+                gap = max(0.0, float(current_price) - float(ever_price))
+                gap_to_low = f"+{gap:.2f}"
+                at_low = float(current_price) <= float(ever_price) + 0.001
+            except ValueError:
+                pass
+        try:
+            release_year = datetime.fromtimestamp(
+                int(item.get("releaseDate") or 0), tz=timezone.utc
+            ).year
+        except (TypeError, ValueError, OSError):
+            release_year = 0
+        thumb = str(item.get("thumb") or "").strip()
+        if not _is_http_url(thumb):
+            thumb = ""
+        results.append({
+            "game_id": game_id,
+            "steam_app_id": app_id,
+            "title": title,
+            "thumb": thumb,
+            "currency": "USD",
+            "current": {
+                "price": current_price,
+                "retail_price": retail_price,
+                "savings_percent": savings_percent,
+                "store": "Steam",
+            },
+            "history": {
+                "lowest": ever_price,
+                "date": ever_date,
+                "currency": "USD",
+            },
+            "gap_to_low": gap_to_low,
+            "is_at_low": at_low,
+            "hoard_worthy": bool(savings_percent >= 80 or (current_price and float(current_price) <= 5.0) or at_low),
+            "deal_rating": round(float(deal_rating), 1),
+            "steam_rating": _clean_text(item.get("steamRatingText"), 40),
+            "steam_percent": int(float(item.get("steamRatingPercent") or 0)),
+            "metacritic": int(float(item.get("metacriticScore") or 0)),
+            "release_year": release_year,
+            "store_url": f"https://store.steampowered.com/app/{app_id}/",
+            "source": "CheapShark",
+        })
+
+    return {
+        "ok": bool(results),
+        "available": True,
+        "provider": "CheapShark",
+        "currency": "USD",
+        "count": len(results),
+        "results": results,
+        "error": "" if results else "no_results",
+        "at": utc_now_iso(),
+    }
+
+
 class NekoHostSystemPort:
     """Read-only host adapter used by the N.E.K.O plugin build.
 
@@ -390,12 +542,14 @@ class NekoHostSystemPort:
         CAPABILITY_EVENTS,
         CAPABILITY_WEB_SEARCH,
         CAPABILITY_STEAM_PRICES,
+        CAPABILITY_STEAM_DEALS,
     )
 
     def __init__(self, plugin: Any) -> None:
         self._plugin = plugin
         self._events: list[dict[str, str]] = []
         self._price_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+        self._deals_cache: tuple[float, dict[str, Any]] | None = None
         self._store_names: dict[str, str] = {}
         self._store_names_at = 0.0
 
@@ -567,6 +721,15 @@ class NekoHostSystemPort:
             pass
         return dict(self._store_names)
 
+    async def fetch_steam_deals(self, max_results: int = 6) -> Mapping[str, Any]:
+        limit = max(3, min(8, int(max_results or 6)))
+        cached = self._deals_cache
+        if cached is not None and (time.monotonic() - cached[0]) < _PRICE_CACHE_SECONDS:
+            return dict(cached[1])
+        raw = await asyncio.to_thread(_fetch_steam_deals_sync, limit)
+        self._deals_cache = (time.monotonic(), dict(raw))
+        return raw
+
     async def search_game_prices(self, query: str, max_results: int = 3) -> Mapping[str, Any]:
         text = str(query or "").strip()
         if not text:
@@ -604,6 +767,7 @@ class NekoHostSystemPort:
     async def close(self) -> None:
         self._events.clear()
         self._price_cache.clear()
+        self._deals_cache = None
         self._store_names.clear()
 
 

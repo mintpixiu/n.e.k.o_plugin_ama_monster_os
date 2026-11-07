@@ -109,6 +109,35 @@ type SteamInfo = {
   account_linked?: boolean
   account_mode?: string
   sale?: SaleCalendar
+  deals?: {
+    available?: boolean
+    status?: string
+    count?: number
+    results?: SteamDeal[]
+    provider?: string
+    currency?: string
+    at?: string | null
+    error?: string
+  }
+  free_to_play?: SteamFree[]
+  free_to_play_updated?: string
+}
+
+type SteamDeal = SteamPrice & {
+  hoard_worthy?: boolean
+  deal_rating?: number
+  steam_rating?: string
+  steam_percent?: number
+  metacritic?: number
+  release_year?: number
+  store_url?: string
+}
+
+type SteamFree = {
+  app_id?: string
+  title?: string
+  store_url?: string
+  source?: string
 }
 
 type SaleEvent = {
@@ -878,6 +907,30 @@ const STYLES = `
 .ama-sale-row-date { margin-top: 1px; color: var(--muted); font-size: 7.5px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
 .ama-sale-row-kind { flex: 0 0 auto; color: var(--muted); font-size: 7.5px; }
 .ama-sale-source { margin: 8px 0 0; color: var(--muted); font-size: 7.5px; line-height: 1.5; }
+.ama-steam-tabs { display: flex; gap: 5px; margin: 0 0 10px; }
+.ama-steam-tab { padding: 6px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--muted); font: inherit; font-size: 9px; font-weight: 750; cursor: pointer; transition: background .16s ease, color .16s ease, border-color .16s ease; }
+.ama-steam-tab:hover { color: var(--ink-soft); border-color: var(--line-strong); }
+.ama-steam-tab.is-active { background: var(--sky-soft); border-color: color-mix(in srgb, var(--sky) 45%, var(--line)); color: var(--sky-deep); }
+.ama-picks-section, .ama-free-section { padding: 14px; margin-bottom: 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+.ama-deal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ama-deal-card { display: flex; flex-direction: column; min-width: 0; padding: 11px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2); }
+.ama-deal-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 18px; }
+.ama-deal-discount { flex: 0 0 auto; padding: 2px 6px; border-radius: 5px; background: var(--mint); color: var(--mint-ink); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 9px; font-weight: 900; }
+.ama-hoard { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 999px; background: color-mix(in srgb, var(--peach) 30%, transparent); color: var(--peach-ink); font-size: 7px; font-weight: 800; letter-spacing: .03em; white-space: nowrap; }
+.ama-deal-title { margin: 4px 0 0; color: var(--ink); font-size: 12px; font-weight: 850; line-height: 1.35; overflow-wrap: anywhere; }
+.ama-deal-price-row { display: flex; align-items: baseline; gap: 7px; margin-top: 6px; }
+.ama-deal-price-row strong { color: var(--sky-deep); font-size: 17px; font-weight: 900; letter-spacing: -.03em; }
+.ama-deal-price-row s { color: var(--muted); font-size: 9px; }
+.ama-deal-meta { display: grid; gap: 2px; margin-top: 7px; padding-top: 7px; border-top: 1px dashed var(--line); color: var(--muted); font-size: 8px; }
+.ama-deal-meta span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ama-deal-actions { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 8px; }
+.ama-deal-actions > span { color: var(--muted); font-size: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ama-free-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.ama-free-card { min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+.ama-free-top { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
+.ama-free-badge { padding: 2px 6px; border-radius: 5px; background: color-mix(in srgb, var(--mint) 25%, transparent); color: var(--mint-ink); font-size: 7px; font-weight: 900; letter-spacing: .08em; }
+.ama-free-title { margin: 5px 0 0; color: var(--ink-soft); font-size: 10px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
+.ama-free-actions { margin-top: 7px; }
 .ama-steam-account {
   display: flex;
   align-items: center;
@@ -1030,6 +1083,8 @@ const STYLES = `
   .ama-steam-price > strong { margin-top: 0; font-size: 13px; }
   .ama-steam-account { align-items: flex-start; }
   .ama-sale-highlights { grid-template-columns: 1fr; }
+  .ama-deal-grid { grid-template-columns: 1fr; }
+  .ama-free-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ama-about-card { grid-template-columns: 1fr; gap: 4px; }
   .ama-about-orb { min-height: 150px; }
   .ama-view-title { font-size: 23px; }
@@ -1065,6 +1120,8 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const initialWebResults = Array.isArray(webInfo.results) ? webInfo.results : []
   const steamInfo = safeState.steam || {}
   const initialSteamResults = Array.isArray(steamInfo.results) ? steamInfo.results : []
+  const initialDeals = Array.isArray(steamInfo.deals?.results) ? steamInfo.deals?.results || [] : []
+  const freeGames = Array.isArray(steamInfo.free_to_play) ? steamInfo.free_to_play : []
   const modules = Array.isArray(safeState.modules) ? safeState.modules : []
   const events = Array.isArray(safeState.events) ? safeState.events.slice(-5) : []
   const capabilities = safeStringArray(bridge.capabilities)
@@ -1077,6 +1134,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const pulseAction = actionById(actions || [], "ama_pulse")
   const webSearchAction = actionById(actions || [], "ama_web_search")
   const steamSearchAction = actionById(actions || [], "ama_steam_search")
+  const steamDealsAction = actionById(actions || [], "ama_steam_deals")
 
   const [view, setView] = props.useLocalState<ViewId>("ama.view", "home")
   const [chrome, setChrome] = props.useLocalState<ChromeMode>("ama.chrome", "normal")
@@ -1112,6 +1170,19 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           : "idle",
   )
   const [steamMessage, setSteamMessage] = useState("")
+  const [steamTab, setSteamTab] = useState<"prices" | "picks">("prices")
+  const [dealResults, setDealResults] = useState<SteamDeal[]>(initialDeals)
+  const [dealStatus, setDealStatus] = useState<WebStatus>(
+    steamInfo.deals?.status === "error"
+      ? "error"
+      : initialDeals.length > 0
+        ? "success"
+        : steamInfo.deals?.status === "empty"
+          ? "empty"
+          : "idle",
+  )
+  const [dealMessage, setDealMessage] = useState("")
+  const [dealsLoaded, setDealsLoaded] = useState(initialDeals.length > 0)
 
   const tr = (key: string, fallback: string): string => {
     const value = t(key)
@@ -1310,8 +1381,60 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     }
   }
 
-  async function runWebSearch(rawQuery?: string) {
-    const query = String(rawQuery ?? webQuery).trim()
+  async function runSteamDeals() {
+    if (!steamDealsAction) {
+      setDealStatus("error")
+      setDealMessage(tr("steam.deals.error", "Could not load sale picks. Check your connection and retry."))
+      setDealsLoaded(true)
+      return
+    }
+    setDealStatus("searching")
+    setDealMessage(tr("steam.deals.loading", "Finding the best deals..."))
+    try {
+      const result = unwrapResult(
+        await props.api.call(
+          steamDealsAction.id || "ama_steam_deals",
+          { max_results: 6 },
+          { timeoutMs: 45000 },
+        ),
+      )
+      if (result.ok === false) {
+        setDealResults([])
+        setDealStatus("error")
+        setDealMessage(
+          String(result.error || "") === "unavailable"
+            ? tr("steam.offline", "Price service is unavailable right now.")
+            : tr("steam.deals.error", "Could not load sale picks. Check your connection and retry."),
+        )
+        setDealsLoaded(true)
+        return
+      }
+      const results = Array.isArray(result.results) ? result.results : []
+      setDealResults(results)
+      setDealStatus(results.length > 0 ? "success" : "empty")
+      setDealMessage(results.length > 0 ? "" : tr("steam.deals.empty", "No qualifying high-discount deals right now."))
+      setDealsLoaded(true)
+      try {
+        await props.api.refresh()
+      } catch (_error) {
+        // The recommendation result is already in hand.
+      }
+    } catch (_error) {
+      setDealResults([])
+      setDealStatus("error")
+      setDealMessage(tr("steam.deals.error", "Could not load sale picks. Check your connection and retry."))
+      setDealsLoaded(true)
+    }
+  }
+
+  function selectSteamTab(next: "prices" | "picks") {
+    setSteamTab(next)
+    if (next === "picks" && !dealsLoaded && dealStatus !== "searching") {
+      void runSteamDeals()
+    }
+  }
+
+  async function runWebSearch(rawQuery?: string) {    const query = String(rawQuery ?? webQuery).trim()
     if (!query) {
       setWebStatus("error")
       setWebMessage(tr("web.emptyQuery", "Type something to search."))
@@ -1582,7 +1705,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       {bridgeRows}
       {capabilities.length > 0 ? (
         <div className="ama-chips">
-          {capabilities.slice(0, 6).map((capability) => <span className="ama-chip" key={capability}>{capability}</span>)}
+          {capabilities.slice(0, 7).map((capability) => <span className="ama-chip" key={capability}>{capability}</span>)}
         </div>
       ) : null}
     </section>
@@ -1875,6 +1998,24 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           {tr("steam.sale.source", "Source: Steamworks")} · {tr("steam.sale.updated", "Updated {date}").replace("{date}", sale.updated || "—")} · {tr("steam.sale.timeNote", "Dates use your local timezone.")}
         </p>
       </section>
+      <div className="ama-steam-tabs" role="tablist" aria-label={tr("steam.title", "Steam price room")}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={steamTab === "prices"}
+          className={`ama-steam-tab${steamTab === "prices" ? " is-active" : ""}`}
+          onClick={() => selectSteamTab("prices")}
+        >{tr("steam.tab.prices", "Prices")}</button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={steamTab === "picks"}
+          className={`ama-steam-tab${steamTab === "picks" ? " is-active" : ""}`}
+          onClick={() => selectSteamTab("picks")}
+        >{tr("steam.tab.picks", "Sale picks")}</button>
+      </div>
+      {steamTab === "prices" ? (
+        <>
       <div className="ama-steam-account">
         <div className="ama-steam-account-icon" aria-hidden="true">S</div>
         <div className="ama-steam-account-main">
@@ -2002,6 +2143,121 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
             )
           })}
         </div>
+      )}
+        </>
+      ) : (
+        <>
+          <section className="ama-picks-section">
+            <div className="ama-panel-head">
+              <div>
+                <div className="ama-kicker"><span className="ama-kicker-line" />{tr("steam.hoard", "Can skip playing; can't skip owning.")}</div>
+                <h2 className="ama-panel-title">{tr("steam.deals.title", "Worth grabbing")}</h2>
+                <p className="ama-panel-hint">{tr("steam.deals.subtitle", "Hand-picked by discount and rating, with historical lows.")}</p>
+              </div>
+              <button
+                type="button"
+                className="ama-web-chip"
+                disabled={dealStatus === "searching"}
+                onClick={() => void runSteamDeals()}
+              >
+                {dealStatus === "searching" ? tr("steam.deals.loading", "Finding the best deals...") : tr("steam.deals.refresh", "Refresh picks")}
+              </button>
+            </div>
+            {dealStatus === "searching" ? (
+              <div className="ama-web-state" role="status">
+                <div className="ama-web-spinner" aria-hidden="true" />
+                <h3>{tr("steam.deals.loading", "Finding the best deals...")}</h3>
+                <p>{tr("steam.deals.subtitle", "Hand-picked by discount and rating, with historical lows.")}</p>
+              </div>
+            ) : dealStatus === "error" ? (
+              <div className="ama-web-state is-error" role="alert">
+                <div className="ama-web-state-glyph" aria-hidden="true">!</div>
+                <h3>{tr("steam.deals.title", "Worth grabbing")}</h3>
+                <p>{dealMessage || tr("steam.deals.error", "Could not load sale picks. Check your connection and retry.")}</p>
+              </div>
+            ) : dealStatus === "empty" ? (
+              <div className="ama-web-state">
+                <div className="ama-web-state-glyph" aria-hidden="true">◈</div>
+                <h3>{tr("steam.deals.empty", "No qualifying high-discount deals right now.")}</h3>
+                <p>{tr("steam.deals.subtitle", "Hand-picked by discount and rating, with historical lows.")}</p>
+              </div>
+            ) : dealResults.length === 0 ? (
+              <div className="ama-web-state">
+                <div className="ama-web-state-glyph" aria-hidden="true">◈</div>
+                <h3>{tr("steam.deals.title", "Worth grabbing")}</h3>
+                <p>{tr("steam.deals.subtitle", "Hand-picked by discount and rating, with historical lows.")}</p>
+              </div>
+            ) : (
+              <div className="ama-deal-grid">
+                {dealResults.map((deal, index) => {
+                  const current = deal.current || {}
+                  const history = deal.history || {}
+                  const isLow = deal.is_at_low === true
+                  const steamPercent = Number(deal.steam_percent) || 0
+                  const releaseYear = Number(deal.release_year) || 0
+                  const discount = Number(current.savings_percent) || 0
+                  return (
+                    <article className="ama-deal-card" key={`${deal.game_id || deal.steam_app_id || "deal"}-${index}`}>
+                      <div className="ama-deal-top">
+                        <span className="ama-deal-discount">-{discount}%</span>
+                        {deal.hoard_worthy ? <span className="ama-hoard">{tr("steam.hoard", "Can skip playing; can't skip owning.")}</span> : null}
+                      </div>
+                      <div className="ama-steam-app">App {deal.steam_app_id || "—"}{releaseYear ? ` · ${releaseYear}` : ""}</div>
+                      <h3 className="ama-deal-title">{deal.title || "—"}</h3>
+                      <div className="ama-deal-price-row">
+                        <strong>{usd(current.price)}</strong>
+                        <s>{usd(current.retail_price)}</s>
+                      </div>
+                      <div className="ama-deal-meta">
+                        <span>{tr("steam.deals.rating", "Rating")} {Number(deal.deal_rating) || 0}/10{steamPercent ? ` · ${steamPercent}%` : ""}</span>
+                        <span>{isLow ? tr("steam.deals.atLow", "At the low") : `${tr("steam.deals.nearLow", "Gap to low")} ${usdGap(deal.gap_to_low)}`}</span>
+                        <span>{tr("steam.history", "All-time low")} {usd(history.lowest)}</span>
+                      </div>
+                      <div className="ama-deal-actions">
+                        {isHttpUrl(deal.store_url) ? (
+                          <FileDownload href={String(deal.store_url)} label={tr("web.open", "Open")} className="ama-web-open" />
+                        ) : null}
+                        <span>{tr("steam.deals.source", "Source: CheapShark · USD")}</span>
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            )}
+            <p className="ama-sale-source">{tr("steam.deals.source", "Source: CheapShark · USD")}</p>
+          </section>
+
+          <section className="ama-free-section">
+            <div className="ama-panel-head">
+              <div>
+                <div className="ama-kicker"><span className="ama-kicker-line" />{tr("steam.hoard", "Can skip playing; can't skip owning.")}</div>
+                <h2 className="ama-panel-title">{tr("steam.free.title", "Free to play")}</h2>
+                <p className="ama-panel-hint">{tr("steam.free.subtitle", "Permanently free, not a limited giveaway.")}</p>
+              </div>
+              <span className="ama-badge is-peach">{tr("steam.hoard", "Can skip playing; can't skip owning.")}</span>
+            </div>
+            <div className="ama-free-grid">
+              {freeGames.map((game) => (
+                <article className="ama-free-card" key={game.app_id || game.title}>
+                  <div className="ama-free-top">
+                    <span className="ama-free-badge">{tr("steam.free.badge", "FREE")}</span>
+                    <span className="ama-steam-app">App {game.app_id || "—"}</span>
+                  </div>
+                  <h3 className="ama-free-title">{game.title || "—"}</h3>
+                  <div className="ama-free-actions">
+                    {isHttpUrl(game.store_url) ? (
+                      <FileDownload href={String(game.store_url)} label={tr("web.open", "Open")} className="ama-web-open" />
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+              {freeGames.length === 0 ? <p className="ama-empty">{tr("steam.free.note", "Curated snapshot, not a live full catalogue.")}</p> : null}
+            </div>
+            <p className="ama-sale-source">
+              {tr("steam.free.note", "Curated snapshot, not a live full catalogue.")} · {tr("steam.free.updated", "Updated {date}").replace("{date}", steamInfo.free_to_play_updated || "—")}
+            </p>
+          </section>
+        </>
       )}
     </>
   )

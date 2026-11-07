@@ -73,6 +73,20 @@ STEAM_SEARCH_SCHEMA: dict[str, Any] = {
 }
 
 
+STEAM_DEALS_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "max_results": {
+            "type": "integer",
+            "minimum": 3,
+            "maximum": 8,
+            "default": 6,
+            "description": "Number of sale picks to return (3-8).",
+        },
+    },
+}
+
+
 @neko_plugin
 class AmaMonsterOsPlugin(NekoPluginBase):
     """The first window of Ama Monster OS, hosted inside N.E.K.O."""
@@ -215,6 +229,33 @@ class AmaMonsterOsPlugin(NekoPluginBase):
         except (TypeError, ValueError):
             limit = 3
         result = await self._runtime.search_game_prices(query, limit)
+        return Ok(result)
+
+    @ui.action(
+        id="ama_steam_deals",
+        label=tr("actions.steam_deals.label", default="Steam sale picks"),
+        icon="search",
+        tone="default",
+        order=31,
+        refresh_context=True,
+    )
+    @plugin_entry(
+        id="ama_steam_deals",
+        name=tr("entries.steam_deals.name", default="Steam sale picks"),
+        description=tr(
+            "entries.steam_deals.description",
+            default="Pick high-discount Steam games, enriched with historical lows, plus a curated free-to-play shelf.",
+        ),
+        input_schema=STEAM_DEALS_SCHEMA,
+        llm_result_fields=["summary"],
+        timeout=45,
+    )
+    async def ama_steam_deals(self, max_results: Any = 6, **_):
+        try:
+            limit = int(max_results)
+        except (TypeError, ValueError):
+            limit = 6
+        result = await self._runtime.steam_deals(limit)
         return Ok(result)
 
     # ------------------------------------------------------------------
