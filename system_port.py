@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 from typing import Any, Mapping
 
 try:  # package-relative imports when loaded as plugin.plugins.ama_monster_os
+    from .steam_catalog import chinese_title
     from .system_contract import (
         CAPABILITY_ACTIONS,
         CAPABILITY_ACTIVITY,
@@ -41,6 +42,7 @@ try:  # package-relative imports when loaded as plugin.plugins.ama_monster_os
         utc_now_iso,
     )
 except ImportError:  # pragma: no cover - direct test import fallback
+    from steam_catalog import chinese_title  # type: ignore[no-redef]
     from system_contract import (  # type: ignore[no-redef]
         CAPABILITY_ACTIONS,
         CAPABILITY_ACTIVITY,
@@ -364,6 +366,8 @@ def _search_cheapshark_sync(
             results.append(entry)
 
     _attach_cn_prices(results)
+    for entry in results:
+        entry["title_cn"] = chinese_title(str(entry.get("title") or ""))
     return {
         "ok": bool(results),
         "available": True,
@@ -516,6 +520,18 @@ def _fetch_steam_deals_sync(limit: int) -> dict[str, Any]:
         })
 
     _attach_cn_prices(results)
+    missing_titles = [
+        str(item.get("steam_app_id") or "")
+        for item in results
+        if not chinese_title(str(item.get("title") or ""))
+    ]
+    localized_names = _fetch_steam_names_sync(missing_titles) if missing_titles else {}
+    for entry in results:
+        app_id = str(entry.get("steam_app_id") or "")
+        entry["title_cn"] = chinese_title(
+            str(entry.get("title") or ""),
+            localized_names.get(app_id, ""),
+        )
     return {
         "ok": bool(results),
         "available": True,
@@ -599,6 +615,31 @@ def _fetch_cn_prices_sync(app_ids: list[str]) -> dict[str, Any]:
             "source": "Steam CN",
         }
     return {"ok": True, "prices": prices, "at": utc_now_iso()}
+
+
+def _fetch_steam_names_sync(app_ids: list[str]) -> dict[str, str]:
+    """Read localized App Hub names for the recommendation cards."""
+
+    names: dict[str, str] = {}
+    for app_id in list(dict.fromkeys(str(item).strip() for item in app_ids))[:8]:
+        if not app_id.isdigit():
+            continue
+        url = (
+            f"{_STEAM_CN_API}?appids={urllib.parse.quote(app_id)}"
+            "&cc=cn&l=schinese&filters=basic"
+        )
+        try:
+            payload = _http_json(url, max_bytes=_MAX_PRICE_HTTP_BYTES, user_agent=_PRICE_USER_AGENT)
+        except Exception:
+            continue
+        item = payload.get(app_id) if isinstance(payload, Mapping) else None
+        data = item.get("data") if isinstance(item, Mapping) else None
+        if isinstance(data, Mapping):
+            name = _clean_text(data.get("name"), 200)
+            if name:
+                names[app_id] = name
+        time.sleep(0.08)
+    return names
 
 
 def _attach_cn_prices(entries: list[dict[str, Any]]) -> None:

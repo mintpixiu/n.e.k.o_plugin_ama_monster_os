@@ -130,6 +130,7 @@ CheapShark and never asks for a Steam password:
       "game_id": "36",
       "steam_app_id": "620",
       "title": "Portal 2",
+      "title_cn": "传送门2",
       "currency": "USD",
       "current": {
         "price": "9.99",
@@ -167,6 +168,9 @@ Rules:
   an official Steam regional price.
 - The `cn` object is the **current** Steam China store price in CNY from the
   official `appdetails` API (`cc=cn`). It is not a CN historical low.
+- `title_cn` prefers a Steam `l=schinese` name containing CJK; for older English-
+  only names a curated alias may be used. Keep `title` as the canonical English
+  name for matching and display it underneath the Chinese title.
 - The all-time low is CheapShark's cross-store record. Keep that attribution.
 - Steam account linking is out of scope for this method. It is the reserved
   `steam.account` seam and must never store a password.
@@ -188,6 +192,7 @@ enriches the top picks with historical lows:
     {
       "steam_app_id": "49520",
       "title": "Borderlands 2",
+      "title_cn": "无主之地2",
       "current": {"price": "1.99", "retail_price": "19.99", "savings_percent": 90, "store": "Steam"},
       "history": {"lowest": "1.99", "date": "2026-11-01", "currency": "USD"},
       "cn": {"available": true, "currency": "CNY", "price": "6.40", "formatted": "¥ 6.40", "discount_percent": 90, "source": "Steam CN"},
@@ -212,6 +217,7 @@ Rules:
 - Recommendations are editorial sort order, not paid placements.
 - Each result may include the current Steam China price as `cn`; it is current,
   not a CN historical low.
+- Use `title_cn` for the Chinese display title and keep `title` for matching.
 - The provider must not present CheapShark's cross-store low as an official
   Steam regional low.
 

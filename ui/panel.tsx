@@ -79,6 +79,7 @@ type SteamPrice = {
   game_id?: string
   steam_app_id?: string
   title?: string
+  title_cn?: string
   currency?: string
   current?: {
     price?: string
@@ -148,6 +149,7 @@ type SteamDeal = SteamPrice & {
 type SteamFree = {
   app_id?: string
   title?: string
+  title_cn?: string
   store_url?: string
   source?: string
 }
@@ -930,6 +932,7 @@ const STYLES = `
 .ama-deal-discount { flex: 0 0 auto; padding: 2px 6px; border-radius: 5px; background: var(--mint); color: var(--mint-ink); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 9px; font-weight: 900; }
 .ama-hoard { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 999px; background: color-mix(in srgb, var(--peach) 30%, transparent); color: var(--peach-ink); font-size: 7px; font-weight: 800; letter-spacing: .03em; white-space: nowrap; }
 .ama-deal-title { margin: 4px 0 0; color: var(--ink); font-size: 12px; font-weight: 850; line-height: 1.35; overflow-wrap: anywhere; }
+.ama-deal-title-alt { margin-top: 1px; color: var(--muted); font-size: 8px; overflow-wrap: anywhere; }
 .ama-deal-price-row { display: flex; align-items: baseline; gap: 7px; margin-top: 6px; }
 .ama-deal-price-row strong { color: var(--sky-deep); font-size: 17px; font-weight: 900; letter-spacing: -.03em; }
 .ama-deal-price-row s { color: var(--muted); font-size: 9px; }
@@ -945,6 +948,7 @@ const STYLES = `
 .ama-free-top { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
 .ama-free-badge { padding: 2px 6px; border-radius: 5px; background: color-mix(in srgb, var(--mint) 25%, transparent); color: var(--mint-ink); font-size: 7px; font-weight: 900; letter-spacing: .08em; }
 .ama-free-title { margin: 5px 0 0; color: var(--ink-soft); font-size: 10px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
+.ama-free-title-alt { margin-top: 1px; color: var(--muted); font-size: 7.5px; overflow-wrap: anywhere; }
 .ama-free-actions { margin-top: 7px; }
 .ama-steam-account {
   display: flex;
@@ -968,6 +972,7 @@ const STYLES = `
 .ama-steam-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .ama-steam-app { color: var(--muted); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 8px; font-weight: 700; letter-spacing: .04em; }
 .ama-steam-title { margin: 3px 0 0; font-size: 13px; font-weight: 850; line-height: 1.35; overflow-wrap: anywhere; }
+.ama-steam-title-alt { margin-top: 1px; color: var(--muted); font-size: 8px; overflow-wrap: anywhere; }
 .ama-steam-low { flex: 0 0 auto; padding: 3px 7px; border-radius: 999px; background: var(--panel-2); color: var(--muted); font-size: 8px; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
 .ama-steam-low.is-low { background: color-mix(in srgb, var(--mint) 30%, transparent); color: var(--mint-ink); }
 .ama-steam-prices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 11px; }
@@ -2127,7 +2132,8 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                 <div className="ama-steam-head">
                   <div>
                     <div className="ama-steam-app">{tr("steam.appId", "App")} {game.steam_app_id || "—"}</div>
-                    <h3 className="ama-steam-title">{game.title || "—"}</h3>
+                    <h3 className="ama-steam-title">{game.title_cn || game.title || "—"}</h3>
+                    {game.title_cn ? <div className="ama-steam-title-alt">{game.title || ""}</div> : null}
                   </div>
                   <span className={`ama-steam-low${isLow ? " is-low" : ""}`}>
                     {isLow ? tr("steam.atLow", "At the low") : tr("steam.aboveLow", "Above the low")}
@@ -2229,7 +2235,8 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                         {deal.hoard_worthy ? <span className="ama-hoard">{tr("steam.hoard", "Can skip playing; can't skip owning.")}</span> : null}
                       </div>
                       <div className="ama-steam-app">App {deal.steam_app_id || "—"}{releaseYear ? ` · ${releaseYear}` : ""}</div>
-                      <h3 className="ama-deal-title">{deal.title || "—"}</h3>
+                      <h3 className="ama-deal-title">{deal.title_cn || deal.title || "—"}</h3>
+                      {deal.title_cn ? <div className="ama-deal-title-alt">{deal.title || ""}</div> : null}
                       <div className="ama-deal-price-row">
                         <strong>{usd(current.price)}</strong>
                         <s>{usd(current.retail_price)}</s>
@@ -2275,7 +2282,8 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                     <span className="ama-free-badge">{tr("steam.free.badge", "FREE")}</span>
                     <span className="ama-steam-app">App {game.app_id || "—"}</span>
                   </div>
-                  <h3 className="ama-free-title">{game.title || "—"}</h3>
+                  <h3 className="ama-free-title">{game.title_cn || game.title || "—"}</h3>
+                  {game.title_cn ? <div className="ama-free-title-alt">{game.title || ""}</div> : null}
                   <div className="ama-free-actions">
                     {isHttpUrl(game.store_url) ? (
                       <FileDownload href={String(game.store_url)} label={tr("web.open", "Open")} className="ama-web-open" />

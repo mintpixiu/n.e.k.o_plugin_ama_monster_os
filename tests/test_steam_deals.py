@@ -72,6 +72,7 @@ def test_cheapshark_deal_picks_are_filtered_and_enriched(monkeypatch) -> None:
     assert pick["hoard_worthy"] is True
     assert pick["cn"]["price"] == "6.40"
     assert pick["cn"]["discount_percent"] == 90
+    assert pick["title_cn"] == "无主之地2"
     assert pick["store_url"] == "https://store.steampowered.com/app/49520/"
 
 

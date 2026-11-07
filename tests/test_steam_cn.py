@@ -42,3 +42,15 @@ def test_steam_cn_prices_handle_request_failure(monkeypatch) -> None:
     assert result["ok"] is False
     assert result["prices"] == {}
     assert result["error"].startswith("request_failed:")
+
+
+def test_localized_steam_name_is_used(monkeypatch) -> None:
+    monkeypatch.setattr(
+        system_port,
+        "_http_json",
+        lambda *args, **kwargs: {
+            "49520": {"success": True, "data": {"name": "无主之地 2"}}
+        },
+    )
+    names = system_port._fetch_steam_names_sync(["49520"])
+    assert names == {"49520": "无主之地 2"}

@@ -58,6 +58,8 @@ match with CheapShark price data:
 - gap to the all-time low
 - retail price and current discount
 - **Steam China current price in CNY** (including its own discount)
+- **Chinese game titles** for recommendations, preferring Steam's official
+  Simplified Chinese name and falling back to curated aliases for older titles
 - explicit **USD**, **CNY**, and **CheapShark cross-store** labeling
 
 The CN price is a live current price from the official Steam Store API
@@ -100,9 +102,15 @@ The Steam room has two tabs:
 - **促销精选** — a live CheapShark picks list plus the curated free shelf.
 
 Sale picks are filtered to at least **40% off** and a **7/10** CheapShark deal
-rating, then enriched with historical lows and current **CNY** prices. The top
-six show a **“可以不玩，但不能没有”** badge when they are 80%+ off, at or below
-US$5, or at their all-time low. These are editorial picks, not paid placements.
+rating, then enriched with historical lows, current **CNY** prices, and
+**Chinese titles**. The top six show a **“可以不玩，但不能没有”** badge when they
+are 80%+ off, at or below US$5, or at their all-time low. These are editorial
+picks, not paid placements.
+
+Chinese titles prefer the official Steam `l=schinese` name. Older games whose
+Steam name stays English use a small curated alias map (for example
+`Borderlands 2` → `无主之地2`, `Sid Meier's Civilization IV` → `文明4`), with the
+English title kept underneath for verification.
 
 The free shelf lists six **permanently free-to-play** titles with fixed Steam
 store links. It is a versioned snapshot (updated **2026-11-07**), not a
@@ -189,7 +197,6 @@ ama_monster_os/
 ├── docs/system-contract.v1.schema.json
 ├── docs/preview.png             shell preview
 ├── docs/preview-web.png         web room preview
-├── docs/preview-steam.png       Steam price room preview
 ├── docs/preview-cn-price.png    Steam China current price preview
 ├── docs/preview-sale.png        Steam sale radar preview
 ├── docs/preview-picks.png       sale picks preview

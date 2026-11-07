@@ -93,6 +93,7 @@ class FakePort:
                 "game_id": "36",
                 "steam_app_id": "620",
                 "title": "Portal 2",
+                "title_cn": "传送门2",
                 "currency": "USD",
                 "current": {
                     "price": "9.99",
@@ -134,6 +135,7 @@ class FakePort:
                 "game_id": "88304",
                 "steam_app_id": "49520",
                 "title": "Borderlands 2",
+                "title_cn": "无主之地2",
                 "currency": "USD",
                 "current": {
                     "price": "1.99",
@@ -305,6 +307,7 @@ def test_steam_prices_store_history_and_snapshot() -> None:
     assert snapshot["steam"]["status"] == "ok"
     assert snapshot["steam"]["account_mode"] == "deferred"
     assert snapshot["steam"]["results"][0]["steam_app_id"] == "620"
+    assert snapshot["steam"]["results"][0]["title_cn"] == "传送门2"
     assert snapshot["steam"]["results"][0]["cn"]["price"] == "35.00"
     assert snapshot["steam"]["sale"]["source"] == "Steamworks"
     assert snapshot["steam"]["sale"]["updated"] == "2026-11-07"
@@ -342,6 +345,7 @@ def test_steam_deals_and_free_shelf_in_snapshot() -> None:
     assert deals["results"][0]["steam_app_id"] == "49520"
     assert snapshot["steam"]["deals"]["status"] == "ok"
     assert snapshot["steam"]["deals"]["results"][0]["history"]["lowest"] == "1.99"
+    assert snapshot["steam"]["deals"]["results"][0]["title_cn"] == "无主之地2"
     assert snapshot["steam"]["deals"]["results"][0]["cn"]["price"] == "6.40"
     assert snapshot["steam"]["free_to_play_updated"] == "2026-11-07"
     assert any(game["app_id"] == "730" for game in snapshot["steam"]["free_to_play"])
