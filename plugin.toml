@@ -1,8 +1,8 @@
 [plugin]
 id = "ama_monster_os"
 name = "N.E.K.O Ama Monster OS"
-description = "《N.E.K.O Ama Monster OS》0.1.0 Beta：给 N.E.K.O 的猫娘风格系统壳窗口，带实时状态、联网搜索、Steam 价格与历史最低价、系统桥契约，以及为未来独立软件预留的内置系统接口。搜索优先调用 N.E.K.O 的 web_search 插件，并在其未运行时使用固定 Bing RSS 回退；Steam 价格来自 CheapShark（USD）。只发送查询文字，不自动抓取网页；不收集 Steam 密码。当前版本是可运行的窗口预览，不冒充完整操作系统。"
-short_description = "A NEKO-styled OS shell window with live status, web search, Steam price history (USD), and a versioned system-bridge seam."
+description = "《N.E.K.O Ama Monster OS》0.1.0 Beta：给 N.E.K.O 的猫娘风格系统壳窗口，带实时状态、联网搜索、Steam 价格与历史最低价、Steam 促销日历、系统桥契约，以及为未来独立软件预留的内置系统接口。搜索优先调用 N.E.K.O 的 web_search 插件，并在其未运行时使用固定 Bing RSS 回退；Steam 价格与促销日程来自 CheapShark 与 Steamworks 官方快照（USD）。只发送查询文字，不自动抓取网页；不收集 Steam 密码。当前版本是可运行的窗口预览，不冒充完整操作系统。"
+short_description = "A NEKO-styled OS shell window with live status, web search, Steam price history and sale calendar (USD), and a versioned system-bridge seam."
 keywords = [
     "ama monster os",
     "ama os",
@@ -21,8 +21,12 @@ keywords = [
     "steam 价格",
     "历史最低价",
     "游戏价格",
+    "steam 促销",
+    "steam 特卖",
+    "促销日历",
     "store price",
     "price history",
+    "sale calendar",
     "shell preview",
     "system bridge",
 ]

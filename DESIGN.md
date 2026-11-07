@@ -24,6 +24,7 @@ from the first version.
 - One real Hosted TSX window with title bar, sidebar navigation, Home/Web/Core/Bridge/About views, minimize/expand/sleep states, and a working pulse action.
 - A Web room that performs live internet searches, shows sanitized results, and opens result links through the Hosted UI external-open bridge.
 - A Steam price room using CheapShark for current lowest price, all-time low, low date, gap, and discount; USD only.
+- A versioned Steam sale calendar snapshot sourced from Steamworks, with current/next event, next seasonal sale, local countdowns, and an official schedule link.
 - A two-provider search chain: N.E.K.O `web_search` first, fixed Bing RSS fallback second.
 - Steam account login is deliberately deferred; the UI says so and never asks for a password.
 - Live, privacy-filtered bridge/telemetry snapshot from the plugin.
@@ -44,6 +45,7 @@ from the first version.
 - cross-plugin: `self.plugins.call_entry("web_search:search", ...)` when available
 - network fallback: fixed Bing RSS URL through stdlib `urllib.request`, executed via `asyncio.to_thread`
 - price data: fixed CheapShark API URLs through stdlib `urllib.request`; USD only
+- sale calendar: versioned `steam_sales.py` snapshot from Steamworks; dates shown in local time; Valve can change them
 - UI surfaces: one `panel` (`ui/panel.tsx`), one Markdown guide, one Markdown docs page
 - state/config: read-only snapshot plus in-memory last search and price lookup; no persistent config in 0.1.0 Beta
 - lifecycle/background work: startup/shutdown only; no timers or background tasks
@@ -77,6 +79,8 @@ plugins such as `lifekit` and `mcp_adapter`.
   states this plainly; no fake login is included.
 - CheapShark prices are USD and its all-time low is cross-store, not an official
   Steam regional low. The UI carries both labels.
+- The sale calendar is a static snapshot, not a live feed. It is marked with an
+  update date and an official Steamworks link so users can verify changed dates.
 - Window chrome controls are presentation state inside one hosted panel; they
   do not control the N.E.K.O application window.
 - Version `0.1.0-beta` is a pre-release; the user publishes manually with their

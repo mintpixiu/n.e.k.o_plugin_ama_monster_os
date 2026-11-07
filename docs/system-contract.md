@@ -159,6 +159,21 @@ Rules:
 - Steam account linking is out of scope for this method. It is the reserved
   `steam.account` seam and must never store a password.
 
+### Sale calendar
+
+The runtime adds `steam.sale` to the snapshot from
+`steam_sales.evaluate_sales()`. It contains `current`, `next`,
+`next_seasonal`, `upcoming`, and the source metadata. The calendar is a
+versioned snapshot from Valve's Steamworks documentation, not a live feed:
+
+- `updated`: capture date (`2026-11-07`)
+- `source_url`: official Steamworks upcoming-events page
+- dates from Valve are shown in Pacific Time; countdowns use the local clock
+- `autumn_2027` is `TBD` and must not be used as a next event until dated
+
+A future desktop build can reuse `steam_sales.py` directly; it has no host or
+network dependency.
+
 ### `record_event()`
 
 Best-effort host journal. It must never raise. A failing journal must not break
@@ -266,5 +281,6 @@ The shipped tests cover:
 - private activity not leaking category/idle time;
 - RSS parsing, URL validation, HTML stripping, and dotted-acronym query fallback;
 - CheapShark normalization, historical-low date/price, and non-Steam filtering;
+- Steam sale calendar current/next evaluation, local countdown inputs, and TBD handling;
 - runtime boot, pulse, web search, Steam price lookup, shutdown, and degraded-host behaviour;
 - serializability of the complete snapshot.

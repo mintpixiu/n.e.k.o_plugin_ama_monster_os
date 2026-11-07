@@ -246,6 +246,8 @@ def test_steam_prices_store_history_and_snapshot() -> None:
     assert snapshot["steam"]["status"] == "ok"
     assert snapshot["steam"]["account_mode"] == "deferred"
     assert snapshot["steam"]["results"][0]["steam_app_id"] == "620"
+    assert snapshot["steam"]["sale"]["source"] == "Steamworks"
+    assert snapshot["steam"]["sale"]["updated"] == "2026-11-07"
     assert [event["name"] for event in snapshot["events"]][-1] == "steam.price"
 
 

@@ -15,12 +15,14 @@ from datetime import datetime
 from typing import Any, Mapping
 
 try:  # package-relative import used by the N.E.K.O plugin
+    from .steam_sales import evaluate_sales
     from .system_contract import (
         SystemEvent,
         SystemPort,
         utc_now_iso,
     )
 except ImportError:  # pragma: no cover - direct test import fallback
+    from steam_sales import evaluate_sales  # type: ignore[no-redef]
     from system_contract import (  # type: ignore[no-redef]
         SystemEvent,
         SystemPort,
@@ -272,7 +274,7 @@ class AmaOsRuntime:
                 "server_ms": round(self._last_pulse_ms, 3),
             },
             "web": {**self._web, "results": list(self._web.get("results") or [])},
-            "steam": {**self._steam, "results": list(self._steam.get("results") or [])},
+            "steam": {**self._steam, "results": list(self._steam.get("results") or []), "sale": evaluate_sales()},
             "events": [event.as_dict() for event in self._events[-8:]],
             "preview": True,
         }

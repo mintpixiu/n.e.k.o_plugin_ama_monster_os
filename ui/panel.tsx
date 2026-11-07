@@ -108,6 +108,33 @@ type SteamInfo = {
   error?: string
   account_linked?: boolean
   account_mode?: string
+  sale?: SaleCalendar
+}
+
+type SaleEvent = {
+  id?: string
+  kind?: string
+  name?: string
+  start_at?: string | null
+  end_at?: string | null
+  status?: string
+  starts_in_seconds?: number | null
+  ends_in_seconds?: number | null
+  time_confirmed?: boolean
+  tbd?: boolean
+}
+
+type SaleCalendar = {
+  updated?: string
+  source?: string
+  source_url?: string
+  timezone?: string
+  current?: SaleEvent | null
+  next?: SaleEvent | null
+  next_seasonal?: SaleEvent | null
+  upcoming?: SaleEvent[]
+  all?: SaleEvent[]
+  evaluated_at?: string
 }
 
 type BootEvent = { name?: string; at?: string; detail?: string }
@@ -812,6 +839,45 @@ const STYLES = `
 .ama-web-spinner { width: 20px; height: 20px; border: 2px solid var(--line-strong); border-top-color: var(--sky); border-radius: 50%; animation: ama-spin .8s linear infinite; }
 .ama-web-provider { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px; border-radius: 6px; background: var(--panel-2); color: var(--muted); font-size: 8px; font-weight: 700; }
 .ama-web-provider.is-fallback { color: var(--peach-ink); background: color-mix(in srgb, var(--peach) 22%, transparent); }
+.ama-sale-panel {
+  padding: 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(140deg, var(--hero-1), color-mix(in srgb, var(--peach) 9%, var(--hero-2)));
+}
+.ama-sale-current {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 9px;
+}
+.ama-sale-current.is-active { color: var(--mint-ink); background: color-mix(in srgb, var(--mint) 18%, transparent); border-color: color-mix(in srgb, var(--mint) 45%, var(--line)); }
+.ama-sale-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
+.ama-sale-current.is-active .ama-sale-dot { background: var(--mint-ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 28%, transparent); }
+.ama-sale-highlights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 8px; }
+.ama-sale-highlight { min-width: 0; padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+.ama-sale-label { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.ama-sale-highlight strong { display: block; margin-top: 4px; color: var(--ink-soft); font-size: 10.5px; line-height: 1.4; }
+.ama-sale-highlight small { display: block; margin-top: 2px; color: var(--muted); font-size: 8.5px; }
+.ama-sale-highlight em { display: block; margin-top: 5px; color: var(--sky-deep); font-size: 9px; font-style: normal; font-weight: 800; }
+.ama-sale-kind { display: inline-flex; padding: 2px 5px; border-radius: 5px; background: var(--panel-2); color: var(--muted); font-size: 7px; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; }
+.ama-sale-details { margin-top: 7px; }
+.ama-sale-details summary { cursor: pointer; color: var(--sky-deep); font-size: 9px; font-weight: 750; }
+.ama-sale-list { display: grid; gap: 2px; margin-top: 5px; }
+.ama-sale-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px dashed var(--line); font-size: 8.5px; }
+.ama-sale-row:last-child { border-bottom: 0; }
+.ama-sale-row-main { min-width: 0; }
+.ama-sale-row-name { color: var(--ink-soft); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ama-sale-row-date { margin-top: 1px; color: var(--muted); font-size: 7.5px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
+.ama-sale-row-kind { flex: 0 0 auto; color: var(--muted); font-size: 7.5px; }
+.ama-sale-source { margin: 8px 0 0; color: var(--muted); font-size: 7.5px; line-height: 1.5; }
 .ama-steam-account {
   display: flex;
   align-items: center;
@@ -963,6 +1029,7 @@ const STYLES = `
   .ama-steam-price { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
   .ama-steam-price > strong { margin-top: 0; font-size: 13px; }
   .ama-steam-account { align-items: flex-start; }
+  .ama-sale-highlights { grid-template-columns: 1fr; }
   .ama-about-card { grid-template-columns: 1fr; gap: 4px; }
   .ama-about-orb { min-height: 150px; }
   .ama-view-title { font-size: 23px; }
@@ -1114,6 +1181,38 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     } catch (_error) {
       return steamQuery
     }
+  }
+
+  function saleEventName(event: SaleEvent | null | undefined): string {
+    if (!event) return ""
+    const key = `steam.sale.${event.id || ""}`
+    const value = t(key)
+    return value && value !== key ? value : event.name || key
+  }
+
+  function saleDateRange(event: SaleEvent | null | undefined): string {
+    if (!event || !event.start_at || !event.end_at) return tr("steam.sale.tbd", "TBD")
+    try {
+      const options: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric", timeZone: "America/Los_Angeles" }
+      const start = new Date(event.start_at)
+      const end = new Date(event.end_at)
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return tr("steam.sale.tbd", "TBD")
+      return `${start.toLocaleDateString(undefined, options)} – ${end.toLocaleDateString(undefined, options)} (PT)`
+    } catch (_error) {
+      return tr("steam.sale.tbd", "TBD")
+    }
+  }
+
+  function saleCountdown(event: SaleEvent | null | undefined): string {
+    if (!event) return ""
+    if (event.tbd) return tr("steam.sale.tbd", "TBD")
+    const seconds = Number(event.status === "active" ? event.ends_in_seconds : event.starts_in_seconds)
+    if (!Number.isFinite(seconds) || seconds < 0) return ""
+    const days = Math.floor(seconds / 86400)
+    const hours = Math.floor((seconds % 86400) / 3600)
+    const key = event.status === "active" ? "steam.sale.endsIn" : "steam.sale.inDays"
+    const fallback = event.status === "active" ? "Ends in {days}d {hours}h" : "In {days}d {hours}h"
+    return tr(key, fallback).replace("{days}", String(days)).replace("{hours}", String(hours))
   }
 
   async function runPulse() {
@@ -1313,6 +1412,13 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const steamReadyText = steamReady
     ? tr("steam.ready", "Prices ready")
     : tr("steam.offline", "Price service is unavailable right now.")
+  const sale = steamInfo.sale || {}
+  const saleCurrent = sale.current || null
+  const saleNext = sale.next || null
+  const saleNextSeasonal = sale.next_seasonal || null
+  const saleUpcoming = Array.isArray(sale.upcoming) ? sale.upcoming : []
+  const saleTbd = Array.isArray(sale.all) ? sale.all.filter((event) => event.tbd) : []
+  const saleOfficialUrl = sale.source_url || "https://partner.steamgames.com/doc/marketing/upcoming_events"
 
   const nav = VIEWS.map((item) => (
     <button
@@ -1695,6 +1801,80 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
         </div>
         <span className={`ama-badge ${steamReady ? "is-mint" : "is-peach"}`}>{steamReadyText}</span>
       </div>
+      <section className="ama-sale-panel">
+        <div className="ama-panel-head">
+          <div>
+            <h2 className="ama-panel-title">{tr("steam.sale.title", "Sale radar")}</h2>
+            <p className="ama-panel-hint">{tr("steam.sale.subtitle", "Next Steam event and the next seasonal sale.")}</p>
+          </div>
+          <FileDownload
+            href={saleOfficialUrl}
+            label={tr("steam.sale.official", "Official schedule")}
+            className="ama-web-open"
+          />
+        </div>
+        <div className={`ama-sale-current${saleCurrent ? " is-active" : ""}`}>
+          <span className="ama-sale-dot" aria-hidden="true" />
+          <span>
+            {saleCurrent
+              ? `${tr("steam.sale.active", "Active now")} · ${saleEventName(saleCurrent)}`
+              : tr("steam.sale.noneActive", "No Steam-wide seasonal sale is active.")}
+          </span>
+        </div>
+        <div className="ama-sale-highlights">
+          {saleNext ? (
+            <div className="ama-sale-highlight">
+              <div className="ama-sale-label">
+                {tr("steam.sale.next", "Next event")}
+                <span className="ama-sale-kind">
+                  {saleNext.kind === "seasonal" ? tr("steam.sale.kind.seasonal", "Seasonal sale") : tr("steam.sale.kind.themed", "Themed fest")}
+                </span>
+              </div>
+              <strong>{saleEventName(saleNext)}</strong>
+              <small>{saleDateRange(saleNext)}</small>
+              <em>{saleCountdown(saleNext)}</em>
+            </div>
+          ) : null}
+          {saleNextSeasonal && (!saleNext || saleNextSeasonal.id !== saleNext.id) ? (
+            <div className="ama-sale-highlight">
+              <div className="ama-sale-label">
+                {tr("steam.sale.nextSeasonal", "Next seasonal sale")}
+              </div>
+              <strong>{saleEventName(saleNextSeasonal)}</strong>
+              <small>{saleDateRange(saleNextSeasonal)}</small>
+              <em>{saleCountdown(saleNextSeasonal)}</em>
+            </div>
+          ) : null}
+        </div>
+        <details className="ama-sale-details">
+          <summary>{tr("steam.sale.upcoming", "Upcoming schedule")}</summary>
+          <div className="ama-sale-list">
+            {saleUpcoming.map((event) => (
+              <div className="ama-sale-row" key={event.id || event.name}>
+                <div className="ama-sale-row-main">
+                  <div className="ama-sale-row-name">{saleEventName(event)}</div>
+                  <div className="ama-sale-row-date">{saleDateRange(event)} · {saleCountdown(event)}</div>
+                </div>
+                <span className="ama-sale-row-kind">
+                  {event.kind === "seasonal" ? tr("steam.sale.kind.seasonal", "Seasonal sale") : tr("steam.sale.kind.themed", "Themed fest")}
+                </span>
+              </div>
+            ))}
+            {saleTbd.map((event) => (
+              <div className="ama-sale-row" key={event.id || event.name}>
+                <div className="ama-sale-row-main">
+                  <div className="ama-sale-row-name">{saleEventName(event)}</div>
+                  <div className="ama-sale-row-date">{tr("steam.sale.tbd", "TBD")}</div>
+                </div>
+                <span className="ama-sale-row-kind">{tr("steam.sale.kind.seasonal", "Seasonal sale")}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+        <p className="ama-sale-source">
+          {tr("steam.sale.source", "Source: Steamworks")} · {tr("steam.sale.updated", "Updated {date}").replace("{date}", sale.updated || "—")} · {tr("steam.sale.timeNote", "Dates use your local timezone.")}
+        </p>
+      </section>
       <div className="ama-steam-account">
         <div className="ama-steam-account-icon" aria-hidden="true">S</div>
         <div className="ama-steam-account-main">

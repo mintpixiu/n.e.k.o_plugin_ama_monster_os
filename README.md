@@ -54,6 +54,31 @@ match with CheapShark price data:
 - retail price and current discount
 - explicit **USD** and **CheapShark cross-store** labeling
 
+### Sale calendar
+
+A sale radar above the search shows the current sale, the **next Steam event**,
+the **next seasonal sale**, and local countdowns. The built-in calendar is
+sourced from Valve's Steamworks schedule, captured **2026-11-07**:
+
+| Event | Dates |
+|-------|-------|
+| Steam Auto-Battler RPG Fest 2026 | Nov 16–23, 2026 |
+| Steam Winter Sale 2026 | Dec 17, 2026 – Jan 4, 2027 |
+| Steam Spring Sale 2027 | Mar 18–25, 2027 |
+| Steam Summer Sale 2027 | Jun 24 – Jul 8, 2027 |
+| Steam Autumn Sale 2027 | TBD |
+
+At the time of this build, the next event is **Auto-Battler RPG Fest** and the
+next seasonal sale is **Winter Sale 2026**. The UI includes an **Official
+schedule** link to Steamworks; Valve can change dates. Dates are shown in
+Pacific Time (PT); countdowns use the viewer's local clock.
+
+![Ama Monster OS sale radar](docs/preview-sale.png)
+
+Sources:
+[Steamworks Upcoming Events](https://partner.steamgames.com/doc/marketing/upcoming_events) ·
+[Steam Winter Sale 2026](https://partner.steamgames.com/doc/marketing/upcoming_events/2026_winter_sale)
+
 ![Ama Monster OS Steam price room](docs/preview-steam.png)
 
 **Steam account login is deliberately not enabled in 0.1.0 Beta.** This build
@@ -119,6 +144,7 @@ ama_monster_os/
 ├── plugin.toml                 manifest and Hosted UI surfaces
 ├── __init__.py                 SDK facade, context, entries, lifecycle
 ├── shell_runtime.py            host-free shell runtime
+├── steam_sales.py              versioned Steam sale calendar
 ├── system_contract.py          contract v1 + SystemPort protocol
 ├── system_port.py              N.E.K.O adapter (read-only)
 ├── ui/panel.tsx                the NEKO-style window
@@ -128,6 +154,7 @@ ama_monster_os/
 ├── docs/preview.png             shell preview
 ├── docs/preview-web.png         web room preview
 ├── docs/preview-steam.png       Steam price room preview
+├── docs/preview-sale.png        Steam sale radar preview
 ├── i18n/                       8 locale files
 └── tests/                      contract, runtime, web, manifest, i18n, UI checks
 ```
