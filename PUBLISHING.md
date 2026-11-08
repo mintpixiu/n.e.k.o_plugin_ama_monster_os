@@ -1,7 +1,12 @@
 # Publishing Ama Monster OS
 
-**Status: not published.** The source is uploaded to the repository only. The
-repository owner publishes manually, on purpose.
+**Status: 0.2.3 Beta published to GitHub Releases as a pre-release.** The
+Market Beta submission is still manual and has not been sent.
+
+- Release: https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os/releases/tag/v0.2.3-beta
+- Tag: `v0.2.3-beta`
+- Package SHA-256: `caf6ebac4271717e802f2e43f862da94fc0ee1a7ebd862d06b2b00ceb7889aa2`
+- Market: pending manual Beta-channel submission
 
 ## Before publishing
 
@@ -46,6 +51,6 @@ the GitHub repository. Follow the official flow:
 - A version published to Beta cannot be republished with the same number to
   Stable; use a new version for a later stable release.
 
-This repository has no automation that publishes to Market. The release
-workflow only builds and uploads the `.neko-plugin` asset and release evidence
-to GitHub.
+This repository has no automation that publishes to Market. The GitHub release
+workflow builds and uploads the `.neko-plugin` asset and release evidence; the
+Market Beta submission still needs the manual submission page.

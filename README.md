@@ -184,7 +184,8 @@ a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
-- Any Market publication. The repository owner publishes manually.
+- Any Market publication. The **0.2.3 Beta** GitHub Release exists, but the
+  Market Beta submission still needs the owner's manual review/submission.
 
 ## Install and open the window
 
@@ -278,16 +279,16 @@ cd "<path-to-ama_monster_os>"
 python -m pytest tests
 ```
 
-See [PUBLISHING.md](PUBLISHING.md) for the owner-only Beta release steps. This
-repository does not publish itself.
+See [PUBLISHING.md](PUBLISHING.md) for the Beta release and Market submission
+notes. The GitHub Release is created; Market notification remains manual.
 
 ## Versioning and release
 
 - Manifest version: `0.2.3-beta`
 - Display version: **0.2.3 Beta**
-- Release channel: **Beta**
-- The user publishes manually. No tag, GitHub Release, or Market notification is
-  created by this repository.
+- Release channel: **Beta (pre-release)**
+- Published GitHub Release: **v0.2.3-beta**
+- Market: **not submitted**; the Beta channel submission is manual
 
 ## Credits
 
