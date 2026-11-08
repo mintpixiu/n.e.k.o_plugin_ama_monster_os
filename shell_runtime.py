@@ -22,6 +22,7 @@ try:  # package-relative import used by the N.E.K.O plugin
         SystemPort,
         utc_now_iso,
     )
+    from .ui_profile import DEFAULT_UI_PROFILE, normalize_ui_profile
 except ImportError:  # pragma: no cover - direct test import fallback
     from steam_catalog import FREE_TO_PLAY_UPDATED, free_to_play_entries  # type: ignore[no-redef]
     from steam_sales import evaluate_sales  # type: ignore[no-redef]
@@ -30,6 +31,7 @@ except ImportError:  # pragma: no cover - direct test import fallback
         SystemPort,
         utc_now_iso,
     )
+    from ui_profile import DEFAULT_UI_PROFILE, normalize_ui_profile  # type: ignore[no-redef]
 
 SHELL_NAME = "Ama Monster OS"
 SHELL_VERSION = "0.1.0-beta"
@@ -154,6 +156,7 @@ class AmaOsRuntime:
             "at": None,
             "error": "",
         }
+        self._ui_profile = normalize_ui_profile(DEFAULT_UI_PROFILE)
 
     @property
     def port(self) -> SystemPort:
@@ -219,6 +222,10 @@ class AmaOsRuntime:
 
     def _uptime_seconds(self) -> int:
         return max(0, int(round(float(self._clock()) - self._started_monotonic)))
+
+    def set_ui_profile(self, profile: Mapping[str, Any] | None) -> dict[str, Any]:
+        self._ui_profile = normalize_ui_profile(profile)
+        return dict(self._ui_profile)
 
     def contract(self) -> Mapping[str, Any]:
         try:
@@ -295,6 +302,7 @@ class AmaOsRuntime:
                 "sale": evaluate_sales(),
             },
             "events": [event.as_dict() for event in self._events[-8:]],
+            "ui_profile": dict(self._ui_profile),
             "preview": True,
         }
 

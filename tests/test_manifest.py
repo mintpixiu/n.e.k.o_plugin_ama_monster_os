@@ -103,4 +103,4 @@ def test_ui_entry_contract() -> None:
     imports = [line for line in text.splitlines() if line.lstrip().startswith("import ")]
     for line in imports:
         assert '"@neko/plugin-ui"' in line or line.lstrip().startswith("import type"), line
-    assert len(text.encode("utf-8")) < 120_000
+    assert len(text.encode("utf-8")) < 160_000

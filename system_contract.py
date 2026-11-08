@@ -86,6 +86,7 @@ ENTRYPOINTS = {
     "web_search": "ama_web_search",
     "steam_search": "ama_steam_search",
     "steam_deals": "ama_steam_deals",
+    "ui_profile": "ama_ui_profile_save",
     "contract": "ama_system_contract",
 }
 
@@ -205,7 +206,7 @@ def validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
     if not isinstance(entrypoints, dict):
         errors.append("entrypoints must be an object")
     else:
-        for key in ("context", "pulse", "web_search", "steam_search", "steam_deals", "contract"):
+        for key in ("context", "pulse", "web_search", "steam_search", "steam_deals", "ui_profile", "contract"):
             if not isinstance(entrypoints.get(key), str) or not entrypoints.get(key):
                 errors.append(f"entrypoints.{key} is missing")
     return errors

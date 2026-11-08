@@ -9,6 +9,7 @@ reuse the window and runtime with a different system port.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from plugin.sdk.plugin import (
@@ -23,6 +24,12 @@ from plugin.sdk.plugin import (
 
 from .shell_runtime import SHELL_CHANNEL, SHELL_DISPLAY_VERSION, SHELL_NAME, AmaOsRuntime
 from .system_port import NekoHostSystemPort
+from .ui_profile import (
+    MAX_UI_PROFILE_BYTES,
+    export_ui_profile,
+    normalize_ui_profile,
+    parse_ui_profile_payload,
+)
 
 PULSE_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -86,6 +93,18 @@ STEAM_DEALS_SCHEMA: dict[str, Any] = {
     },
 }
 
+UI_PROFILE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "profile": {
+            "type": "object",
+            "description": "Safe appearance profile: brand, glyph, accent, wallpaper, radius, density, theme.",
+            "additionalProperties": True,
+        },
+    },
+    "required": ["profile"],
+}
+
 
 @neko_plugin
 class AmaMonsterOsPlugin(NekoPluginBase):
@@ -95,12 +114,33 @@ class AmaMonsterOsPlugin(NekoPluginBase):
         super().__init__(ctx)
         self._runtime = AmaOsRuntime(NekoHostSystemPort(self))
 
+    def _ui_profile_path(self):
+        return self.data_path("ui_profile.json")
+
+    def _load_ui_profile(self) -> None:
+        try:
+            path = self._ui_profile_path()
+            if not path.is_file():
+                return
+            raw = path.read_text(encoding="utf-8")
+            if len(raw.encode("utf-8", errors="ignore")) > MAX_UI_PROFILE_BYTES:
+                return
+            profile, error = parse_ui_profile_payload(raw)
+            if profile is not None:
+                self._runtime.set_ui_profile(profile)
+                self.logger.info("Loaded custom UI profile from %s", path)
+            elif error:
+                self.logger.warning("Ignoring invalid UI profile: %s", error)
+        except Exception as exc:
+            self.logger.warning("Could not load UI profile: %s", exc)
+
     # ------------------------------------------------------------------
     # Lifecycle: cheap, no background tasks, no I/O at import time.
     # ------------------------------------------------------------------
 
     @lifecycle(id="startup")
     async def on_startup(self, **_):
+        self._load_ui_profile()
         await self._runtime.start()
         contract = self._runtime.contract()
         self.logger.info(
@@ -257,6 +297,55 @@ class AmaMonsterOsPlugin(NekoPluginBase):
             limit = 6
         result = await self._runtime.steam_deals(limit)
         return Ok(result)
+
+    @ui.action(
+        id="ama_ui_profile_save",
+        label=tr("actions.ui_profile_save.label", default="Save appearance"),
+        icon="refresh",
+        tone="primary",
+        order=40,
+        refresh_context=True,
+    )
+    @plugin_entry(
+        id="ama_ui_profile_save",
+        name=tr("entries.ui_profile_save.name", default="Save appearance"),
+        description=tr(
+            "entries.ui_profile_save.description",
+            default="Persist a validated custom UI profile for the Ama Monster OS window.",
+        ),
+        input_schema=UI_PROFILE_SCHEMA,
+        llm_result_fields=["summary"],
+        timeout=10,
+    )
+    async def ama_ui_profile_save(self, profile: Any = None, **_):
+        normalized = normalize_ui_profile(profile)
+        self._runtime.set_ui_profile(normalized)
+        try:
+            path = self._ui_profile_path()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = path.with_name(f"{path.name}.tmp")
+            temporary.write_text(
+                json.dumps(export_ui_profile(normalized), ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+                newline="\n",
+            )
+            temporary.replace(path)
+        except Exception as exc:
+            self.logger.warning("Could not persist UI profile: %s", exc)
+            return Ok({
+                "ok": False,
+                "profile": normalized,
+                "error": "persist_failed",
+                "summary": self.i18n.t(
+                    "studio.saveFailed",
+                    default="Appearance applied for this session, but could not be saved.",
+                ),
+            })
+        return Ok({
+            "ok": True,
+            "profile": normalized,
+            "summary": self.i18n.t("studio.saved", default="Appearance saved."),
+        })
 
     # ------------------------------------------------------------------
     # Future integration surface

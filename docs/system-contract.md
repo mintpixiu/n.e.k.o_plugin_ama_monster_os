@@ -225,6 +225,36 @@ The runtime also exposes a static `free_to_play` shelf from `steam_catalog.py`
 with fixed Steam store links. It is a versioned snapshot, not a live full
 catalogue of every free game.
 
+### UI profile
+
+The snapshot contains a validated `ui_profile` object. The same schema is used
+by the Studio UI and the plugin persistence action:
+
+```json
+{
+  "version": 1,
+  "name": "Sakura",
+  "brand": "Ama Monster OS",
+  "glyph": "✦",
+  "accent": "#e88aa8",
+  "wallpaper": "dots",
+  "radius": 16,
+  "density": "comfortable",
+  "theme": "light"
+}
+```
+
+Rules:
+
+- `accent` must be a six-digit hex colour.
+- `wallpaper` is one of `grid`, `dots`, `aurora`, `stars`, `plain`.
+- `density` is `comfortable` or `compact`; `theme` is `light` or `dark`.
+- `radius` is clamped to 8–28; text fields are length-limited.
+- The plugin writes `data/ui_profile.json` in its data folder through
+  `ama_ui_profile_save`; no arbitrary CSS, HTML, or remote assets are accepted.
+- Export envelopes use `{"format": "ama.ui.profile", "version": 1, "profile": {...}}`.
+  Import accepts that envelope or a direct profile object.
+
 ### Sale calendar
 
 The runtime adds `steam.sale` to the snapshot from
@@ -283,6 +313,7 @@ Release provider resources. Must be idempotent.
     "web_search": "ama_web_search",
     "steam_search": "ama_steam_search",
     "steam_deals": "ama_steam_deals",
+    "ui_profile": "ama_ui_profile_save",
     "contract": "ama_system_contract"
   }
 }
@@ -321,8 +352,8 @@ capability it cannot serve.
    design, but must provide its own renderer or bundle.
 5. Call `runtime.pulse()` for the pulse button, `runtime.search_web(query)` for
    the Web room, `runtime.search_game_prices(query)` for the Steam price room,
-   `runtime.steam_deals()` for sale picks, and `runtime.contract()` for the
-   bridge page.
+   `runtime.steam_deals()` for sale picks, `runtime.set_ui_profile(profile)` for
+   the appearance studio, and `runtime.contract()` for the bridge page.
 6. Call `await runtime.stop()` before exiting.
 7. Keep `contract_version` at `1.0.0` for additions that do not break v1. Bump
    the major version and update the schema for breaking changes.
@@ -352,5 +383,6 @@ The shipped tests cover:
 - CheapShark normalization, historical-low date/price, and non-Steam filtering;
 - Steam deal filtering, hoard-worthy flags, and free-to-play shelf links;
 - Steam sale calendar current/next evaluation, local countdown inputs, and TBD handling;
+- UI profile normalization, import envelope validation, and persistence path;
 - runtime boot, pulse, web search, Steam price lookup, shutdown, and degraded-host behaviour;
 - serializability of the complete snapshot.

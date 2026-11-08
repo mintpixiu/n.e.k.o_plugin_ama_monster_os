@@ -1,9 +1,83 @@
 import { FileDownload, useState } from "@neko/plugin-ui"
 import type { HostedAction, PluginSurfaceProps } from "@neko/plugin-ui"
 
-type ViewId = "home" | "web" | "steam" | "core" | "bridge" | "about"
+type ViewId = "home" | "web" | "steam" | "studio" | "core" | "bridge" | "about"
 type ChromeMode = "normal" | "max" | "min" | "asleep"
 type ThemeMode = "light" | "dark"
+type UiWallpaper = "grid" | "dots" | "aurora" | "stars" | "plain"
+type UiDensity = "comfortable" | "compact"
+
+type UiProfile = {
+  version: number
+  name: string
+  brand: string
+  glyph: string
+  accent: string
+  wallpaper: UiWallpaper
+  radius: number
+  density: UiDensity
+  theme: ThemeMode
+}
+
+const DEFAULT_UI_PROFILE: UiProfile = {
+  version: 1,
+  name: "Cloud",
+  brand: "Ama Monster OS",
+  glyph: "✦",
+  accent: "#44b8f2",
+  wallpaper: "grid",
+  radius: 16,
+  density: "comfortable",
+  theme: "light",
+}
+
+const UI_PRESETS: Array<{ id: string; labelKey: string; accent: string; wallpaper: UiWallpaper; theme: ThemeMode }> = [
+  { id: "cloud", labelKey: "studio.preset.cloud", accent: "#44b8f2", wallpaper: "grid", theme: "light" },
+  { id: "sakura", labelKey: "studio.preset.sakura", accent: "#e88aa8", wallpaper: "dots", theme: "light" },
+  { id: "mint", labelKey: "studio.preset.mint", accent: "#4fc3a1", wallpaper: "aurora", theme: "light" },
+  { id: "night", labelKey: "studio.preset.night", accent: "#8bdcff", wallpaper: "stars", theme: "dark" },
+]
+
+const UI_WALLPAPERS: UiWallpaper[] = ["grid", "dots", "aurora", "stars", "plain"]
+const UI_ACCENTS = ["#44b8f2", "#e88aa8", "#4fc3a1", "#9b8ad9", "#d9a441", "#7d8fa8"]
+
+function normalizeUiProfile(value: any): UiProfile {
+  const source = value && typeof value === "object" ? value : {}
+  const accent = typeof source.accent === "string" && /^#[0-9a-f]{6}$/i.test(source.accent.trim())
+    ? source.accent.trim().toLowerCase()
+    : DEFAULT_UI_PROFILE.accent
+  const radius = Math.max(8, Math.min(28, Math.round(Number(source.radius) || DEFAULT_UI_PROFILE.radius)))
+  const wallpaper = UI_WALLPAPERS.indexOf(source.wallpaper) >= 0 ? source.wallpaper : DEFAULT_UI_PROFILE.wallpaper
+  const density: UiDensity = source.density === "compact" ? "compact" : "comfortable"
+  const theme: ThemeMode = source.theme === "dark" ? "dark" : "light"
+  const brand = String(source.brand || "").trim().slice(0, 24) || DEFAULT_UI_PROFILE.brand
+  const glyph = String(source.glyph || "").trim().slice(0, 2) || DEFAULT_UI_PROFILE.glyph
+  const name = String(source.name || "").trim().slice(0, 32) || DEFAULT_UI_PROFILE.name
+  return { version: 1, name, brand, glyph, accent, wallpaper, radius, density, theme }
+}
+
+function uiProfileDownloadUrl(value: any): string {
+  const json = JSON.stringify(value, null, 2)
+  const bytes = new TextEncoder().encode(json)
+  let binary = ""
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte) })
+  return `data:application/json;base64,${btoa(binary)}`
+}
+
+function parseUiProfileText(text: string): { profile?: UiProfile; error?: string } {
+  const trimmed = String(text || "").trim()
+  if (!trimmed) return { error: "empty" }
+  let parsed: any
+  try {
+    parsed = JSON.parse(trimmed)
+  } catch (_error) {
+    return { error: "invalid_json" }
+  }
+  if (!parsed || typeof parsed !== "object") return { error: "invalid_profile" }
+  if (parsed.format && parsed.format !== "ama.ui.profile") return { error: "unsupported_format" }
+  const candidate = parsed.profile && typeof parsed.profile === "object" ? parsed.profile : parsed
+  return { profile: normalizeUiProfile(candidate) }
+}
 
 type ModuleInfo = {
   id?: string
@@ -191,6 +265,7 @@ type ShellState = {
   pulse?: PulseInfo
   web?: WebInfo
   steam?: SteamInfo
+  ui_profile?: UiProfile
   events?: BootEvent[]
   preview?: boolean
 }
@@ -202,6 +277,7 @@ const VIEWS: Array<{ id: ViewId; key: string; glyph: string }> = [
   { id: "home", key: "nav.home", glyph: "⌂" },
   { id: "web", key: "nav.web", glyph: "◎" },
   { id: "steam", key: "nav.steam", glyph: "◈" },
+  { id: "studio", key: "nav.studio", glyph: "✎" },
   { id: "core", key: "nav.core", glyph: "✦" },
   { id: "bridge", key: "nav.bridge", glyph: "⇄" },
   { id: "about", key: "nav.about", glyph: "♡" },
@@ -385,6 +461,50 @@ const STYLES = `
   background: radial-gradient(ellipse at center, transparent 40%, rgba(68, 148, 191, 0.07) 100%);
   pointer-events: none;
 }
+.ama-root[data-wallpaper="dots"] .ama-desktop::before {
+  background-image: radial-gradient(var(--grid-line) 1.2px, transparent 1.2px);
+  background-size: 20px 20px;
+  mask-image: none;
+}
+.ama-root[data-wallpaper="aurora"] .ama-desktop::before {
+  background:
+    radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--sky) 22%, transparent), transparent 38%),
+    radial-gradient(circle at 78% 18%, color-mix(in srgb, var(--pink) 20%, transparent), transparent 42%),
+    radial-gradient(circle at 60% 86%, color-mix(in srgb, var(--mint) 17%, transparent), transparent 45%);
+  mask-image: none;
+}
+.ama-root[data-wallpaper="stars"] .ama-desktop::before {
+  background-image:
+    radial-gradient(1.2px 1.2px at 12% 24%, var(--sky) 50%, transparent 52%),
+    radial-gradient(1px 1px at 32% 68%, var(--pink) 50%, transparent 52%),
+    radial-gradient(1.4px 1.4px at 58% 18%, var(--sky) 50%, transparent 52%),
+    radial-gradient(1px 1px at 74% 52%, var(--peach) 50%, transparent 52%),
+    radial-gradient(1.1px 1.1px at 88% 76%, var(--sky) 50%, transparent 52%),
+    radial-gradient(1px 1px at 44% 42%, var(--mint) 50%, transparent 52%);
+  background-size: 220px 180px;
+  mask-image: none;
+  opacity: .55;
+}
+.ama-root[data-wallpaper="plain"] .ama-desktop::before { display: none; }
+.ama-root[data-radius="custom"] .ama-window { border-radius: calc(var(--ui-radius) + 6px) !important; }
+.ama-root[data-radius="custom"] .ama-hero,
+.ama-root[data-radius="custom"] .ama-panel,
+.ama-root[data-radius="custom"] .ama-web-hero,
+.ama-root[data-radius="custom"] .ama-web-result,
+.ama-root[data-radius="custom"] .ama-web-state,
+.ama-root[data-radius="custom"] .ama-sale-panel,
+.ama-root[data-radius="custom"] .ama-picks-section,
+.ama-root[data-radius="custom"] .ama-free-section,
+.ama-root[data-radius="custom"] .ama-steam-card,
+.ama-root[data-radius="custom"] .ama-deal-card,
+.ama-root[data-radius="custom"] .ama-core-card,
+.ama-root[data-radius="custom"] .ama-about-card { border-radius: var(--ui-radius) !important; }
+.ama-root[data-density="compact"] .ama-content { padding: 14px 18px 14px; }
+.ama-root[data-density="compact"] .ama-sidebar { gap: 9px; padding: 12px 10px; }
+.ama-root[data-density="compact"] .ama-nav-btn { padding: 7px 9px; }
+.ama-root[data-density="compact"] .ama-hero { padding: 16px; }
+.ama-root[data-density="compact"] .ama-panel { padding: 11px; }
+.ama-root[data-density="compact"] .ama-web-hero { padding: 15px; }
 .ama-cloud { position: absolute; border-radius: 999px; background: var(--cloud); filter: blur(2px); pointer-events: none; opacity: .8; }
 .ama-cloud.c1 { width: 180px; height: 54px; left: 4%; top: 18%; box-shadow: 54px -18px 0 -10px var(--cloud), 104px 6px 0 -16px var(--cloud); animation: ama-drift 16s ease-in-out infinite; }
 .ama-cloud.c2 { width: 130px; height: 38px; right: 7%; top: 10%; box-shadow: 42px -13px 0 -8px var(--cloud), 80px 4px 0 -12px var(--cloud); animation: ama-drift 20s ease-in-out infinite reverse; }
@@ -1063,6 +1183,52 @@ const STYLES = `
 .ama-sleep-stars span:nth-child(4) { right: 23%; bottom: 13%; font-size: 16px; animation-delay: .7s; }
 .ama-empty { padding: 26px 10px; text-align: center; color: var(--muted); font-size: 10px; }
 .ama-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.ama-studio-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(250px, .65fr); gap: 12px; align-items: start; }
+.ama-studio-panel { min-width: 0; }
+.ama-studio-group { padding: 11px 0; border-top: 1px dashed var(--line); }
+.ama-studio-group:first-of-type { border-top: 0; padding-top: 0; }
+.ama-studio-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; color: var(--ink-soft); font-size: 9px; font-weight: 850; }
+.ama-studio-label small { color: var(--muted); font-size: 8px; font-weight: 600; }
+.ama-studio-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.ama-preset { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); color: var(--ink-soft); font: inherit; font-size: 8px; font-weight: 750; cursor: pointer; text-align: left; }
+.ama-preset:hover { border-color: var(--line-strong); }
+.ama-preset.is-active { border-color: var(--sky); box-shadow: 0 0 0 2px color-mix(in srgb, var(--sky) 14%, transparent); }
+.ama-preset-dot { width: 14px; height: 14px; flex: 0 0 auto; border-radius: 50%; }
+.ama-swatches { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.ama-swatch { width: 22px; height: 22px; padding: 2px; border: 2px solid transparent; border-radius: 50%; background: var(--card); cursor: pointer; }
+.ama-swatch span { display: block; width: 100%; height: 100%; border-radius: 50%; }
+.ama-swatch.is-active { border-color: var(--ink-soft); }
+.ama-studio-color { width: 34px; height: 28px; padding: 1px; border: 1px solid var(--line); border-radius: 7px; background: var(--card); cursor: pointer; }
+.ama-studio-seg { display: flex; flex-wrap: wrap; gap: 5px; }
+.ama-studio-seg button { padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel-2); color: var(--muted); font: inherit; font-size: 8px; font-weight: 700; cursor: pointer; }
+.ama-studio-seg button.is-active { border-color: var(--sky); background: var(--sky-soft); color: var(--sky-deep); }
+.ama-studio-fields { display: grid; grid-template-columns: 1fr 72px; gap: 7px; }
+.ama-studio-field { min-width: 0; }
+.ama-studio-field label { display: block; margin-bottom: 3px; color: var(--muted); font-size: 7.5px; }
+.ama-studio-input { width: 100%; min-height: 30px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; outline: none; background: var(--input); color: var(--ink); font: inherit; font-size: 9px; }
+.ama-studio-input:focus { border-color: var(--sky); }
+.ama-studio-range { width: 100%; accent-color: var(--sky); }
+.ama-studio-side { min-width: 0; }
+.ama-studio-preview { padding: 13px; border: 1px solid var(--line); border-radius: var(--ui-radius); background: linear-gradient(140deg, var(--hero-1), var(--hero-2)); }
+.ama-studio-preview-card { padding: 13px; border: 1px solid var(--line); border-radius: calc(var(--ui-radius) - 2px); background: var(--card); }
+.ama-studio-preview-top { display: flex; align-items: center; gap: 8px; }
+.ama-studio-glyph { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; background: var(--sky); color: #fff; font-size: 15px; font-weight: 900; }
+.ama-studio-preview-title { min-width: 0; }
+.ama-studio-preview-title strong { display: block; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ama-studio-preview-title small { display: block; color: var(--muted); font-size: 7.5px; }
+.ama-studio-preview-lines { display: grid; gap: 5px; margin-top: 11px; }
+.ama-studio-preview-lines span { display: block; height: 5px; border-radius: 99px; background: color-mix(in srgb, var(--sky) 24%, var(--line)); }
+.ama-studio-preview-lines span:nth-child(2) { width: 75%; }
+.ama-studio-preview-lines span:nth-child(3) { width: 48%; background: color-mix(in srgb, var(--pink) 35%, var(--line)); }
+.ama-studio-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.ama-studio-actions .ama-btn { min-height: 30px; font-size: 9px; }
+.ama-studio-note { margin: 7px 0 0; color: var(--muted); font-size: 8px; line-height: 1.5; }
+.ama-studio-export, .ama-studio-import { width: 100%; min-height: 108px; resize: vertical; padding: 8px; border: 1px solid var(--line); border-radius: 9px; outline: none; background: var(--input); color: var(--ink); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 8px; line-height: 1.5; }
+.ama-studio-export:focus, .ama-studio-import:focus { border-color: var(--sky); }
+.ama-studio-io { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 9px; }
+.ama-studio-io-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.ama-studio-message { min-height: 15px; margin: 7px 0 0; color: var(--muted); font-size: 8px; }
+.ama-studio-message.is-ok { color: var(--success); }
 @keyframes ama-window-in { from { opacity: 0; transform: translateY(12px) scale(.992); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes ama-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 @keyframes ama-twinkle { 0%, 100% { opacity: .35; transform: scale(.92); } 50% { opacity: .95; transform: scale(1.08); } }
@@ -1071,6 +1237,7 @@ const STYLES = `
 @keyframes ama-spin { to { transform: rotate(360deg); } }
 @media (max-width: 980px) {
   .ama-columns, .ama-split, .ama-steam-grid { grid-template-columns: 1fr; }
+  .ama-studio-layout { grid-template-columns: 1fr; }
   .ama-hero { grid-template-columns: minmax(0, 1fr) 180px; }
   .ama-orb { width: 168px; height: 168px; }
   .ama-cat { transform: scale(.86); }
@@ -1106,6 +1273,8 @@ const STYLES = `
   .ama-sale-highlights { grid-template-columns: 1fr; }
   .ama-deal-grid { grid-template-columns: 1fr; }
   .ama-free-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ama-studio-presets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ama-studio-io { grid-template-columns: 1fr; }
   .ama-about-card { grid-template-columns: 1fr; gap: 4px; }
   .ama-about-orb { min-height: 150px; }
   .ama-view-title { font-size: 23px; }
@@ -1156,10 +1325,16 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const webSearchAction = actionById(actions || [], "ama_web_search")
   const steamSearchAction = actionById(actions || [], "ama_steam_search")
   const steamDealsAction = actionById(actions || [], "ama_steam_deals")
+  const uiProfileSaveAction = actionById(actions || [], "ama_ui_profile_save")
+  const initialUiProfile = normalizeUiProfile(safeState.ui_profile)
 
   const [view, setView] = props.useLocalState<ViewId>("ama.view", "home")
   const [chrome, setChrome] = props.useLocalState<ChromeMode>("ama.chrome", "normal")
-  const [theme, setTheme] = props.useLocalState<ThemeMode>("ama.theme", "light")
+  const [uiProfile, setUiProfile] = props.useLocalState<UiProfile>("ama.ui.profile", initialUiProfile)
+  const [uiSaving, setUiSaving] = useState(false)
+  const [uiDirty, setUiDirty] = useState(false)
+  const [uiMessage, setUiMessage] = useState("")
+  const [importText, setImportText] = useState("")
   const [pulse, setPulse] = useState<{ status: PulseStatus; message: string }>({
     status: "idle",
     message: "",
@@ -1210,11 +1385,11 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     return value && value !== key ? value : fallback
   }
 
-  const validViews: ViewId[] = ["home", "web", "steam", "core", "bridge", "about"]
+  const validViews: ViewId[] = ["home", "web", "steam", "studio", "core", "bridge", "about"]
   const activeView: ViewId = validViews.indexOf(view) >= 0 ? view : "home"
   const validChrome: ChromeMode[] = ["normal", "max", "min", "asleep"]
   const activeChrome: ChromeMode = validChrome.indexOf(chrome) >= 0 ? chrome : "normal"
-  const activeTheme: ThemeMode = theme === "dark" ? "dark" : "light"
+  const activeTheme: ThemeMode = uiProfile.theme === "dark" ? "dark" : "light"
 
   const daypart = shell.daypart || "day"
   const greeting = tr(
@@ -1254,7 +1429,71 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   }
 
   function toggleTheme() {
-    setTheme(activeTheme === "dark" ? "light" : "dark")
+    patchUiProfile({ theme: activeTheme === "dark" ? "light" : "dark" })
+  }
+
+  function patchUiProfile(patch: Partial<UiProfile>) {
+    setUiProfile(normalizeUiProfile({ ...uiProfile, ...patch }))
+    setUiDirty(true)
+    setUiMessage("")
+  }
+
+  function applyPreset(preset: typeof UI_PRESETS[number]) {
+    setUiProfile(normalizeUiProfile({
+      ...uiProfile,
+      accent: preset.accent,
+      wallpaper: preset.wallpaper,
+      theme: preset.theme,
+    }))
+    setUiDirty(true)
+    setUiMessage("")
+  }
+
+  async function saveUiProfile(profile: UiProfile = uiProfile) {
+    if (!uiProfileSaveAction) {
+      setUiMessage(tr("studio.saveUnavailable", "Could not save appearance in this window."))
+      return
+    }
+    setUiSaving(true)
+    try {
+      const result = unwrapResult(
+        await props.api.call(
+          uiProfileSaveAction.id || "ama_ui_profile_save",
+          { profile },
+          { timeoutMs: 15000 },
+        ),
+      )
+      if (result.ok === false) {
+        setUiMessage(String(result.summary || "") || tr("studio.saveFailed", "Could not save appearance."))
+      } else {
+        setUiDirty(false)
+        setUiMessage(tr("studio.saved", "Appearance saved."))
+        try { await props.api.refresh() } catch (_error) { /* saved locally */ }
+      }
+    } catch (_error) {
+      setUiMessage(tr("studio.saveFailed", "Could not save appearance."))
+    } finally {
+      setUiSaving(false)
+    }
+  }
+
+  function resetUiProfile() {
+    const next = { ...DEFAULT_UI_PROFILE, name: uiProfile.name }
+    setUiProfile(next)
+    setUiDirty(true)
+    setUiMessage("")
+  }
+
+  function importUiProfile() {
+    const parsed = parseUiProfileText(importText)
+    if (!parsed.profile) {
+      setUiMessage(tr("studio.importInvalid", "That does not look like an Ama UI profile."))
+      return
+    }
+    setUiProfile(parsed.profile)
+    setUiDirty(true)
+    setImportText("")
+    setUiMessage(tr("studio.imported", "Imported. Save to keep it."))
   }
 
   function currentWebQuery(): string {
@@ -1580,9 +1819,9 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const titlebar = (
     <header className="ama-titlebar">
       <div className="ama-brand">
-        <div className="ama-logo" aria-hidden="true">✦</div>
+        <div className="ama-logo" aria-hidden="true">{uiProfile.glyph || "✦"}</div>
         <div className="ama-brand-title">
-          <p className="ama-brand-name">{shellName}</p>
+          <p className="ama-brand-name">{uiProfile.brand || shellName}</p>
           <p className="ama-brand-sub">{tr("hero.preview", "SHELL PREVIEW")} · {version}</p>
         </div>
       </div>
@@ -2430,7 +2669,230 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     </>
   )
 
-  const content = activeView === "web" ? webView : activeView === "steam" ? steamView : activeView === "core" ? coreView : activeView === "bridge" ? bridgeView : activeView === "about" ? aboutView : homeView
+  const uiExportText = JSON.stringify({
+    format: "ama.ui.profile",
+    version: 1,
+    profile: uiProfile,
+  }, null, 2)
+  const uiDownloadUrl = uiProfileDownloadUrl({
+    format: "ama.ui.profile",
+    version: 1,
+    profile: uiProfile,
+  })
+
+  async function copyUiProfile() {
+    try {
+      await navigator.clipboard.writeText(uiExportText)
+      setUiMessage(tr("studio.copied", "Copied."))
+    } catch (_error) {
+      try {
+        const area = document.querySelector(".ama-studio-export") as HTMLTextAreaElement | null
+        area?.select()
+        document.execCommand("copy")
+        setUiMessage(tr("studio.copied", "Copied."))
+      } catch (_fallback) {
+        setUiMessage(tr("studio.copyFailed", "Select the text and copy it manually."))
+      }
+    }
+  }
+
+  const studioView = (
+    <>
+      <div className="ama-view-head">
+        <div>
+          <div className="ama-kicker"><span className="ama-kicker-line" />UI STUDIO</div>
+          <h1 className="ama-view-title">{tr("studio.title", "Appearance studio")}</h1>
+          <p className="ama-view-sub">{tr("studio.subtitle", "Make the shell yours, then save or export the profile.")}</p>
+        </div>
+        <span className={`ama-badge ${uiDirty ? "is-peach" : "is-mint"}`}>
+          {uiDirty ? tr("studio.unsaved", "Unsaved") : tr("studio.savedBadge", "Saved")}
+        </span>
+      </div>
+
+      <div className="ama-studio-layout">
+        <section className="ama-panel ama-studio-panel">
+          <div className="ama-panel-head">
+            <div>
+              <h2 className="ama-panel-title">{tr("studio.controls", "Appearance")}</h2>
+              <p className="ama-panel-hint">{tr("studio.controlsHint", "Changes preview immediately. Save to keep them.")}</p>
+            </div>
+            <span className="ama-badge is-muted">v1</span>
+          </div>
+
+          <div className="ama-studio-group">
+            <div className="ama-studio-label">{tr("studio.presets", "Presets")}<small>{tr("studio.presetsHint", "One click")}</small></div>
+            <div className="ama-studio-presets">
+              {UI_PRESETS.map((preset) => (
+                <button
+                  type="button"
+                  key={preset.id}
+                  className={`ama-preset${uiProfile.accent === preset.accent && uiProfile.wallpaper === preset.wallpaper ? " is-active" : ""}`}
+                  onClick={() => applyPreset(preset)}
+                >
+                  <span className="ama-preset-dot" style={{ background: preset.accent }} />
+                  <span>{tr(preset.labelKey, preset.id)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="ama-studio-group">
+            <div className="ama-studio-label">{tr("studio.accent", "Accent")}<small>{uiProfile.accent}</small></div>
+            <div className="ama-swatches">
+              {UI_ACCENTS.map((color) => (
+                <button
+                  type="button"
+                  key={color}
+                  className={`ama-swatch${uiProfile.accent === color ? " is-active" : ""}`}
+                  aria-label={`${tr("studio.accent", "Accent")} ${color}`}
+                  onClick={() => patchUiProfile({ accent: color })}
+                ><span style={{ background: color }} /></button>
+              ))}
+              <input
+                className="ama-studio-color"
+                type="color"
+                value={uiProfile.accent}
+                aria-label={tr("studio.accent", "Accent")}
+                onInput={(event: any) => patchUiProfile({ accent: event.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="ama-studio-group">
+            <div className="ama-studio-label">{tr("studio.theme", "Theme")}</div>
+            <div className="ama-studio-seg">
+              <button type="button" className={activeTheme === "light" ? "is-active" : ""} onClick={() => patchUiProfile({ theme: "light" })}>{tr("theme.light", "Daylight")}</button>
+              <button type="button" className={activeTheme === "dark" ? "is-active" : ""} onClick={() => patchUiProfile({ theme: "dark" })}>{tr("theme.dark", "Moonlight")}</button>
+            </div>
+          </div>
+
+          <div className="ama-studio-group">
+            <div className="ama-studio-label">{tr("studio.wallpaper", "Backdrop")}</div>
+            <div className="ama-studio-seg">
+              {UI_WALLPAPERS.map((wallpaper) => (
+                <button
+                  type="button"
+                  key={wallpaper}
+                  className={uiProfile.wallpaper === wallpaper ? "is-active" : ""}
+                  onClick={() => patchUiProfile({ wallpaper })}
+                >{tr(`studio.wallpaper.${wallpaper}`, wallpaper)}</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="ama-studio-group">
+            <div className="ama-studio-label">{tr("studio.radius", "Corner radius")}<small>{uiProfile.radius}px</small></div>
+            <input
+              className="ama-studio-range"
+              type="range"
+              min={8}
+              max={28}
+              value={uiProfile.radius}
+              aria-label={tr("studio.radius", "Corner radius")}
+              onInput={(event: any) => patchUiProfile({ radius: Number(event.target.value) })}
+            />
+          </div>
+
+          <div className="ama-studio-group">
+            <div className="ama-studio-label">{tr("studio.density", "Density")}</div>
+            <div className="ama-studio-seg">
+              <button type="button" className={uiProfile.density === "comfortable" ? "is-active" : ""} onClick={() => patchUiProfile({ density: "comfortable" })}>{tr("studio.density.comfortable", "Comfortable")}</button>
+              <button type="button" className={uiProfile.density === "compact" ? "is-active" : ""} onClick={() => patchUiProfile({ density: "compact" })}>{tr("studio.density.compact", "Compact")}</button>
+            </div>
+          </div>
+
+          <div className="ama-studio-group">
+            <div className="ama-studio-label">{tr("studio.identity", "Window identity")}</div>
+            <div className="ama-studio-fields">
+              <div className="ama-studio-field">
+                <label>{tr("studio.brand", "Title")}</label>
+                <input
+                  className="ama-studio-input"
+                  value={uiProfile.brand}
+                  maxLength={24}
+                  onInput={(event: any) => patchUiProfile({ brand: event.target.value })}
+                />
+              </div>
+              <div className="ama-studio-field">
+                <label>{tr("studio.glyph", "Glyph")}</label>
+                <input
+                  className="ama-studio-input"
+                  value={uiProfile.glyph}
+                  maxLength={2}
+                  onInput={(event: any) => patchUiProfile({ glyph: event.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside className="ama-studio-side">
+          <div className="ama-studio-preview">
+            <div className="ama-studio-preview-card">
+              <div className="ama-studio-preview-top">
+                <span className="ama-studio-glyph">{uiProfile.glyph || "✦"}</span>
+                <div className="ama-studio-preview-title">
+                  <strong>{uiProfile.brand || shellName}</strong>
+                  <small>{tr("studio.preview", "Live preview")} · v1</small>
+                </div>
+              </div>
+              <div className="ama-studio-preview-lines" aria-hidden="true"><span /><span /><span /></div>
+            </div>
+          </div>
+          <div className="ama-studio-actions">
+            <button type="button" className="ama-btn ama-btn-primary" disabled={uiSaving} onClick={() => void saveUiProfile()}>
+              {uiSaving ? tr("studio.saving", "Saving...") : tr("studio.save", "Save appearance")}
+            </button>
+            <button type="button" className="ama-btn" onClick={resetUiProfile}>{tr("studio.reset", "Reset")}</button>
+          </div>
+          <p className="ama-studio-note">{tr("studio.stored", "Profiles are stored in the plugin data folder. Export a JSON copy for backup.")}</p>
+          <p className={`ama-studio-message${uiMessage && !uiDirty ? " is-ok" : ""}`}>{uiMessage}</p>
+        </aside>
+      </div>
+
+      <section className="ama-panel" style={{ marginTop: "12px" } as any}>
+        <div className="ama-panel-head">
+          <div>
+            <h2 className="ama-panel-title">{tr("studio.io", "Import / export")}</h2>
+            <p className="ama-panel-hint">{tr("studio.ioHint", "Paste a profile to apply it, or copy the current JSON.")}</p>
+          </div>
+          <span className="ama-badge is-muted">JSON</span>
+        </div>
+        <div className="ama-studio-io">
+          <div>
+            <div className="ama-studio-label">{tr("studio.export", "Current profile")}</div>
+            <textarea className="ama-studio-export" readOnly value={uiExportText} aria-label={tr("studio.export", "Current profile")} />
+            <div className="ama-studio-io-actions">
+              <button type="button" className="ama-web-chip" onClick={() => void copyUiProfile()}>{tr("studio.copy", "Copy")}</button>
+              <FileDownload href={uiDownloadUrl} label={tr("studio.download", "Download JSON")} filename="ama-ui-profile.json" className="ama-web-open" />
+            </div>
+          </div>
+          <div>
+            <div className="ama-studio-label">{tr("studio.import", "Import profile")}</div>
+            <textarea
+              className="ama-studio-import"
+              value={importText}
+              placeholder={tr("studio.importPlaceholder", "Paste an exported Ama UI profile here...")}
+              aria-label={tr("studio.import", "Import profile")}
+              onInput={(event: any) => setImportText(event.target.value)}
+            />
+            <div className="ama-studio-io-actions">
+              <button type="button" className="ama-web-chip" onClick={importUiProfile}>{tr("studio.applyImport", "Import and apply")}</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  )
+
+  const content = activeView === "web" ? webView : activeView === "steam" ? steamView : activeView === "studio" ? studioView : activeView === "core" ? coreView : activeView === "bridge" ? bridgeView : activeView === "about" ? aboutView : homeView
+
+  const uiStyle = {
+    "--sky": uiProfile.accent,
+    "--sky-soft": `color-mix(in srgb, ${uiProfile.accent} 18%, var(--card))`,
+    "--sky-deep": `color-mix(in srgb, ${uiProfile.accent} 58%, var(--ink))`,
+    "--ui-radius": `${uiProfile.radius}px`,
+  } as any
 
   const footer = (
     <footer className="ama-footer">
@@ -2472,7 +2934,13 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   )
 
   return (
-    <div className={`ama-root ama-theme-${activeTheme}`}>
+    <div
+      className={`ama-root ama-theme-${activeTheme}`}
+      data-wallpaper={uiProfile.wallpaper}
+      data-density={uiProfile.density}
+      data-radius={uiProfile.radius === DEFAULT_UI_PROFILE.radius ? "default" : "custom"}
+      style={uiStyle}
+    >
       <style>{STYLES}</style>
       <div className={`ama-desktop${activeChrome === "max" ? " is-expanded" : ""}`}>
         <span className="ama-cloud c1" aria-hidden="true" />

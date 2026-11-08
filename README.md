@@ -12,7 +12,7 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
 
 ## What is real in this version
 
-- A working Hosted TSX window: cat-ear title bar, Home/Web/Steam/Core/Bridge/About
+- A working Hosted TSX window: cat-ear title bar, Home/Web/Steam/Studio/Core/Bridge/About
   views, minimize, expand, sleep/wake, day/moon theme, and responsive layout.
 - A live snapshot from the plugin: uptime, boot count, bridge health, host
   platform, Python/SDK versions, and privacy-filtered activity.
@@ -25,6 +25,9 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
   lows, CN prices, and a playful **“可以不玩，但不能没有”** flag.
 - A **free-to-play shelf** of permanently free Steam titles, versioned as a
   curated snapshot rather than a live catalogue.
+- A **UI Studio** for custom accent, light/dark theme, backdrop, corner radius,
+  compact density, window title, and glyph. Profiles are saved in the plugin
+  data folder and can be exported/imported as JSON.
 - A **Pulse check** action that calls the Python plugin and refreshes the
   context through the real Hosted UI bridge.
 - A stable, versioned contract (`ama.system.bridge` v1.0.0) and a `SystemPort`
@@ -131,6 +134,28 @@ The all-time low is CheapShark's cross-store record, not an official Steam
 regional low. Steam Community and the Steam Store API were unreachable from the
 test network, so they are not used.
 
+## Appearance studio
+
+The **Studio** room is a safe, declarative appearance editor:
+
+- presets: Cloud, Sakura, Mint, Night
+- accent colour picker and swatches
+- light/dark theme
+- backdrop: grid, dots, aurora, stars, plain
+- corner radius and compact density
+- custom window title and glyph
+- live preview before saving
+- persistent profile in the plugin data folder (`data/ui_profile.json`)
+- export the profile as JSON, copy it, or paste/import an exported profile
+
+It never accepts arbitrary CSS, remote wallpaper URLs, or executable content.
+Every field is length-limited, enumerated, and passed through the same Python
+validator before it is written to disk.
+
+![Ama Monster OS appearance studio](docs/preview-studio.png)
+
+![Appearance profile import and export](docs/preview-studio-io.png)
+
 ## What is deliberately not here yet
 
 - A general browser or arbitrary-URL reader. This is a search room, not an
@@ -140,6 +165,7 @@ test network, so they are not used.
   a versioned curated snapshot, not a claim of complete coverage.
 - A CN historical-low database. The CN price is current only; Steam does not
   expose a public regional price-history API, and SteamDB is not scraped.
+- Arbitrary CSS, remote wallpaper URLs, or user-supplied HTML in the UI studio.
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
@@ -190,6 +216,7 @@ ama_monster_os/
 ├── shell_runtime.py            host-free shell runtime
 ├── steam_catalog.py            versioned free-to-play shelf
 ├── steam_sales.py              versioned Steam sale calendar
+├── ui_profile.py               validated UI profile + import/export
 ├── system_contract.py          contract v1 + SystemPort protocol
 ├── system_port.py              N.E.K.O adapter (read-only)
 ├── ui/panel.tsx                the NEKO-style window
@@ -202,6 +229,8 @@ ama_monster_os/
 ├── docs/preview-sale.png        Steam sale radar preview
 ├── docs/preview-picks.png       sale picks preview
 ├── docs/preview-free.png        free-to-play shelf preview
+├── docs/preview-studio.png      appearance studio preview
+├── docs/preview-studio-io.png   appearance import/export preview
 ├── i18n/                       8 locale files
 └── tests/                      contract, runtime, web, manifest, i18n, UI checks
 ```

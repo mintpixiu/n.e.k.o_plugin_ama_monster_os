@@ -250,6 +250,7 @@ def test_contract_validates() -> None:
     assert manifest["entrypoints"]["web_search"] == "ama_web_search"
     assert manifest["entrypoints"]["steam_search"] == "ama_steam_search"
     assert manifest["entrypoints"]["steam_deals"] == "ama_steam_deals"
+    assert manifest["entrypoints"]["ui_profile"] == "ama_ui_profile_save"
     assert "web.search" in manifest["capabilities"]
     assert "steam.prices" in manifest["capabilities"]
     assert "steam.deals" in manifest["capabilities"]
@@ -280,6 +281,22 @@ def test_web_search_rejects_empty_query() -> None:
     result = asyncio.run(runtime.search_web("   ", 5))
     assert result["ok"] is False
     assert result["error"] == "empty_query"
+
+
+def test_ui_profile_is_normalized_and_in_snapshot() -> None:
+    runtime = AmaOsRuntime(FakePort())
+    profile = runtime.set_ui_profile({
+        "brand": "My Shell",
+        "accent": "#e88aa8",
+        "radius": 99,
+        "theme": "dark",
+    })
+    snapshot = asyncio.run(runtime.snapshot())
+    assert profile["brand"] == "My Shell"
+    assert profile["accent"] == "#e88aa8"
+    assert profile["radius"] == 28
+    assert snapshot["ui_profile"]["theme"] == "dark"
+    assert snapshot["ui_profile"]["brand"] == "My Shell"
 
 
 def test_web_search_failure_is_reported_without_crashing() -> None:

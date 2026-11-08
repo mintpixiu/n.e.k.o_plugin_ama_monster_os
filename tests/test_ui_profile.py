@@ -1,0 +1,70 @@
+from __future__ import annotations
+
+import json
+
+from ui_profile import (
+    DEFAULT_UI_PROFILE,
+    export_ui_profile,
+    normalize_ui_profile,
+    parse_ui_profile_payload,
+)
+
+
+def test_default_profile_is_safe() -> None:
+    profile = normalize_ui_profile(None)
+    assert profile == DEFAULT_UI_PROFILE
+    assert profile["accent"] == "#44b8f2"
+    assert profile["radius"] == 16
+
+
+def test_profile_fields_are_clamped() -> None:
+    profile = normalize_ui_profile({
+        "name": "  My Shell  ",
+        "brand": "A" * 80,
+        "glyph": "✦✦✦",
+        "accent": "red",
+        "wallpaper": "unknown",
+        "radius": 99,
+        "density": "tiny",
+        "theme": "sepia",
+    })
+    assert profile["name"] == "My Shell"
+    assert len(profile["brand"]) == 24
+    assert profile["glyph"] == "✦✦"
+    assert profile["accent"] == DEFAULT_UI_PROFILE["accent"]
+    assert profile["wallpaper"] == "grid"
+    assert profile["radius"] == 28
+    assert profile["density"] == "comfortable"
+    assert profile["theme"] == "light"
+
+
+def test_export_round_trip() -> None:
+    profile = normalize_ui_profile({
+        "name": "Sakura",
+        "brand": "Ama 樱",
+        "glyph": "❀",
+        "accent": "#e88aa8",
+        "wallpaper": "dots",
+        "radius": 20,
+        "density": "compact",
+        "theme": "dark",
+    })
+    exported = export_ui_profile(profile)
+    parsed, error = parse_ui_profile_payload(json.dumps(exported))
+    assert error == ""
+    assert parsed == profile
+
+
+def test_direct_profile_and_invalid_payloads() -> None:
+    parsed, error = parse_ui_profile_payload({"accent": "#4fc3a1", "theme": "dark"})
+    assert error == ""
+    assert parsed["accent"] == "#4fc3a1"
+    assert parsed["theme"] == "dark"
+
+    parsed, error = parse_ui_profile_payload("{not json")
+    assert parsed is None
+    assert error == "invalid_json"
+
+    parsed, error = parse_ui_profile_payload({"format": "other", "profile": {}})
+    assert parsed is None
+    assert error == "unsupported_format"

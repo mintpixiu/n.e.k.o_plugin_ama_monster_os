@@ -28,6 +28,7 @@ from the first version.
 - A Steam sale-picks tab with high-discount, well-rated games, historical lows, CN prices, and Chinese titles shown underneath the English original.
 - A curated Chinese-title map for older Steam games whose official `l=schinese` name remains English.
 - A curated, versioned free-to-play shelf with fixed Steam store links.
+- A **UI Studio** with presets, accent colour, light/dark theme, backdrop pattern, radius, density, window title/glyph, live preview, persistent profile, and JSON import/export.
 - A versioned Steam sale calendar snapshot sourced from Steamworks, with current/next event, next seasonal sale, local countdowns, and an official schedule link.
 - A two-provider search chain: N.E.K.O `web_search` first, fixed Bing RSS fallback second.
 - Steam account login is deliberately deferred; the UI says so and never asks for a password.
@@ -53,6 +54,7 @@ from the first version.
 - sale picks: fixed CheapShark deals endpoint, filtered and enriched; no paid placement
 - free shelf: versioned `steam_catalog.py` list of permanently free titles
 - sale calendar: versioned `steam_sales.py` snapshot from Steamworks; dates shown in local time; Valve can change them
+- UI profile: `ui_profile.py` schema, persisted to `data/ui_profile.json`, exported as `ama.ui.profile` JSON
 - UI surfaces: one `panel` (`ui/panel.tsx`), one Markdown guide, one Markdown docs page
 - state/config: read-only snapshot plus in-memory last search and price lookup; no persistent config in 0.1.0 Beta
 - lifecycle/background work: startup/shutdown only; no timers or background tasks
@@ -92,6 +94,8 @@ plugins such as `lifekit` and `mcp_adapter`.
   The hoard flag is a joke, not a guarantee that a game is worth owning.
 - The free shelf is a static snapshot of permanently free titles, not a
   limited-time giveaway tracker and not complete coverage.
+- The UI Studio is declarative only: no arbitrary CSS, remote images, HTML, or
+  executable content. Profiles are validated server-side before persistence.
 - The sale calendar is a static snapshot, not a live feed. It is marked with an
   update date and an official Steamworks link so users can verify changed dates.
 - Window chrome controls are presentation state inside one hosted panel; they
