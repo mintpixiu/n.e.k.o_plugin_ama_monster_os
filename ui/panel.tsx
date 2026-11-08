@@ -67,6 +67,7 @@ function uiProfileDownloadUrl(value: any): string {
 function parseUiProfileText(text: string): { profile?: UiProfile; error?: string } {
   const trimmed = String(text || "").trim()
   if (!trimmed) return { error: "empty" }
+  if (new TextEncoder().encode(trimmed).length > 16 * 1024) return { error: "profile_too_large" }
   let parsed: any
   try {
     parsed = JSON.parse(trimmed)

@@ -39,6 +39,7 @@ keywords = [
     "主题",
     "导入导出",
     "外观",
+    "教程",
     "store price",
     "price history",
     "sale picks",
@@ -79,6 +80,14 @@ permissions = [
 id = "quickstart"
 title = "Ama Monster OS 快速开始"
 entry = "docs/quickstart.md"
+permissions = [
+    "state:read",
+]
+
+[[plugin.ui.guide]]
+id = "ui_studio"
+title = "自定义外观与导入导出教程"
+entry = "docs/ui-studio.md"
 permissions = [
     "state:read",
 ]

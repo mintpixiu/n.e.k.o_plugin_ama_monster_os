@@ -55,6 +55,7 @@ def test_hosted_ui_surfaces_exist() -> None:
     guides = ui["guide"] + ui["docs"]
     assert {item["entry"] for item in guides} == {
         "docs/quickstart.md",
+        "docs/ui-studio.md",
         "docs/system-contract.md",
     }
     for item in guides:

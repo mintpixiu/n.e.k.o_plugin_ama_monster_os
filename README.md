@@ -152,6 +152,9 @@ It never accepts arbitrary CSS, remote wallpaper URLs, or executable content.
 Every field is length-limited, enumerated, and passed through the same Python
 validator before it is written to disk.
 
+**Step-by-step tutorial:** [docs/ui-studio.md](docs/ui-studio.md) — covers making
+a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting.
+
 ![Ama Monster OS appearance studio](docs/preview-studio.png)
 
 ![Appearance profile import and export](docs/preview-studio-io.png)
@@ -231,6 +234,7 @@ ama_monster_os/
 ├── docs/preview-free.png        free-to-play shelf preview
 ├── docs/preview-studio.png      appearance studio preview
 ├── docs/preview-studio-io.png   appearance import/export preview
+├── docs/ui-studio.md            appearance & import/export tutorial
 ├── i18n/                       8 locale files
 └── tests/                      contract, runtime, web, manifest, i18n, UI checks
 ```
