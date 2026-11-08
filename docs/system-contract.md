@@ -240,6 +240,7 @@ by the Studio UI and the plugin persistence action:
   "wallpaper": "dots",
   "window_bg": "sakura",
   "window_color": "#ffffff",
+  "window_image": "",
   "radius": 16,
   "density": "comfortable",
   "theme": "light"
@@ -251,8 +252,11 @@ Rules:
 - `accent` and `window_color` must be six-digit hex colours.
 - `wallpaper` is one of `grid`, `dots`, `aurora`, `stars`, `plain` and controls
   the desktop behind the window.
-- `window_bg` is one of `paper`, `mist`, `sakura`, `glass`, `custom` and controls
-  the window surface itself; `window_color` is used only for `custom`.
+- `window_bg` is one of `paper`, `mist`, `sakura`, `glass`, `image`, `custom` and
+  controls the window surface itself; `window_color` is used only for `custom`.
+- `window_image` is a bounded local `data:image/(png|jpeg|webp|gif);base64,...`
+  URL used only when `window_bg=image`; remote image URLs are rejected. The
+  binary image limit is 1.2 MB and the whole profile limit is 3 MB.
 - `density` is `comfortable` or `compact`; `theme` is `light` or `dark`.
 - `radius` is clamped to 8–28; text fields are length-limited.
 - The plugin writes `data/ui_profile.json` in its data folder through

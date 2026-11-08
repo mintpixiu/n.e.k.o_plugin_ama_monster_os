@@ -5,7 +5,7 @@ type ViewId = "home" | "web" | "steam" | "studio" | "core" | "bridge" | "about"
 type ChromeMode = "normal" | "max" | "min" | "asleep"
 type ThemeMode = "light" | "dark"
 type UiWallpaper = "grid" | "dots" | "aurora" | "stars" | "plain"
-type UiWindowBg = "paper" | "mist" | "sakura" | "glass" | "custom"
+type UiWindowBg = "paper" | "mist" | "sakura" | "glass" | "image" | "custom"
 type UiDensity = "comfortable" | "compact"
 
 type UiProfile = {
@@ -17,6 +17,7 @@ type UiProfile = {
   wallpaper: UiWallpaper
   window_bg: UiWindowBg
   window_color: string
+  window_image: string
   radius: number
   density: UiDensity
   theme: ThemeMode
@@ -31,6 +32,7 @@ const DEFAULT_UI_PROFILE: UiProfile = {
   wallpaper: "grid",
   window_bg: "paper",
   window_color: "#ffffff",
+  window_image: "",
   radius: 16,
   density: "comfortable",
   theme: "light",
@@ -44,8 +46,16 @@ const UI_PRESETS: Array<{ id: string; labelKey: string; accent: string; wallpape
 ]
 
 const UI_WALLPAPERS: UiWallpaper[] = ["grid", "dots", "aurora", "stars", "plain"]
-const UI_WINDOW_BACKGROUNDS: UiWindowBg[] = ["paper", "mist", "sakura", "glass", "custom"]
+const UI_WINDOW_BACKGROUNDS: UiWindowBg[] = ["paper", "mist", "sakura", "glass", "image", "custom"]
 const UI_ACCENTS = ["#44b8f2", "#e88aa8", "#4fc3a1", "#9b8ad9", "#d9a441", "#7d8fa8"]
+const MAX_WINDOW_IMAGE_BYTES = 1_200_000
+const MAX_UI_PROFILE_BYTES = 3_000_000
+
+function validWindowImage(value: any): boolean {
+  return typeof value === "string"
+    && /^data:image\/(?:png|jpeg|jpg|webp|gif);base64,/i.test(value)
+    && value.length < MAX_WINDOW_IMAGE_BYTES * 1.4
+}
 
 function normalizeUiProfile(value: any): UiProfile {
   const source = value && typeof value === "object" ? value : {}
@@ -54,19 +64,24 @@ function normalizeUiProfile(value: any): UiProfile {
     : DEFAULT_UI_PROFILE.accent
   const radius = Math.max(8, Math.min(28, Math.round(Number(source.radius) || DEFAULT_UI_PROFILE.radius)))
   const wallpaper = UI_WALLPAPERS.indexOf(source.wallpaper) >= 0 ? source.wallpaper : DEFAULT_UI_PROFILE.wallpaper
-  const window_bg = UI_WINDOW_BACKGROUNDS.indexOf(source.window_bg) >= 0 ? source.window_bg : DEFAULT_UI_PROFILE.window_bg
   const windowColor = typeof source.window_color === "string" && /^#[0-9a-f]{6}$/i.test(source.window_color.trim())
     ? source.window_color.trim().toLowerCase()
     : DEFAULT_UI_PROFILE.window_color
+  const windowImage = validWindowImage(source.window_image) ? String(source.window_image) : ""
+  const windowBgValue = UI_WINDOW_BACKGROUNDS.indexOf(source.window_bg) >= 0 ? source.window_bg : DEFAULT_UI_PROFILE.window_bg
+  const window_bg: UiWindowBg = windowBgValue === "image" && !windowImage ? "paper" : windowBgValue
   const density: UiDensity = source.density === "compact" ? "compact" : "comfortable"
   const theme: ThemeMode = source.theme === "dark" ? "dark" : "light"
   const brand = String(source.brand || "").trim().slice(0, 24) || DEFAULT_UI_PROFILE.brand
   const glyph = String(source.glyph || "").trim().slice(0, 2) || DEFAULT_UI_PROFILE.glyph
   const name = String(source.name || "").trim().slice(0, 32) || DEFAULT_UI_PROFILE.name
-  return { version: 1, name, brand, glyph, accent, wallpaper, window_bg, window_color: windowColor, radius, density, theme }
+  return { version: 1, name, brand, glyph, accent, wallpaper, window_bg, window_color: windowColor, window_image: windowImage, radius, density, theme }
 }
 
 function windowBackgroundValue(profile: UiProfile): string {
+  if (profile.window_bg === "image" && profile.window_image) {
+    return `linear-gradient(145deg, color-mix(in srgb, var(--paper) 52%, transparent), color-mix(in srgb, var(--paper) 74%, transparent)), url("${profile.window_image}") center / cover no-repeat`
+  }
   if (profile.window_bg === "custom") return profile.window_color
   if (profile.window_bg === "mist") return "linear-gradient(145deg, color-mix(in srgb, var(--sky) 14%, var(--paper)), var(--paper))"
   if (profile.window_bg === "sakura") return "linear-gradient(145deg, #fff8fb, #ffe6f0)"
@@ -85,7 +100,7 @@ function uiProfileDownloadUrl(value: any): string {
 function parseUiProfileText(text: string): { profile?: UiProfile; error?: string } {
   const trimmed = String(text || "").trim()
   if (!trimmed) return { error: "empty" }
-  if (new TextEncoder().encode(trimmed).length > 16 * 1024) return { error: "profile_too_large" }
+  if (new TextEncoder().encode(trimmed).length > MAX_UI_PROFILE_BYTES) return { error: "profile_too_large" }
   let parsed: any
   try {
     parsed = JSON.parse(trimmed)
@@ -1222,6 +1237,12 @@ const STYLES = `
 .ama-studio-seg { display: flex; flex-wrap: wrap; gap: 5px; }
 .ama-studio-seg button { padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel-2); color: var(--muted); font: inherit; font-size: 8px; font-weight: 700; cursor: pointer; }
 .ama-studio-seg button.is-active { border-color: var(--sky); background: var(--sky-soft); color: var(--sky-deep); }
+.ama-studio-seg button:disabled { opacity: .42; cursor: not-allowed; }
+.ama-studio-image-row { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 7px; }
+.ama-file-button { display: inline-flex; align-items: center; justify-content: center; min-height: 28px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel-2); color: var(--ink-soft); font-size: 8px; font-weight: 700; cursor: pointer; }
+.ama-file-button:hover { border-color: var(--sky); color: var(--sky-deep); }
+.ama-file-input { display: none; }
+.ama-studio-image-preview { width: 58px; height: 36px; object-fit: cover; border: 1px solid var(--line); border-radius: 7px; }
 .ama-studio-fields { display: grid; grid-template-columns: 1fr 72px; gap: 7px; }
 .ama-studio-field { min-width: 0; }
 .ama-studio-field label { display: block; margin-bottom: 3px; color: var(--muted); font-size: 7.5px; }
@@ -1515,6 +1536,71 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setUiDirty(true)
     setImportText("")
     setUiMessage(tr("studio.imported", "Imported. Save to keep it."))
+  }
+
+  function importProfileFromText(text: string) {
+    const parsed = parseUiProfileText(text)
+    if (!parsed.profile) {
+      setUiMessage(tr("studio.importInvalid", "That does not look like an Ama UI profile."))
+      return
+    }
+    setUiProfile(parsed.profile)
+    setUiDirty(true)
+    setUiMessage(tr("studio.fileImported", "Imported from file. Save to keep it."))
+  }
+
+  function importProfileFile(event: any) {
+    const file = event?.target?.files?.[0]
+    if (event?.target) event.target.value = ""
+    if (!file) return
+    if (Number(file.size) > MAX_UI_PROFILE_BYTES) {
+      setUiMessage(tr("studio.fileTooLarge", "That profile file is too large."))
+      return
+    }
+    try {
+      file.text().then((text: string) => importProfileFromText(text)).catch(() => {
+        setUiMessage(tr("studio.fileInvalid", "Could not read that profile file."))
+      })
+    } catch (_error) {
+      setUiMessage(tr("studio.fileInvalid", "Could not read that profile file."))
+    }
+  }
+
+  function importWindowImage(event: any) {
+    const file = event?.target?.files?.[0]
+    if (event?.target) event.target.value = ""
+    if (!file) return
+    if (!/^image\/(png|jpe?g|webp|gif)$/i.test(String(file.type || ""))) {
+      setUiMessage(tr("studio.imageInvalid", "Use a PNG, JPG, WebP, or GIF image."))
+      return
+    }
+    if (Number(file.size) > MAX_WINDOW_IMAGE_BYTES) {
+      setUiMessage(tr("studio.imageTooLarge", "That image is larger than 1.2 MB."))
+      return
+    }
+    try {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const dataUrl = String(reader.result || "")
+        if (!validWindowImage(dataUrl)) {
+          setUiMessage(tr("studio.imageInvalid", "Use a PNG, JPG, WebP, or GIF image."))
+          return
+        }
+        setUiProfile(normalizeUiProfile({ ...uiProfile, window_bg: "image", window_image: dataUrl }))
+        setUiDirty(true)
+        setUiMessage(tr("studio.imageImported", "Image imported. Save to keep it."))
+      }
+      reader.onerror = () => setUiMessage(tr("studio.imageInvalid", "Use a PNG, JPG, WebP, or GIF image."))
+      reader.readAsDataURL(file)
+    } catch (_error) {
+      setUiMessage(tr("studio.imageInvalid", "Use a PNG, JPG, WebP, or GIF image."))
+    }
+  }
+
+  function removeWindowImage() {
+    setUiProfile(normalizeUiProfile({ ...uiProfile, window_bg: "paper", window_image: "" }))
+    setUiDirty(true)
+    setUiMessage("")
   }
 
   function currentWebQuery(): string {
@@ -2798,9 +2884,29 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                   type="button"
                   key={windowBg}
                   className={uiProfile.window_bg === windowBg ? "is-active" : ""}
+                  disabled={windowBg === "image" && !uiProfile.window_image}
                   onClick={() => patchUiProfile({ window_bg: windowBg })}
                 >{tr(`studio.windowBg.${windowBg}`, windowBg)}</button>
               ))}
+            </div>
+            <div className="ama-studio-image-row">
+              <label className="ama-file-button">
+                {tr("studio.importImage", "Import image")}
+                <input
+                  className="ama-file-input"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  onChange={importWindowImage}
+                />
+              </label>
+              {uiProfile.window_image ? (
+                <>
+                  <img className="ama-studio-image-preview" src={uiProfile.window_image} alt="" />
+                  <button type="button" className="ama-web-chip" onClick={removeWindowImage}>{tr("studio.removeImage", "Remove image")}</button>
+                </>
+              ) : (
+                <span className="ama-studio-note">{tr("studio.imageHint", "PNG / JPG / WebP / GIF, up to 1.2 MB")}</span>
+              )}
             </div>
             {uiProfile.window_bg === "custom" ? (
               <div className="ama-swatches" style={{ marginTop: "7px" } as any}>
@@ -2928,6 +3034,15 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
             />
             <div className="ama-studio-io-actions">
               <button type="button" className="ama-web-chip" onClick={importUiProfile}>{tr("studio.applyImport", "Import and apply")}</button>
+              <label className="ama-file-button">
+                {tr("studio.importJsonFile", "Import JSON file")}
+                <input
+                  className="ama-file-input"
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={importProfileFile}
+                />
+              </label>
             </div>
           </div>
         </div>

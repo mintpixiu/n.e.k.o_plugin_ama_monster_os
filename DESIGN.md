@@ -95,7 +95,8 @@ plugins such as `lifekit` and `mcp_adapter`.
 - The free shelf is a static snapshot of permanently free titles, not a
   limited-time giveaway tracker and not complete coverage.
 - The UI Studio is declarative only: no arbitrary CSS, remote images, HTML, or
-  executable content. Profiles are validated server-side before persistence.
+  executable content. Local PNG/JPG/WebP/GIF window images are read as bounded
+  data URLs; profiles are validated server-side before persistence.
 - The sale calendar is a static snapshot, not a live feed. It is marked with an
   update date and an official Steamworks link so users can verify changed dates.
 - Window chrome controls are presentation state inside one hosted panel; they

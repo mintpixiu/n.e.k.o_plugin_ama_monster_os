@@ -8,6 +8,7 @@ schema is used by the Hosted UI (for live preview) and by the Python plugin
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 from datetime import datetime, timezone
@@ -15,12 +16,14 @@ from typing import Any, Mapping
 
 UI_PROFILE_FORMAT = "ama.ui.profile"
 UI_PROFILE_VERSION = 1
-MAX_UI_PROFILE_BYTES = 16 * 1024
+MAX_UI_PROFILE_BYTES = 3_000_000
+MAX_WINDOW_IMAGE_BYTES = 1_200_000
 WALLPAPERS = ("grid", "dots", "aurora", "stars", "plain")
-WINDOW_BACKGROUNDS = ("paper", "mist", "sakura", "glass", "custom")
+WINDOW_BACKGROUNDS = ("paper", "mist", "sakura", "glass", "image", "custom")
 DENSITIES = ("comfortable", "compact")
 THEMES = ("light", "dark")
 _ACCENT_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+_IMAGE_RE = re.compile(r"^data:image/(png|jpeg|jpg|webp|gif);base64,([A-Za-z0-9+/=\s]+)$")
 
 DEFAULT_UI_PROFILE: dict[str, Any] = {
     "version": UI_PROFILE_VERSION,
@@ -31,6 +34,7 @@ DEFAULT_UI_PROFILE: dict[str, Any] = {
     "wallpaper": "grid",
     "window_bg": "paper",
     "window_color": "#ffffff",
+    "window_image": "",
     "radius": 16,
     "density": "comfortable",
     "theme": "light",
@@ -44,6 +48,35 @@ def _text(value: Any, fallback: str, limit: int) -> str:
     if not text:
         return fallback
     return text[:limit]
+
+
+def _window_image(value: Any) -> str:
+    """Accept only a bounded, real image data URL (no remote URLs)."""
+
+    if not isinstance(value, str):
+        return ""
+    raw = value.strip()
+    if not raw or len(raw) > int(MAX_WINDOW_IMAGE_BYTES * 1.4) + 256:
+        return ""
+    match = _IMAGE_RE.match(raw)
+    if not match:
+        return ""
+    try:
+        payload = base64.b64decode(match.group(2), validate=True)
+    except (ValueError, TypeError):
+        return ""
+    if not payload or len(payload) > MAX_WINDOW_IMAGE_BYTES:
+        return ""
+    kind = match.group(1)
+    if kind == "png" and not payload.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ""
+    if kind in ("jpeg", "jpg") and not payload.startswith(b"\xff\xd8\xff"):
+        return ""
+    if kind == "gif" and not payload.startswith(b"GIF8"):
+        return ""
+    if kind == "webp" and not (payload.startswith(b"RIFF") and payload[8:12] == b"WEBP"):
+        return ""
+    return raw
 
 
 def normalize_ui_profile(value: Any = None) -> dict[str, Any]:
@@ -67,6 +100,9 @@ def normalize_ui_profile(value: Any = None) -> dict[str, Any]:
     window_color = str(source.get("window_color") or "").strip()
     if not _ACCENT_RE.match(window_color):
         window_color = str(DEFAULT_UI_PROFILE["window_color"])
+    window_image = _window_image(source.get("window_image"))
+    if window_bg == "image" and not window_image:
+        window_bg = "paper"
     density = str(source.get("density") or "").strip().lower()
     if density not in DENSITIES:
         density = str(DEFAULT_UI_PROFILE["density"])
@@ -82,6 +118,7 @@ def normalize_ui_profile(value: Any = None) -> dict[str, Any]:
         "wallpaper": wallpaper,
         "window_bg": window_bg,
         "window_color": window_color.lower(),
+        "window_image": window_image,
         "radius": radius,
         "density": density,
         "theme": theme,
@@ -127,6 +164,7 @@ __all__ = [
     "DEFAULT_UI_PROFILE",
     "DENSITIES",
     "MAX_UI_PROFILE_BYTES",
+    "MAX_WINDOW_IMAGE_BYTES",
     "THEMES",
     "UI_PROFILE_FORMAT",
     "UI_PROFILE_VERSION",

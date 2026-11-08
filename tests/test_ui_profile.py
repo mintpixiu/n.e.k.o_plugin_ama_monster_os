@@ -56,6 +56,23 @@ def test_custom_window_background_round_trip() -> None:
     assert parsed["window_color"] == "#f4e6ff"
 
 
+def test_window_image_data_url_is_validated() -> None:
+    png = (
+        "data:image/png;base64,"
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+    )
+    profile = normalize_ui_profile({"window_bg": "image", "window_image": png})
+    assert profile["window_bg"] == "image"
+    assert profile["window_image"] == png
+
+    fallback = normalize_ui_profile({"window_bg": "image", "window_image": "https://example.com/bg.png"})
+    assert fallback["window_bg"] == "paper"
+    assert fallback["window_image"] == ""
+
+    bad_magic = "data:image/png;base64,aGVsbG8="
+    assert normalize_ui_profile({"window_bg": "image", "window_image": bad_magic})["window_bg"] == "paper"
+
+
 def test_export_round_trip() -> None:
     profile = normalize_ui_profile({
         "name": "Sakura",
