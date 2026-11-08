@@ -28,7 +28,7 @@ from the first version.
 - A Steam sale-picks tab with high-discount, well-rated games, historical lows, CN prices, and Chinese titles shown underneath the English original.
 - A curated Chinese-title map for older Steam games whose official `l=schinese` name remains English.
 - A curated, versioned free-to-play shelf with fixed Steam store links.
-- A **UI Studio** with presets, accent colour, light/dark theme, backdrop pattern, radius, density, window title/glyph, live preview, persistent profile, and JSON import/export.
+- A **UI Studio** with presets, accent colour, light/dark theme, **window background**, desktop backdrop pattern, radius, density, window title/glyph, live preview, persistent profile, and JSON import/export.
 - A versioned Steam sale calendar snapshot sourced from Steamworks, with current/next event, next seasonal sale, local countdowns, and an official schedule link.
 - A two-provider search chain: N.E.K.O `web_search` first, fixed Bing RSS fallback second.
 - Steam account login is deliberately deferred; the UI says so and never asks for a password.

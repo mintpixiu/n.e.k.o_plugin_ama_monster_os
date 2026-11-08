@@ -5,6 +5,7 @@ type ViewId = "home" | "web" | "steam" | "studio" | "core" | "bridge" | "about"
 type ChromeMode = "normal" | "max" | "min" | "asleep"
 type ThemeMode = "light" | "dark"
 type UiWallpaper = "grid" | "dots" | "aurora" | "stars" | "plain"
+type UiWindowBg = "paper" | "mist" | "sakura" | "glass" | "custom"
 type UiDensity = "comfortable" | "compact"
 
 type UiProfile = {
@@ -14,6 +15,8 @@ type UiProfile = {
   glyph: string
   accent: string
   wallpaper: UiWallpaper
+  window_bg: UiWindowBg
+  window_color: string
   radius: number
   density: UiDensity
   theme: ThemeMode
@@ -26,19 +29,22 @@ const DEFAULT_UI_PROFILE: UiProfile = {
   glyph: "✦",
   accent: "#44b8f2",
   wallpaper: "grid",
+  window_bg: "paper",
+  window_color: "#ffffff",
   radius: 16,
   density: "comfortable",
   theme: "light",
 }
 
-const UI_PRESETS: Array<{ id: string; labelKey: string; accent: string; wallpaper: UiWallpaper; theme: ThemeMode }> = [
-  { id: "cloud", labelKey: "studio.preset.cloud", accent: "#44b8f2", wallpaper: "grid", theme: "light" },
-  { id: "sakura", labelKey: "studio.preset.sakura", accent: "#e88aa8", wallpaper: "dots", theme: "light" },
-  { id: "mint", labelKey: "studio.preset.mint", accent: "#4fc3a1", wallpaper: "aurora", theme: "light" },
-  { id: "night", labelKey: "studio.preset.night", accent: "#8bdcff", wallpaper: "stars", theme: "dark" },
+const UI_PRESETS: Array<{ id: string; labelKey: string; accent: string; wallpaper: UiWallpaper; window_bg: UiWindowBg; theme: ThemeMode }> = [
+  { id: "cloud", labelKey: "studio.preset.cloud", accent: "#44b8f2", wallpaper: "grid", window_bg: "paper", theme: "light" },
+  { id: "sakura", labelKey: "studio.preset.sakura", accent: "#e88aa8", wallpaper: "dots", window_bg: "sakura", theme: "light" },
+  { id: "mint", labelKey: "studio.preset.mint", accent: "#4fc3a1", wallpaper: "aurora", window_bg: "mist", theme: "light" },
+  { id: "night", labelKey: "studio.preset.night", accent: "#8bdcff", wallpaper: "stars", window_bg: "glass", theme: "dark" },
 ]
 
 const UI_WALLPAPERS: UiWallpaper[] = ["grid", "dots", "aurora", "stars", "plain"]
+const UI_WINDOW_BACKGROUNDS: UiWindowBg[] = ["paper", "mist", "sakura", "glass", "custom"]
 const UI_ACCENTS = ["#44b8f2", "#e88aa8", "#4fc3a1", "#9b8ad9", "#d9a441", "#7d8fa8"]
 
 function normalizeUiProfile(value: any): UiProfile {
@@ -48,12 +54,24 @@ function normalizeUiProfile(value: any): UiProfile {
     : DEFAULT_UI_PROFILE.accent
   const radius = Math.max(8, Math.min(28, Math.round(Number(source.radius) || DEFAULT_UI_PROFILE.radius)))
   const wallpaper = UI_WALLPAPERS.indexOf(source.wallpaper) >= 0 ? source.wallpaper : DEFAULT_UI_PROFILE.wallpaper
+  const window_bg = UI_WINDOW_BACKGROUNDS.indexOf(source.window_bg) >= 0 ? source.window_bg : DEFAULT_UI_PROFILE.window_bg
+  const windowColor = typeof source.window_color === "string" && /^#[0-9a-f]{6}$/i.test(source.window_color.trim())
+    ? source.window_color.trim().toLowerCase()
+    : DEFAULT_UI_PROFILE.window_color
   const density: UiDensity = source.density === "compact" ? "compact" : "comfortable"
   const theme: ThemeMode = source.theme === "dark" ? "dark" : "light"
   const brand = String(source.brand || "").trim().slice(0, 24) || DEFAULT_UI_PROFILE.brand
   const glyph = String(source.glyph || "").trim().slice(0, 2) || DEFAULT_UI_PROFILE.glyph
   const name = String(source.name || "").trim().slice(0, 32) || DEFAULT_UI_PROFILE.name
-  return { version: 1, name, brand, glyph, accent, wallpaper, radius, density, theme }
+  return { version: 1, name, brand, glyph, accent, wallpaper, window_bg, window_color: windowColor, radius, density, theme }
+}
+
+function windowBackgroundValue(profile: UiProfile): string {
+  if (profile.window_bg === "custom") return profile.window_color
+  if (profile.window_bg === "mist") return "linear-gradient(145deg, color-mix(in srgb, var(--sky) 14%, var(--paper)), var(--paper))"
+  if (profile.window_bg === "sakura") return "linear-gradient(145deg, #fff8fb, #ffe6f0)"
+  if (profile.window_bg === "glass") return "color-mix(in srgb, var(--paper) 76%, transparent)"
+  return "var(--paper)"
 }
 
 function uiProfileDownloadUrl(value: any): string {
@@ -486,6 +504,7 @@ const STYLES = `
   mask-image: none;
   opacity: .55;
 }
+.ama-root[data-window-bg="glass"] .ama-window { backdrop-filter: blur(18px); }
 .ama-root[data-wallpaper="plain"] .ama-desktop::before { display: none; }
 .ama-root[data-radius="custom"] .ama-window { border-radius: calc(var(--ui-radius) + 6px) !important; }
 .ama-root[data-radius="custom"] .ama-hero,
@@ -526,7 +545,7 @@ const STYLES = `
   flex-direction: column;
   border-radius: 28px;
   border: 1px solid var(--line);
-  background: var(--paper);
+  background: var(--window-bg, var(--paper));
   box-shadow: var(--window-shadow);
   animation: ama-window-in .55s cubic-bezier(.2,.8,.2,1) both;
 }
@@ -1444,6 +1463,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       ...uiProfile,
       accent: preset.accent,
       wallpaper: preset.wallpaper,
+      window_bg: preset.window_bg,
       theme: preset.theme,
     }))
     setUiDirty(true)
@@ -2768,7 +2788,36 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           </div>
 
           <div className="ama-studio-group">
-            <div className="ama-studio-label">{tr("studio.wallpaper", "Backdrop")}</div>
+            <div className="ama-studio-label">
+              {tr("studio.windowBg", "Window background")}
+              <small>{uiProfile.window_bg === "custom" ? uiProfile.window_color : tr(`studio.windowBg.${uiProfile.window_bg}`, uiProfile.window_bg)}</small>
+            </div>
+            <div className="ama-studio-seg">
+              {UI_WINDOW_BACKGROUNDS.map((windowBg) => (
+                <button
+                  type="button"
+                  key={windowBg}
+                  className={uiProfile.window_bg === windowBg ? "is-active" : ""}
+                  onClick={() => patchUiProfile({ window_bg: windowBg })}
+                >{tr(`studio.windowBg.${windowBg}`, windowBg)}</button>
+              ))}
+            </div>
+            {uiProfile.window_bg === "custom" ? (
+              <div className="ama-swatches" style={{ marginTop: "7px" } as any}>
+                <input
+                  className="ama-studio-color"
+                  type="color"
+                  value={uiProfile.window_color}
+                  aria-label={tr("studio.windowColor", "Window colour")}
+                  onInput={(event: any) => patchUiProfile({ window_color: event.target.value })}
+                />
+                <span className="ama-studio-note">{uiProfile.window_color}</span>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="ama-studio-group">
+            <div className="ama-studio-label">{tr("studio.wallpaper", "Desktop backdrop")}</div>
             <div className="ama-studio-seg">
               {UI_WALLPAPERS.map((wallpaper) => (
                 <button
@@ -2893,6 +2942,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     "--sky-soft": `color-mix(in srgb, ${uiProfile.accent} 18%, var(--card))`,
     "--sky-deep": `color-mix(in srgb, ${uiProfile.accent} 58%, var(--ink))`,
     "--ui-radius": `${uiProfile.radius}px`,
+    "--window-bg": windowBackgroundValue(uiProfile),
   } as any
 
   const footer = (
@@ -2938,6 +2988,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     <div
       className={`ama-root ama-theme-${activeTheme}`}
       data-wallpaper={uiProfile.wallpaper}
+      data-window-bg={uiProfile.window_bg}
       data-density={uiProfile.density}
       data-radius={uiProfile.radius === DEFAULT_UI_PROFILE.radius ? "default" : "custom"}
       style={uiStyle}

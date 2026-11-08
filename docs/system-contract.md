@@ -238,6 +238,8 @@ by the Studio UI and the plugin persistence action:
   "glyph": "✦",
   "accent": "#e88aa8",
   "wallpaper": "dots",
+  "window_bg": "sakura",
+  "window_color": "#ffffff",
   "radius": 16,
   "density": "comfortable",
   "theme": "light"
@@ -246,8 +248,11 @@ by the Studio UI and the plugin persistence action:
 
 Rules:
 
-- `accent` must be a six-digit hex colour.
-- `wallpaper` is one of `grid`, `dots`, `aurora`, `stars`, `plain`.
+- `accent` and `window_color` must be six-digit hex colours.
+- `wallpaper` is one of `grid`, `dots`, `aurora`, `stars`, `plain` and controls
+  the desktop behind the window.
+- `window_bg` is one of `paper`, `mist`, `sakura`, `glass`, `custom` and controls
+  the window surface itself; `window_color` is used only for `custom`.
 - `density` is `comfortable` or `compact`; `theme` is `light` or `dark`.
 - `radius` is clamped to 8–28; text fields are length-limited.
 - The plugin writes `data/ui_profile.json` in its data folder through

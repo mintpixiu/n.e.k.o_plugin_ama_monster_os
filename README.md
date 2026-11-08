@@ -25,9 +25,9 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
   lows, CN prices, and a playful **“可以不玩，但不能没有”** flag.
 - A **free-to-play shelf** of permanently free Steam titles, versioned as a
   curated snapshot rather than a live catalogue.
-- A **UI Studio** for custom accent, light/dark theme, backdrop, corner radius,
-  compact density, window title, and glyph. Profiles are saved in the plugin
-  data folder and can be exported/imported as JSON.
+- A **UI Studio** for custom accent, light/dark theme, **window background**,
+  desktop backdrop, corner radius, compact density, window title, and glyph.
+  Profiles are saved in the plugin data folder and can be exported/imported as JSON.
 - A **Pulse check** action that calls the Python plugin and refreshes the
   context through the real Hosted UI bridge.
 - A stable, versioned contract (`ama.system.bridge` v1.0.0) and a `SystemPort`
@@ -141,7 +141,8 @@ The **Studio** room is a safe, declarative appearance editor:
 - presets: Cloud, Sakura, Mint, Night
 - accent colour picker and swatches
 - light/dark theme
-- backdrop: grid, dots, aurora, stars, plain
+- **window background**: paper, mist, sakura, glass, or a custom colour
+- desktop backdrop: grid, dots, aurora, stars, plain
 - corner radius and compact density
 - custom window title and glyph
 - live preview before saving

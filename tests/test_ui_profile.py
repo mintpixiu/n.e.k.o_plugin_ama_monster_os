@@ -24,6 +24,8 @@ def test_profile_fields_are_clamped() -> None:
         "glyph": "✦✦✦",
         "accent": "red",
         "wallpaper": "unknown",
+        "window_bg": "unknown",
+        "window_color": "white",
         "radius": 99,
         "density": "tiny",
         "theme": "sepia",
@@ -33,9 +35,25 @@ def test_profile_fields_are_clamped() -> None:
     assert profile["glyph"] == "✦✦"
     assert profile["accent"] == DEFAULT_UI_PROFILE["accent"]
     assert profile["wallpaper"] == "grid"
+    assert profile["window_bg"] == "paper"
+    assert profile["window_color"] == "#ffffff"
     assert profile["radius"] == 28
     assert profile["density"] == "comfortable"
     assert profile["theme"] == "light"
+
+
+def test_custom_window_background_round_trip() -> None:
+    profile = normalize_ui_profile({
+        "window_bg": "custom",
+        "window_color": "#F4E6FF",
+        "brand": "Window Only",
+    })
+    assert profile["window_bg"] == "custom"
+    assert profile["window_color"] == "#f4e6ff"
+    exported = export_ui_profile(profile)
+    parsed, error = parse_ui_profile_payload(json.dumps(exported))
+    assert error == ""
+    assert parsed["window_color"] == "#f4e6ff"
 
 
 def test_export_round_trip() -> None:

@@ -28,6 +28,8 @@
     "glyph": "✦",
     "accent": "#e88aa8",
     "wallpaper": "dots",
+    "window_bg": "sakura",
+    "window_color": "#ffffff",
     "radius": 16,
     "density": "comfortable",
     "theme": "light"
@@ -45,10 +47,15 @@
 | `profile.brand` | 字符串 | 窗口左上角标题，最长 24 字符 |
 | `profile.glyph` | 字符串 | 窗口图标，最长 2 字符，例如 `✦`、`❀`、`♥` |
 | `profile.accent` | 字符串 | 六位十六进制颜色，例如 `#44b8f2` |
-| `profile.wallpaper` | 字符串 | `grid` / `dots` / `aurora` / `stars` / `plain` |
+| `profile.wallpaper` | 字符串 | 窗口外桌面背景：`grid` / `dots` / `aurora` / `stars` / `plain` |
+| `profile.window_bg` | 字符串 | **窗口本身背景**：`paper` / `mist` / `sakura` / `glass` / `custom` |
+| `profile.window_color` | 字符串 | `window_bg=custom` 时的窗口背景色，六位十六进制 |
 | `profile.radius` | 数字 | 圆角，8–28，超出会截断 |
 | `profile.density` | 字符串 | `comfortable` / `compact` |
 | `profile.theme` | 字符串 | `light` / `dark` |
+
+> `wallpaper` 是窗口**外**的桌面花纹；`window_bg` 才是窗口**本身**的背景。
+> 两者可以独立设置。
 
 也可以只写 `profile` 里的字段，不带 `format` 外层：
 
@@ -58,6 +65,8 @@
   "glyph": "☾",
   "accent": "#8bdcff",
   "wallpaper": "stars",
+  "window_bg": "glass",
+  "window_color": "#ffffff",
   "radius": 20,
   "density": "compact",
   "theme": "dark"
@@ -89,7 +98,8 @@
 
 - **强调色**：点色板，或使用右侧取色器
 - **主题**：日光 / 月光
-- **背景**：网格 / 点阵 / 极光 / 星夜 / 纯净
+- **窗口背景**：纸白 / 雾蓝 / 樱粉 / 玻璃 / 自定义颜色
+- **桌面背景**：网格 / 点阵 / 极光 / 星夜 / 纯净
 - **圆角**：拖动 8–28px
 - **密度**：舒适 / 紧凑
 - **窗口标识**：修改标题和图标
@@ -166,6 +176,8 @@
     "glyph": "❀",
     "accent": "#e88aa8",
     "wallpaper": "dots",
+    "window_bg": "sakura",
+    "window_color": "#ffffff",
     "radius": 18,
     "density": "comfortable",
     "theme": "light"
@@ -186,6 +198,8 @@
     "glyph": "☾",
     "accent": "#8bdcff",
     "wallpaper": "stars",
+    "window_bg": "glass",
+    "window_color": "#ffffff",
     "radius": 20,
     "density": "compact",
     "theme": "dark"
@@ -206,6 +220,8 @@
     "glyph": "✦",
     "accent": "#4fc3a1",
     "wallpaper": "aurora",
+    "window_bg": "mist",
+    "window_color": "#ffffff",
     "radius": 16,
     "density": "comfortable",
     "theme": "light"

@@ -17,6 +17,7 @@ UI_PROFILE_FORMAT = "ama.ui.profile"
 UI_PROFILE_VERSION = 1
 MAX_UI_PROFILE_BYTES = 16 * 1024
 WALLPAPERS = ("grid", "dots", "aurora", "stars", "plain")
+WINDOW_BACKGROUNDS = ("paper", "mist", "sakura", "glass", "custom")
 DENSITIES = ("comfortable", "compact")
 THEMES = ("light", "dark")
 _ACCENT_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -28,6 +29,8 @@ DEFAULT_UI_PROFILE: dict[str, Any] = {
     "glyph": "✦",
     "accent": "#44b8f2",
     "wallpaper": "grid",
+    "window_bg": "paper",
+    "window_color": "#ffffff",
     "radius": 16,
     "density": "comfortable",
     "theme": "light",
@@ -58,6 +61,12 @@ def normalize_ui_profile(value: Any = None) -> dict[str, Any]:
     wallpaper = str(source.get("wallpaper") or "").strip().lower()
     if wallpaper not in WALLPAPERS:
         wallpaper = str(DEFAULT_UI_PROFILE["wallpaper"])
+    window_bg = str(source.get("window_bg") or "").strip().lower()
+    if window_bg not in WINDOW_BACKGROUNDS:
+        window_bg = str(DEFAULT_UI_PROFILE["window_bg"])
+    window_color = str(source.get("window_color") or "").strip()
+    if not _ACCENT_RE.match(window_color):
+        window_color = str(DEFAULT_UI_PROFILE["window_color"])
     density = str(source.get("density") or "").strip().lower()
     if density not in DENSITIES:
         density = str(DEFAULT_UI_PROFILE["density"])
@@ -71,6 +80,8 @@ def normalize_ui_profile(value: Any = None) -> dict[str, Any]:
         "glyph": _text(source.get("glyph"), str(DEFAULT_UI_PROFILE["glyph"]), 2),
         "accent": accent.lower(),
         "wallpaper": wallpaper,
+        "window_bg": window_bg,
+        "window_color": window_color.lower(),
         "radius": radius,
         "density": density,
         "theme": theme,
@@ -120,6 +131,7 @@ __all__ = [
     "UI_PROFILE_FORMAT",
     "UI_PROFILE_VERSION",
     "WALLPAPERS",
+    "WINDOW_BACKGROUNDS",
     "export_ui_profile",
     "normalize_ui_profile",
     "parse_ui_profile_payload",
