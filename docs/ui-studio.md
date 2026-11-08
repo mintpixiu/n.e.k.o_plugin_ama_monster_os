@@ -1,6 +1,6 @@
 # 自定义外观与导入导出教程
 
-**Ama Monster OS 0.1.0 Beta** · UI Studio · `ama.ui.profile` v1
+**Ama Monster OS 0.2.3 Beta** · UI Studio · `ama.ui.profile` v1
 
 这篇教程讲三件事：
 
@@ -30,6 +30,14 @@
     "wallpaper": "dots",
     "window_bg": "sakura",
     "window_color": "#ffffff",
+    "window_image": "",
+    "gradient_colors": ["#44b8f2", "#9b8ad9", "#e88aa8"],
+    "gradient_angle": 135,
+    "sound_enabled": true,
+    "sound_mode": "steam",
+    "sound_volume": 0.55,
+    "sound_data": "",
+    "sound_name": "",
     "radius": 16,
     "density": "comfortable",
     "theme": "light"
@@ -48,9 +56,16 @@
 | `profile.glyph` | 字符串 | 窗口图标，最长 2 字符，例如 `✦`、`❀`、`♥` |
 | `profile.accent` | 字符串 | 六位十六进制颜色，例如 `#44b8f2` |
 | `profile.wallpaper` | 字符串 | 窗口外桌面背景：`grid` / `dots` / `aurora` / `stars` / `plain` |
-| `profile.window_bg` | 字符串 | **窗口本身背景**：`paper` / `mist` / `sakura` / `glass` / `image` / `custom` |
+| `profile.window_bg` | 字符串 | **窗口本身背景**：`paper` / `mist` / `sakura` / `glass` / `gradient` / `image` / `custom` |
 | `profile.window_color` | 字符串 | `window_bg=custom` 时的窗口背景色，六位十六进制 |
 | `profile.window_image` | 字符串 | `window_bg=image` 时的本地图片 data URL；不要手填远程 URL |
+| `profile.gradient_colors` | 数组 | `window_bg=gradient` 时的 2–30 个十六进制颜色 |
+| `profile.gradient_angle` | 数字 | 渐变角度，0–360 |
+| `profile.sound_enabled` | 布尔 | 是否启用选取音效 |
+| `profile.sound_mode` | 字符串 | `steam` / `soft` / `mechanical` / `custom` |
+| `profile.sound_volume` | 数字 | 音量，0–1 |
+| `profile.sound_data` | 字符串 | 自定义音效的本地 data URL；不要手填远程 URL |
+| `profile.sound_name` | 字符串 | 自定义音效显示名，最长 80 字符 |
 | `profile.radius` | 数字 | 圆角，8–28，超出会截断 |
 | `profile.density` | 字符串 | `comfortable` / `compact` |
 | `profile.theme` | 字符串 | `light` / `dark` |
@@ -99,11 +114,12 @@
 
 - **强调色**：点色板，或使用右侧取色器
 - **主题**：日光 / 月光
-- **窗口背景**：纸白 / 雾蓝 / 樱粉 / 玻璃 / 图片 / 自定义颜色
+- **窗口背景**：纸白 / 雾蓝 / 樱粉 / 玻璃 / 渐变 / 图片 / 自定义颜色
 - **桌面背景**：网格 / 点阵 / 极光 / 星夜 / 纯净
 - **圆角**：拖动 8–28px
 - **密度**：舒适 / 紧凑
 - **窗口标识**：修改标题和图标
+- **选取音效**：Steam 轻点 / 柔和 / 机械 / 自定义
 
 修改会立即显示在整个窗口里。右上角会从 **已保存** 变成 **未保存**。
 
@@ -126,7 +142,30 @@
 
 ![导入外部图片作为窗口背景](preview-studio-image.png)
 
-### 第 6 步：导出
+### 第 6 步：制作颜色渐变
+
+1. 在 **窗口背景** 选择 **渐变**。
+2. 用每个颜色行的取色器修改颜色。
+3. 点击 **添加颜色**，最多 30 种；点击 `×` 删除，至少保留 2 种。
+4. 拖动 **渐变角度**，0–360°。
+5. 预览确认后点击 **保存外观**。
+
+颜色会均匀分布；非法颜色和重复颜色会被自动过滤。
+
+### 第 7 步：设置选取音效
+
+1. 在 **选取音效** 选择 **开**。
+2. 选择风格：**Steam 轻点** / **柔和** / **机械**。
+3. 拖动音量，或点 **试听**。
+4. 如需自己的音效，点击 **导入音效**，选择 WAV / MP3 / OGG（不超过 1 MB）。
+5. 点击 **保存外观**。
+
+选中音效会在点击导航、按钮、标签页时播放。自定义音效以 data URL 保存在
+配置里，不依赖原文件路径。
+
+![渐变与选取音效](preview-studio-sound.png)
+
+### 第 8 步：导出
 
 在 **导入 / 导出** 区域：
 
@@ -261,15 +300,18 @@
 | 想恢复初始外观 | 点击 **恢复默认**，再点 **保存外观** |
 | 图片导入失败 | 只支持 PNG/JPG/WebP/GIF，单张不超过 1.2 MB |
 | 图片背景看不到 | 确认窗口背景选择“图片”，并点击“保存外观” |
-| 配置文件导入失败 | 检查文件是否为 UTF-8 JSON；大小不超过 3 MB |
+| 音效导入失败 | 只支持 WAV/MP3/OGG，不超过 1 MB |
+| 音效没有声音 | 确认选取音效为“开”、音量大于 0；浏览器可能需先点击一次窗口 |
+| 配置文件导入失败 | 检查文件是否为 UTF-8 JSON；大小不超过 4 MB |
 | 配置存在哪里 | 插件数据目录下的 `data/ui_profile.json`；具体根目录由 N.E.K.O 按平台决定 |
 
 ## 六、安全边界
 
 - 不接受任意 CSS、HTML、JavaScript。
-- 只接受本地图片文件转换出的 data URL，不接受远程图片 URL。
+- 只接受本地图片/音频文件转换出的 data URL，不接受远程 URL。
 - 图片限制为 PNG/JPG/WebP/GIF，单张不超过 1.2 MB，并校验文件头。
-- 配置文件限制为 3 MB；所有字段在 Python 端再次校验后才写入磁盘。
+- 音效限制为 WAV/MP3/OGG，单条不超过 1 MB，并校验文件头。
+- 配置文件限制为 4 MB；所有字段在 Python 端再次校验后才写入磁盘。
 - 导入文件大小有上限；异常 JSON 会被拒绝。
 - 不读取 Steam 密码，不涉及账号登录。
 

@@ -73,6 +73,43 @@ def test_window_image_data_url_is_validated() -> None:
     assert normalize_ui_profile({"window_bg": "image", "window_image": bad_magic})["window_bg"] == "paper"
 
 
+def test_gradient_colors_are_bounded_and_deduplicated() -> None:
+    colors = [f"#{index:02x}00ff" for index in range(40)]
+    profile = normalize_ui_profile({
+        "window_bg": "gradient",
+        "gradient_colors": colors + ["#4400ff", "not-a-colour"],
+        "gradient_angle": 999,
+    })
+    assert profile["window_bg"] == "gradient"
+    assert len(profile["gradient_colors"]) == 30
+    assert len(set(profile["gradient_colors"])) == 30
+    assert profile["gradient_angle"] == 360
+
+    fallback = normalize_ui_profile({"window_bg": "gradient", "gradient_colors": ["#ffffff"]})
+    assert len(fallback["gradient_colors"]) >= 2
+
+
+def test_custom_sound_is_validated() -> None:
+    wav = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="
+    profile = normalize_ui_profile({
+        "sound_enabled": True,
+        "sound_mode": "custom",
+        "sound_volume": 0.4,
+        "sound_data": wav,
+        "sound_name": "tick.wav",
+    })
+    assert profile["sound_mode"] == "custom"
+    assert profile["sound_data"] == wav
+    assert profile["sound_name"] == "tick.wav"
+    assert profile["sound_volume"] == 0.4
+
+    fallback = normalize_ui_profile({"sound_mode": "custom", "sound_data": "https://example.com/tick.wav"})
+    assert fallback["sound_mode"] == "steam"
+    assert fallback["sound_data"] == ""
+
+    assert normalize_ui_profile({"sound_volume": 9})["sound_volume"] == 1.0
+
+
 def test_export_round_trip() -> None:
     profile = normalize_ui_profile({
         "name": "Sakura",

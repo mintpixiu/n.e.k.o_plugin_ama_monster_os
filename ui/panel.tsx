@@ -5,8 +5,9 @@ type ViewId = "home" | "web" | "steam" | "studio" | "core" | "bridge" | "about"
 type ChromeMode = "normal" | "max" | "min" | "asleep"
 type ThemeMode = "light" | "dark"
 type UiWallpaper = "grid" | "dots" | "aurora" | "stars" | "plain"
-type UiWindowBg = "paper" | "mist" | "sakura" | "glass" | "image" | "custom"
+type UiWindowBg = "paper" | "mist" | "sakura" | "glass" | "gradient" | "image" | "custom"
 type UiDensity = "comfortable" | "compact"
+type SoundMode = "steam" | "soft" | "mechanical" | "custom"
 
 type UiProfile = {
   version: number
@@ -18,6 +19,13 @@ type UiProfile = {
   window_bg: UiWindowBg
   window_color: string
   window_image: string
+  gradient_colors: string[]
+  gradient_angle: number
+  sound_enabled: boolean
+  sound_mode: SoundMode
+  sound_volume: number
+  sound_data: string
+  sound_name: string
   radius: number
   density: UiDensity
   theme: ThemeMode
@@ -33,6 +41,13 @@ const DEFAULT_UI_PROFILE: UiProfile = {
   window_bg: "paper",
   window_color: "#ffffff",
   window_image: "",
+  gradient_colors: ["#44b8f2", "#9b8ad9", "#e88aa8"],
+  gradient_angle: 135,
+  sound_enabled: true,
+  sound_mode: "steam",
+  sound_volume: 0.55,
+  sound_data: "",
+  sound_name: "",
   radius: 16,
   density: "comfortable",
   theme: "light",
@@ -46,15 +61,90 @@ const UI_PRESETS: Array<{ id: string; labelKey: string; accent: string; wallpape
 ]
 
 const UI_WALLPAPERS: UiWallpaper[] = ["grid", "dots", "aurora", "stars", "plain"]
-const UI_WINDOW_BACKGROUNDS: UiWindowBg[] = ["paper", "mist", "sakura", "glass", "image", "custom"]
+const UI_WINDOW_BACKGROUNDS: UiWindowBg[] = ["paper", "mist", "sakura", "glass", "gradient", "image", "custom"]
 const UI_ACCENTS = ["#44b8f2", "#e88aa8", "#4fc3a1", "#9b8ad9", "#d9a441", "#7d8fa8"]
 const MAX_WINDOW_IMAGE_BYTES = 1_200_000
-const MAX_UI_PROFILE_BYTES = 3_000_000
+const MAX_SOUND_BYTES = 1_000_000
+const MAX_UI_PROFILE_BYTES = 4_000_000
 
 function validWindowImage(value: any): boolean {
   return typeof value === "string"
     && /^data:image\/(?:png|jpeg|jpg|webp|gif);base64,/i.test(value)
     && value.length < MAX_WINDOW_IMAGE_BYTES * 1.4
+}
+
+function validSoundData(value: any): boolean {
+  return typeof value === "string"
+    && /^data:audio\/(?:wav|mpeg|mp3|ogg);base64,/i.test(value)
+    && value.length < MAX_SOUND_BYTES * 1.4
+}
+
+let amaAudioContext: AudioContext | null = null
+
+function hslToHex(hue: number, saturation: number, lightness: number): string {
+  const h = ((hue % 360) + 360) % 360 / 360
+  const s = saturation / 100
+  const l = lightness / 100
+  const hueToRgb = (p: number, q: number, t: number) => {
+    let value = t
+    if (value < 0) value += 1
+    if (value > 1) value -= 1
+    if (value < 1 / 6) return p + (q - p) * 6 * value
+    if (value < 1 / 2) return q
+    if (value < 2 / 3) return p + (q - p) * (2 / 3 - value) * 6
+    return p
+  }
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s
+  const p = 2 * l - q
+  const values = [hueToRgb(p, q, h + 1 / 3), hueToRgb(p, q, h), hueToRgb(p, q, h - 1 / 3)]
+  return `#${values.map((value) => Math.round(value * 255).toString(16).padStart(2, "0")).join("")}`
+}
+
+function playSelectSound(profile: UiProfile) {
+  if (!profile.sound_enabled || profile.sound_volume <= 0) return
+  const volume = Math.max(0, Math.min(1, Number(profile.sound_volume) || 0))
+  if (profile.sound_mode === "custom" && profile.sound_data) {
+    try {
+      const audio = new Audio(profile.sound_data)
+      audio.volume = volume
+      void audio.play().catch(() => {})
+      return
+    } catch (_error) {
+      return
+    }
+  }
+  try {
+    const Ctor = window.AudioContext || (window as any).webkitAudioContext
+    if (!Ctor) return
+    if (!amaAudioContext) amaAudioContext = new Ctor()
+    const context = amaAudioContext
+    if (context.state === "suspended") void context.resume()
+    const now = context.currentTime
+    const oscillator = context.createOscillator()
+    const gain = context.createGain()
+    if (profile.sound_mode === "mechanical") {
+      oscillator.type = "square"
+      oscillator.frequency.setValueAtTime(760, now)
+      oscillator.frequency.exponentialRampToValueAtTime(420, now + 0.045)
+    } else if (profile.sound_mode === "soft") {
+      oscillator.type = "sine"
+      oscillator.frequency.setValueAtTime(680, now)
+      oscillator.frequency.exponentialRampToValueAtTime(520, now + 0.055)
+    } else {
+      oscillator.type = "triangle"
+      oscillator.frequency.setValueAtTime(1040, now)
+      oscillator.frequency.exponentialRampToValueAtTime(1480, now + 0.035)
+    }
+    gain.gain.setValueAtTime(0.0001, now)
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume * 0.18), now + 0.006)
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.085)
+    oscillator.connect(gain)
+    gain.connect(context.destination)
+    oscillator.start(now)
+    oscillator.stop(now + 0.09)
+  } catch (_error) {
+    // Audio is a nicety; never break the window if the host blocks it.
+  }
 }
 
 function normalizeUiProfile(value: any): UiProfile {
@@ -70,15 +160,55 @@ function normalizeUiProfile(value: any): UiProfile {
   const windowImage = validWindowImage(source.window_image) ? String(source.window_image) : ""
   const windowBgValue = UI_WINDOW_BACKGROUNDS.indexOf(source.window_bg) >= 0 ? source.window_bg : DEFAULT_UI_PROFILE.window_bg
   const window_bg: UiWindowBg = windowBgValue === "image" && !windowImage ? "paper" : windowBgValue
+  const gradientColors: string[] = Array.isArray(source.gradient_colors)
+    ? Array.from(new Set<string>(
+      (source.gradient_colors as any[])
+        .filter((item: any) => typeof item === "string" && /^#[0-9a-f]{6}$/i.test(item.trim()))
+        .map((item: any) => String(item).trim().toLowerCase()),
+    )).slice(0, 30)
+    : []
+  const gradient_colors = gradientColors.length >= 2 ? gradientColors : [...DEFAULT_UI_PROFILE.gradient_colors]
+  const gradientAngle = Math.max(0, Math.min(360, Math.round(Number(source.gradient_angle) || DEFAULT_UI_PROFILE.gradient_angle)))
+  const soundMode: SoundMode = ["steam", "soft", "mechanical", "custom"].indexOf(source.sound_mode) >= 0 ? source.sound_mode : "steam"
+  const soundData = soundMode === "custom" && validSoundData(source.sound_data) ? String(source.sound_data) : ""
+  const sound_mode: SoundMode = soundMode === "custom" && !soundData ? "steam" : soundMode
+  const soundVolume = Math.max(0, Math.min(1, Number(source.sound_volume ?? DEFAULT_UI_PROFILE.sound_volume)))
   const density: UiDensity = source.density === "compact" ? "compact" : "comfortable"
   const theme: ThemeMode = source.theme === "dark" ? "dark" : "light"
   const brand = String(source.brand || "").trim().slice(0, 24) || DEFAULT_UI_PROFILE.brand
   const glyph = String(source.glyph || "").trim().slice(0, 2) || DEFAULT_UI_PROFILE.glyph
   const name = String(source.name || "").trim().slice(0, 32) || DEFAULT_UI_PROFILE.name
-  return { version: 1, name, brand, glyph, accent, wallpaper, window_bg, window_color: windowColor, window_image: windowImage, radius, density, theme }
+  return {
+    version: 1,
+    name,
+    brand,
+    glyph,
+    accent,
+    wallpaper,
+    window_bg,
+    window_color: windowColor,
+    window_image: windowImage,
+    gradient_colors,
+    gradient_angle: gradientAngle,
+    sound_enabled: source.sound_enabled !== false,
+    sound_mode,
+    sound_volume: Math.round(soundVolume * 100) / 100,
+    sound_data: soundData,
+    sound_name: String(source.sound_name || "").trim().slice(0, 80),
+    radius,
+    density,
+    theme,
+  }
 }
 
 function windowBackgroundValue(profile: UiProfile): string {
+  if (profile.window_bg === "gradient" && profile.gradient_colors.length >= 2) {
+    const stops = profile.gradient_colors.map((color, index) => {
+      const position = Math.round((index / (profile.gradient_colors.length - 1)) * 100)
+      return `${color} ${position}%`
+    }).join(", ")
+    return `linear-gradient(${profile.gradient_angle}deg, ${stops})`
+  }
   if (profile.window_bg === "image" && profile.window_image) {
     return `linear-gradient(145deg, color-mix(in srgb, var(--paper) 52%, transparent), color-mix(in srgb, var(--paper) 74%, transparent)), url("${profile.window_image}") center / cover no-repeat`
   }
@@ -1243,6 +1373,18 @@ const STYLES = `
 .ama-file-button:hover { border-color: var(--sky); color: var(--sky-deep); }
 .ama-file-input { display: none; }
 .ama-studio-image-preview { width: 58px; height: 36px; object-fit: cover; border: 1px solid var(--line); border-radius: 7px; }
+.ama-gradient-editor { margin-top: 8px; padding: 8px; border: 1px dashed var(--line-strong); border-radius: 9px; background: var(--panel-2); }
+.ama-gradient-preview { height: 28px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 7px; }
+.ama-gradient-colors { display: grid; gap: 3px; max-height: 160px; overflow: auto; padding-right: 2px; }
+.ama-gradient-row { display: grid; grid-template-columns: 20px 30px minmax(0, 1fr) 20px; align-items: center; gap: 5px; }
+.ama-gradient-index { color: var(--muted); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 7px; }
+.ama-gradient-row code { color: var(--ink-soft); font-size: 8px; }
+.ama-gradient-remove { display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: var(--card); color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; }
+.ama-gradient-remove:disabled { opacity: .3; cursor: not-allowed; }
+.ama-studio-sound-row { display: flex; align-items: center; gap: 7px; margin-top: 7px; }
+.ama-studio-sound-row > span { flex: 0 0 auto; color: var(--muted); font-size: 8px; }
+.ama-studio-sound-row .ama-studio-range { flex: 1; min-width: 70px; }
+.ama-studio-sound-row > strong { min-width: 28px; color: var(--ink-soft); font-size: 8px; text-align: right; }
 .ama-studio-fields { display: grid; grid-template-columns: 1fr 72px; gap: 7px; }
 .ama-studio-field { min-width: 0; }
 .ama-studio-field label { display: block; margin-bottom: 3px; color: var(--muted); font-size: 7.5px; }
@@ -1359,7 +1501,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.1.0 Beta"
+  const version = shell.version || "0.2.3 Beta"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
@@ -1601,6 +1743,88 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setUiProfile(normalizeUiProfile({ ...uiProfile, window_bg: "paper", window_image: "" }))
     setUiDirty(true)
     setUiMessage("")
+  }
+
+  function addGradientColor() {
+    if (uiProfile.gradient_colors.length >= 30) return
+    const next = hslToHex((uiProfile.gradient_colors.length * 47 + 205) % 360, 64, 62)
+    const colors = uiProfile.gradient_colors.indexOf(next) >= 0
+      ? [...uiProfile.gradient_colors, hslToHex((uiProfile.gradient_colors.length * 67 + 20) % 360, 58, 66)]
+      : [...uiProfile.gradient_colors, next]
+    setUiProfile(normalizeUiProfile({
+      ...uiProfile,
+      window_bg: "gradient",
+      gradient_colors: colors.slice(0, 30),
+    }))
+    setUiDirty(true)
+    setUiMessage("")
+  }
+
+  function setGradientColor(index: number, value: string) {
+    const colors = [...uiProfile.gradient_colors]
+    if (index < 0 || index >= colors.length) return
+    colors[index] = value
+    setUiProfile(normalizeUiProfile({ ...uiProfile, window_bg: "gradient", gradient_colors: colors }))
+    setUiDirty(true)
+  }
+
+  function removeGradientColor(index: number) {
+    if (uiProfile.gradient_colors.length <= 2) return
+    const colors = uiProfile.gradient_colors.filter((_, itemIndex) => itemIndex !== index)
+    setUiProfile(normalizeUiProfile({ ...uiProfile, window_bg: "gradient", gradient_colors: colors }))
+    setUiDirty(true)
+  }
+
+  function importSoundFile(event: any) {
+    const file = event?.target?.files?.[0]
+    if (event?.target) event.target.value = ""
+    if (!file) return
+    if (!/^audio\/(wav|mpeg|mp3|ogg)$/i.test(String(file.type || ""))) {
+      setUiMessage(tr("studio.soundInvalid", "Use a WAV, MP3, or OGG sound file."))
+      return
+    }
+    if (Number(file.size) > MAX_SOUND_BYTES) {
+      setUiMessage(tr("studio.soundTooLarge", "That sound is larger than 1 MB."))
+      return
+    }
+    try {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const dataUrl = String(reader.result || "")
+        if (!validSoundData(dataUrl)) {
+          setUiMessage(tr("studio.soundInvalid", "Use a WAV, MP3, or OGG sound file."))
+          return
+        }
+        setUiProfile(normalizeUiProfile({
+          ...uiProfile,
+          sound_enabled: true,
+          sound_mode: "custom",
+          sound_data: dataUrl,
+          sound_name: String(file.name || "").slice(0, 80),
+        }))
+        setUiDirty(true)
+        setUiMessage(tr("studio.soundImported", "Sound imported. Save to keep it."))
+      }
+      reader.onerror = () => setUiMessage(tr("studio.soundInvalid", "Use a WAV, MP3, or OGG sound file."))
+      reader.readAsDataURL(file)
+    } catch (_error) {
+      setUiMessage(tr("studio.soundInvalid", "Use a WAV, MP3, or OGG sound file."))
+    }
+  }
+
+  function removeSound() {
+    setUiProfile(normalizeUiProfile({ ...uiProfile, sound_mode: "steam", sound_data: "", sound_name: "" }))
+    setUiDirty(true)
+    setUiMessage("")
+  }
+
+  function handleSelectSound(event: any) {
+    const target = event?.target as HTMLElement | null
+    if (!target || typeof target.closest !== "function") return
+    if (target.closest("[data-no-sound]")) return
+    if (target.closest("button, a, [role='tab'], [role='button']")) {
+      playSelectSound(uiProfile)
+    }
   }
 
   function currentWebQuery(): string {
@@ -2920,6 +3144,63 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                 <span className="ama-studio-note">{uiProfile.window_color}</span>
               </div>
             ) : null}
+            {uiProfile.window_bg === "gradient" ? (
+              <div className="ama-gradient-editor">
+                <div
+                  className="ama-gradient-preview"
+                  style={{ background: windowBackgroundValue({ ...uiProfile, window_bg: "gradient" }) }}
+                />
+                <div className="ama-studio-label">
+                  {tr("studio.gradientColors", "Gradient colours")}
+                  <small>{uiProfile.gradient_colors.length}/30</small>
+                </div>
+                <div className="ama-gradient-colors">
+                  {uiProfile.gradient_colors.map((color, index) => (
+                    <div className="ama-gradient-row" key={`${color}-${index}`}>
+                      <span className="ama-gradient-index">{String(index + 1).padStart(2, "0")}</span>
+                      <input
+                        className="ama-studio-color"
+                        type="color"
+                        value={color}
+                        aria-label={`${tr("studio.gradientColor", "Gradient colour")} ${index + 1}`}
+                        onInput={(event: any) => setGradientColor(index, event.target.value)}
+                      />
+                      <code>{color}</code>
+                      <button
+                        type="button"
+                        className="ama-gradient-remove"
+                        disabled={uiProfile.gradient_colors.length <= 2}
+                        aria-label={tr("studio.removeColor", "Remove colour")}
+                        onClick={() => removeGradientColor(index)}
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="ama-studio-image-row">
+                  <button
+                    type="button"
+                    className="ama-web-chip"
+                    disabled={uiProfile.gradient_colors.length >= 30}
+                    onClick={addGradientColor}
+                  >+ {tr("studio.addColor", "Add colour")}</button>
+                  <span className="ama-studio-note">{tr("studio.gradientHint", "2–30 colours, evenly spaced.")}</span>
+                </div>
+                <div className="ama-studio-label">
+                  {tr("studio.gradientAngle", "Gradient angle")}
+                  <small>{uiProfile.gradient_angle}°</small>
+                </div>
+                <input
+                  className="ama-studio-range"
+                  type="range"
+                  min={0}
+                  max={360}
+                  step={5}
+                  value={uiProfile.gradient_angle}
+                  aria-label={tr("studio.gradientAngle", "Gradient angle")}
+                  onInput={(event: any) => patchUiProfile({ gradient_angle: Number(event.target.value) })}
+                />
+              </div>
+            ) : null}
           </div>
 
           <div className="ama-studio-group">
@@ -2977,6 +3258,67 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                   maxLength={2}
                   onInput={(event: any) => patchUiProfile({ glyph: event.target.value })}
                 />
+              </div>
+            </div>
+            <div className="ama-studio-group">
+              <div className="ama-studio-label">
+                {tr("studio.sound", "Selection sound")}
+                <small>{uiProfile.sound_enabled ? tr("studio.soundOn", "On") : tr("studio.soundOff", "Off")}</small>
+              </div>
+              <div className="ama-studio-seg">
+                <button type="button" className={uiProfile.sound_enabled ? "is-active" : ""} onClick={() => patchUiProfile({ sound_enabled: true })}>{tr("studio.soundOn", "On")}</button>
+                <button type="button" className={!uiProfile.sound_enabled ? "is-active" : ""} onClick={() => patchUiProfile({ sound_enabled: false })}>{tr("studio.soundOff", "Off")}</button>
+              </div>
+              <div className="ama-studio-label" style={{ marginTop: "9px" } as any}>{tr("studio.soundMode", "Sound style")}</div>
+              <div className="ama-studio-seg">
+                {(["steam", "soft", "mechanical", "custom"] as SoundMode[]).map((mode) => (
+                  <button
+                    type="button"
+                    key={mode}
+                    className={uiProfile.sound_mode === mode ? "is-active" : ""}
+                    disabled={mode === "custom" && !uiProfile.sound_data}
+                    onClick={() => patchUiProfile({ sound_mode: mode })}
+                  >{tr(`studio.sound.${mode}`, mode)}</button>
+                ))}
+              </div>
+              <div className="ama-studio-sound-row">
+                <span>{tr("studio.soundVolume", "Volume")}</span>
+                <input
+                  className="ama-studio-range"
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={uiProfile.sound_volume}
+                  aria-label={tr("studio.soundVolume", "Volume")}
+                  onInput={(event: any) => patchUiProfile({ sound_volume: Number(event.target.value) })}
+                />
+                <strong>{Math.round(uiProfile.sound_volume * 100)}%</strong>
+                <button
+                  type="button"
+                  className="ama-web-chip"
+                  data-no-sound="true"
+                  onClick={() => playSelectSound({ ...uiProfile, sound_enabled: true })}
+                >{tr("studio.soundTest", "Test")}</button>
+              </div>
+              <div className="ama-studio-image-row">
+                <label className="ama-file-button">
+                  {tr("studio.soundImport", "Import sound")}
+                  <input
+                    className="ama-file-input"
+                    type="file"
+                    accept="audio/wav,audio/mpeg,audio/ogg,audio/mp3"
+                    onChange={importSoundFile}
+                  />
+                </label>
+                {uiProfile.sound_data ? (
+                  <>
+                    <span className="ama-studio-note">{uiProfile.sound_name || tr("studio.sound.custom", "Custom")}</span>
+                    <button type="button" className="ama-web-chip" onClick={removeSound}>{tr("studio.soundRemove", "Remove sound")}</button>
+                  </>
+                ) : (
+                  <span className="ama-studio-note">{tr("studio.soundHint", "WAV / MP3 / OGG, up to 1 MB")}</span>
+                )}
               </div>
             </div>
           </div>
@@ -3107,6 +3449,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       data-density={uiProfile.density}
       data-radius={uiProfile.radius === DEFAULT_UI_PROFILE.radius ? "default" : "custom"}
       style={uiStyle}
+      onClick={handleSelectSound}
     >
       <style>{STYLES}</style>
       <div className={`ama-desktop${activeChrome === "max" ? " is-expanded" : ""}`}>

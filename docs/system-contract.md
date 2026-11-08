@@ -241,6 +241,13 @@ by the Studio UI and the plugin persistence action:
   "window_bg": "sakura",
   "window_color": "#ffffff",
   "window_image": "",
+  "gradient_colors": ["#44b8f2", "#9b8ad9", "#e88aa8"],
+  "gradient_angle": 135,
+  "sound_enabled": true,
+  "sound_mode": "steam",
+  "sound_volume": 0.55,
+  "sound_data": "",
+  "sound_name": "",
   "radius": 16,
   "density": "comfortable",
   "theme": "light"
@@ -252,11 +259,18 @@ Rules:
 - `accent` and `window_color` must be six-digit hex colours.
 - `wallpaper` is one of `grid`, `dots`, `aurora`, `stars`, `plain` and controls
   the desktop behind the window.
-- `window_bg` is one of `paper`, `mist`, `sakura`, `glass`, `image`, `custom` and
-  controls the window surface itself; `window_color` is used only for `custom`.
+- `window_bg` is one of `paper`, `mist`, `sakura`, `glass`, `gradient`, `image`,
+  `custom` and controls the window surface itself; `window_color` is used only
+  for `custom`.
 - `window_image` is a bounded local `data:image/(png|jpeg|webp|gif);base64,...`
   URL used only when `window_bg=image`; remote image URLs are rejected. The
-  binary image limit is 1.2 MB and the whole profile limit is 3 MB.
+  binary image limit is 1.2 MB.
+- `gradient_colors` contains 2–30 distinct hex colours; `gradient_angle` is
+  0–360.
+- `sound_mode` is `steam`, `soft`, `mechanical`, or `custom`; `sound_volume`
+  is 0–1. `sound_data` accepts only a local WAV/MP3/OGG data URL up to 1 MB;
+  remote audio URLs are rejected.
+- The whole profile limit is 4 MB.
 - `density` is `comfortable` or `compact`; `theme` is `light` or `dark`.
 - `radius` is clamped to 8–28; text fields are length-limited.
 - The plugin writes `data/ui_profile.json` in its data folder through
@@ -392,6 +406,6 @@ The shipped tests cover:
 - CheapShark normalization, historical-low date/price, and non-Steam filtering;
 - Steam deal filtering, hoard-worthy flags, and free-to-play shelf links;
 - Steam sale calendar current/next evaluation, local countdown inputs, and TBD handling;
-- UI profile normalization, import envelope validation, and persistence path;
+- UI profile normalization, gradient/sound validation, import envelope validation, and persistence path;
 - runtime boot, pulse, web search, Steam price lookup, shutdown, and degraded-host behaviour;
 - serializability of the complete snapshot.

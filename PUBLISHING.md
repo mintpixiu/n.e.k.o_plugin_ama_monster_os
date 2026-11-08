@@ -15,11 +15,11 @@ repository named `n.e.k.o_plugin_ama_monster_os`.
 
 ## Beta publication
 
-0.1.0 is a **Beta** release. The default `neko-plugin publish` command publishes
+0.2.3 is a **Beta** release. The default `neko-plugin publish` command publishes
 to the **stable** channel, so for Beta use the two-step flow:
 
 ```powershell
-# 1) Create and push tag v0.1.0-beta + the GitHub Release, without notifying Market
+# 1) Create and push tag v0.2.3-beta + the GitHub Release, without notifying Market
 uv run neko-plugin publish github "D:\NEKO.OS\ama_monster_os"
 
 # 2) In the N.E.K.O Plugin Market submission page, choose the Beta channel,
@@ -40,9 +40,9 @@ the GitHub repository. Follow the official flow:
 
 ## Version rules
 
-- Manifest version: `0.1.0-beta`
-- Display version: `0.1.0 Beta`
-- Tag created by the CLI: `v0.1.0-beta`
+- Manifest version: `0.2.3-beta`
+- Display version: `0.2.3 Beta`
+- Tag created by the CLI: `v0.2.3-beta`
 - A version published to Beta cannot be republished with the same number to
   Stable; use a new version for a later stable release.
 

@@ -1,6 +1,6 @@
 # N.E.K.O Ama Monster OS
 
-> **0.1.0 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
+> **0.2.3 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
 > web search, a Steam price radar, and a versioned system bridge reserved for a
 > future standalone build.
 
@@ -8,7 +8,7 @@
 
 This is the first window of **Ama Monster OS**, not a finished operating
 system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
-0.1.0 Beta contains.
+0.2.3 Beta contains.
 
 ## What is real in this version
 
@@ -27,8 +27,9 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
   curated snapshot rather than a live catalogue.
 - A **UI Studio** for custom accent, light/dark theme, **window background**
   (including an imported local image), desktop backdrop, corner radius, compact
-  density, window title, and glyph. Profiles are saved in the plugin data folder
-  and can be exported/imported as JSON.
+  density, window title, and glyph. It also includes a **2–30 colour gradient
+  builder** and **Steam-style selection sounds**, with custom sound import.
+  Profiles are saved in the plugin data folder and can be exported/imported as JSON.
 - A **Pulse check** action that calls the Python plugin and refreshes the
   context through the real Hosted UI bridge.
 - A stable, versioned contract (`ama.system.bridge` v1.0.0) and a `SystemPort`
@@ -125,7 +126,7 @@ limited-time giveaway tracker and not a live full catalogue.
 
 ![Ama Monster OS free-to-play shelf](docs/preview-free.png)
 
-**Steam account login is deliberately not enabled in 0.1.0 Beta.** This build
+**Steam account login is deliberately not enabled in 0.2.3 Beta.** This build
 does not ask for a Steam password and does not put Steam's login page inside an
 iframe. The account card says **Login deferred** instead of pretending to be
 connected. A future safe integration can use Steam OpenID (browser redirect,
@@ -142,10 +143,13 @@ The **Studio** room is a safe, declarative appearance editor:
 - presets: Cloud, Sakura, Mint, Night
 - accent colour picker and swatches
 - light/dark theme
-- **window background**: paper, mist, sakura, glass, a custom colour, or a local
-  PNG/JPG/WebP/GIF image up to 1.2 MB
+- **window background**: paper, mist, sakura, glass, gradient, a custom colour,
+  or a local PNG/JPG/WebP/GIF image up to 1.2 MB
+- **gradient builder**: 2–30 colours with an adjustable angle
+- **selection sound**: Steam-style tick, soft, mechanical, or a custom WAV/MP3/OGG
+  sound up to 1 MB; volume and on/off controls
 - desktop backdrop: grid, dots, aurora, stars, plain
-- import a JSON profile file, or import a local background image
+- import a JSON profile file, a local background image, or a local sound file
 - corner radius and compact density
 - custom window title and glyph
 - live preview before saving
@@ -160,6 +164,8 @@ validator before it is written to disk.
 a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting.
 
 ![Ama Monster OS appearance studio](docs/preview-studio.png)
+
+![Selection sound and gradient controls](docs/preview-studio-sound.png)
 
 ![Imported window background image](docs/preview-studio-image.png)
 
@@ -239,6 +245,7 @@ ama_monster_os/
 ├── docs/preview-picks.png       sale picks preview
 ├── docs/preview-free.png        free-to-play shelf preview
 ├── docs/preview-studio.png      appearance studio preview
+├── docs/preview-studio-sound.png gradient and selection sound preview
 ├── docs/preview-studio-io.png   appearance import/export preview
 ├── docs/preview-studio-image.png imported window image preview
 ├── docs/ui-studio.md            appearance & import/export tutorial
@@ -276,13 +283,15 @@ repository does not publish itself.
 
 ## Versioning and release
 
-- Manifest version: `0.1.0-beta`
-- Display version: **0.1.0 Beta**
+- Manifest version: `0.2.3-beta`
+- Display version: **0.2.3 Beta**
 - Release channel: **Beta**
 - The user publishes manually. No tag, GitHub Release, or Market notification is
   created by this repository.
 
 ## Credits
+
+Author: **呆萌貔貅**
 
 Built for [Project N.E.K.O](https://github.com/Project-N-E-K-O/N.E.K.O).
 N.E.K.O and its marks belong to their respective owners.
