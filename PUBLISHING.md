@@ -5,8 +5,9 @@ Market Beta submission is still manual and has not been sent.
 
 - Release: https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os/releases/tag/v0.3.2-beta
 - Tag: `v0.3.2-beta`
-- Package SHA-256: `d995548ee88cbb337f394fc304e40b31b9dc0273d79b7deb9085d3138da16bbe`
+- Package SHA-256: `a83fff0605eb75c49921981b7f8f9f4f2b6272953cb0f39e610fbdd6df2b9eaa`
 - Market: pending manual Beta-channel submission
+- Standard GitHub Actions evidence: `market-evidence.json` + `market-release-check.txt` present
 
 ## Before publishing
 
