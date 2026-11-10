@@ -1,12 +1,11 @@
 # Publishing Ama Monster OS
 
-**Status: 0.3.2 Beta is built but not published.** The last GitHub Release is
-`v0.2.3-beta`; the Market Beta submission for it is still manual and was not
-sent.
+**Status: 0.3.2 Beta published to GitHub Releases as a pre-release.** The
+Market Beta submission is still manual and has not been sent.
 
-- Last Release: https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os/releases/tag/v0.2.3-beta
-- Last Tag: `v0.2.3-beta`
-- 0.3.2: not published yet
+- Release: https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os/releases/tag/v0.3.2-beta
+- Tag: `v0.3.2-beta`
+- Package SHA-256: `d995548ee88cbb337f394fc304e40b31b9dc0273d79b7deb9085d3138da16bbe`
 - Market: pending manual Beta-channel submission
 
 ## Before publishing
