@@ -6,7 +6,7 @@
 - name: `N.E.K.O Ama Monster OS`
 - entry: `plugin.plugins.ama_monster_os:AmaMonsterOsPlugin`
 - main class: `AmaMonsterOsPlugin`
-- version: `0.3.2-beta` (displayed as **0.3.2 Beta**)
+- version: `0.3.3-beta` (displayed as **0.3.3 Beta**)
 
 ## Purpose
 
@@ -40,7 +40,7 @@ from the first version.
 ## Out of Scope
 
 - A general browser or arbitrary-URL reader; only search is implemented.
-- Steam account login, Steam library, achievements, or wallet in 0.3.2 Beta. Login is deferred until a safe OpenID/API path can be tested.
+- Steam account login, Steam library, achievements, or wallet in 0.3.3 Beta. Login is deferred until a safe OpenID/API path can be tested.
 - Native desktop windows, process control, filesystem browsing, voice pipeline, real chat/memory/tool/style modules.
 - Any claim that the preview is a complete operating system.
 - Publishing to the N.E.K.O Market. The repository owner publishes manually.
@@ -57,7 +57,7 @@ from the first version.
 - sale calendar: versioned `steam_sales.py` snapshot from Steamworks; dates shown in local time; Valve can change them
 - UI profile: `ui_profile.py` schema, persisted to `data/ui_profile.json`, exported as `ama.ui.profile` JSON
 - UI surfaces: one `panel` (`ui/panel.tsx`), one Markdown guide, one Markdown docs page
-- state/config: read-only snapshot plus in-memory last search and price lookup; no persistent config in 0.3.2 Beta
+- state/config: read-only snapshot plus in-memory last search and price lookup; no persistent config in 0.3.3 Beta
 - lifecycle/background work: startup/shutdown only; no timers or background tasks
 - external integrations: N.E.K.O web search plugin, Bing RSS fallback, CheapShark price API
 
@@ -102,5 +102,5 @@ plugins such as `lifekit` and `mcp_adapter`.
   update date and an official Steamworks link so users can verify changed dates.
 - Window chrome controls are presentation state inside one hosted panel; they
   do not control the N.E.K.O application window.
-- Version `0.3.2-beta` is a pre-release; the user publishes manually with their
+- Version `0.3.3-beta` is a pre-release; the user publishes manually with their
   own tag and Market confirmation.

@@ -1,6 +1,6 @@
 # N.E.K.O Ama Monster OS
 
-> **0.3.2 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
+> **0.3.3 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
 > web search, a Steam price radar, a token price radar, and a versioned system
 > bridge reserved for a future standalone build.
 
@@ -8,7 +8,7 @@
 
 This is the first window of **Ama Monster OS**, not a finished operating
 system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
-0.3.2 Beta contains.
+0.3.3 Beta contains.
 
 ## What is real in this version
 
@@ -129,7 +129,7 @@ limited-time giveaway tracker and not a live full catalogue.
 
 ![Ama Monster OS free-to-play shelf](docs/preview-free.png)
 
-**Steam account login is deliberately not enabled in 0.3.2 Beta.** This build
+**Steam account login is deliberately not enabled in 0.3.3 Beta.** This build
 does not ask for a Steam password and does not put Steam's login page inside an
 iframe. The account card says **Login deferred** instead of pretending to be
 connected. A future safe integration can use Steam OpenID (browser redirect,
@@ -191,8 +191,8 @@ a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
-- Any Market publication. The **0.3.2 Beta** GitHub Release exists; its Market
-  Beta submission remains manual.
+- Any Market publication. The **0.3.2 Beta** GitHub Release is live; **0.3.3 Beta
+  is being prepared** and its Market submission remains manual.
 
 ## Install and open the window
 
@@ -290,14 +290,14 @@ python -m pytest tests
 ```
 
 See [PUBLISHING.md](PUBLISHING.md) for the Beta release and Market submission
-notes. The latest GitHub Release is `v0.3.2-beta`; Market notification remains manual.
+notes. The latest live GitHub Release is `v0.3.2-beta`; `v0.3.3-beta` is being prepared.
 
 ## Versioning and release
 
-- Manifest version: `0.3.2-beta`
-- Display version: **0.3.2 Beta**
+- Manifest version: `0.3.3-beta`
+- Display version: **0.3.3 Beta**
 - Release channel: **Beta (pre-release)**
-- Published GitHub Release: **v0.3.2-beta**
+- Published GitHub Release: **v0.3.2-beta** (0.3.3 preparing)
 - Market: **not submitted**; the Beta channel submission is manual
 
 ## Credits
