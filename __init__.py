@@ -9,6 +9,7 @@ reuse the window and runtime with a different system port.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 
@@ -24,6 +25,7 @@ from plugin.sdk.plugin import (
 
 from .shell_runtime import SHELL_CHANNEL, SHELL_DISPLAY_VERSION, SHELL_NAME, AmaOsRuntime
 from .system_port import NekoHostSystemPort
+from .token_radar import TokenPriceService
 from .ui_profile import (
     MAX_UI_PROFILE_BYTES,
     export_ui_profile,
@@ -103,6 +105,17 @@ UI_PROFILE_SCHEMA: dict[str, Any] = {
         },
     },
     "required": ["profile"],
+}
+
+TOKEN_PRICES_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "force": {
+            "type": "boolean",
+            "default": False,
+            "description": "Bypass the 55-second cache and fetch the public catalog now.",
+        },
+    },
 }
 
 
@@ -345,6 +358,54 @@ class AmaMonsterOsPlugin(NekoPluginBase):
             "ok": True,
             "profile": normalized,
             "summary": self.i18n.t("studio.saved", default="Appearance saved."),
+        })
+
+    @ui.action(
+        id="ama_token_prices",
+        label=tr("actions.token_prices.label", default="Refresh token prices"),
+        icon="search",
+        tone="primary",
+        order=41,
+        refresh_context=True,
+    )
+    @plugin_entry(
+        id="ama_token_prices",
+        name=tr("entries.token_prices.name", default="Refresh token prices"),
+        description=tr(
+            "entries.token_prices.description",
+            default=(
+                "Fetch current public model list prices, update the local daily "
+                "price history, and return the token radar snapshot."
+            ),
+        ),
+        input_schema=TOKEN_PRICES_SCHEMA,
+        llm_result_fields=["summary"],
+        timeout=45,
+    )
+    async def ama_token_prices(self, force: Any = False, **_):
+        force_refresh = force is True or str(force).strip().lower() in ("1", "true", "yes")
+        service = TokenPriceService(self.data_path())
+        try:
+            snapshot = await asyncio.to_thread(service.refresh, force_refresh)
+        except Exception as exc:
+            self.logger.warning("Token radar refresh failed: %s", exc)
+            return Ok({
+                "ok": False,
+                "error": "token_radar_failed",
+                "summary": self.i18n.t(
+                    "tokens.error",
+                    default="Token prices are temporarily unavailable.",
+                ),
+            })
+        self._runtime.set_token_radar(snapshot)
+        model_count = len(snapshot.get("models") or [])
+        return Ok({
+            "ok": bool(snapshot.get("ok", True)),
+            "token_radar": snapshot,
+            "summary": self.i18n.t(
+                "tokens.updated",
+                default="Token prices updated: {count} models.",
+            ).replace("{count}", str(model_count)),
         })
 
     # ------------------------------------------------------------------

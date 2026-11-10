@@ -34,8 +34,8 @@ except ImportError:  # pragma: no cover - direct test import fallback
     from ui_profile import DEFAULT_UI_PROFILE, normalize_ui_profile  # type: ignore[no-redef]
 
 SHELL_NAME = "Ama Monster OS"
-SHELL_VERSION = "0.2.3-beta"
-SHELL_DISPLAY_VERSION = "0.2.3 Beta"
+SHELL_VERSION = "0.3.2-beta"
+SHELL_DISPLAY_VERSION = "0.3.2 Beta"
 SHELL_CHANNEL = "Beta"
 SHELL_CODENAME = "Ama-01"
 _MAX_QUERY_CHARS = 200
@@ -157,6 +157,21 @@ class AmaOsRuntime:
             "error": "",
         }
         self._ui_profile = normalize_ui_profile(DEFAULT_UI_PROFILE)
+        self._token_radar: dict[str, Any] = {
+            "ok": True,
+            "status": "idle",
+            "message": "",
+            "source": "models.dev 公开目录",
+            "source_url": "https://models.dev/",
+            "currency": "USD",
+            "unit": "1M tokens",
+            "fetched_at": "",
+            "checked_at": "",
+            "models": [],
+            "history": {},
+            "history_meta": {"days": 0, "baseline": False, "note": ""},
+            "time_note": "目录价按 USD / 1M tokens；价格只在厂商调价时变化。",
+        }
 
     @property
     def port(self) -> SystemPort:
@@ -226,6 +241,11 @@ class AmaOsRuntime:
     def set_ui_profile(self, profile: Mapping[str, Any] | None) -> dict[str, Any]:
         self._ui_profile = normalize_ui_profile(profile)
         return dict(self._ui_profile)
+
+    def set_token_radar(self, radar: Mapping[str, Any] | None) -> dict[str, Any]:
+        if isinstance(radar, Mapping):
+            self._token_radar = {str(key): value for key, value in radar.items()}
+        return dict(self._token_radar)
 
     def contract(self) -> Mapping[str, Any]:
         try:
@@ -303,6 +323,7 @@ class AmaOsRuntime:
             },
             "events": [event.as_dict() for event in self._events[-8:]],
             "ui_profile": dict(self._ui_profile),
+            "token_radar": dict(self._token_radar),
             "preview": True,
         }
 

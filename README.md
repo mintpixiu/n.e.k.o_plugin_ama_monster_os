@@ -1,14 +1,14 @@
 # N.E.K.O Ama Monster OS
 
-> **0.2.3 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
-> web search, a Steam price radar, and a versioned system bridge reserved for a
-> future standalone build.
+> **0.3.2 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
+> web search, a Steam price radar, a token price radar, and a versioned system
+> bridge reserved for a future standalone build.
 
 ![Ama Monster OS shell preview](docs/preview.png)
 
 This is the first window of **Ama Monster OS**, not a finished operating
 system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
-0.2.3 Beta contains.
+0.3.2 Beta contains.
 
 ## What is real in this version
 
@@ -25,6 +25,9 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
   lows, CN prices, and a playful **“可以不玩，但不能没有”** flag.
 - A **free-to-play shelf** of permanently free Steam titles, versioned as a
   curated snapshot rather than a live catalogue.
+- A **Token radar** for public model list prices from OpenAI, Anthropic, Google,
+  xAI, Mistral, DeepSeek, Qwen, Kimi, GLM, and Volcengine: 20 models, 30-day
+  candlesticks, 60-second refresh, and explicit peak/off-peak windows.
 - A **UI Studio** for custom accent, light/dark theme, **window background**
   (including an imported local image), desktop backdrop, corner radius, compact
   density, window title, and glyph. It also includes a **2–30 colour gradient
@@ -126,7 +129,7 @@ limited-time giveaway tracker and not a live full catalogue.
 
 ![Ama Monster OS free-to-play shelf](docs/preview-free.png)
 
-**Steam account login is deliberately not enabled in 0.2.3 Beta.** This build
+**Steam account login is deliberately not enabled in 0.3.2 Beta.** This build
 does not ask for a Steam password and does not put Steam's login page inside an
 iframe. The account card says **Login deferred** instead of pretending to be
 connected. A future safe integration can use Steam OpenID (browser redirect,
@@ -165,6 +168,10 @@ a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting
 
 ![Ama Monster OS appearance studio](docs/preview-studio.png)
 
+![Token price radar](docs/preview-token.png)
+
+![30-day token price candles](docs/preview-token-chart.png)
+
 ![Selection sound and gradient controls](docs/preview-studio-sound.png)
 
 ![Imported window background image](docs/preview-studio-image.png)
@@ -184,8 +191,8 @@ a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
-- Any Market publication. The **0.2.3 Beta** GitHub Release exists, but the
-  Market Beta submission still needs the owner's manual review/submission.
+- Any Market publication. The **0.2.3 Beta** GitHub Release exists; **0.3.2 Beta
+  has not been published** and its Market submission remains manual.
 
 ## Install and open the window
 
@@ -246,6 +253,9 @@ ama_monster_os/
 ├── docs/preview-picks.png       sale picks preview
 ├── docs/preview-free.png        free-to-play shelf preview
 ├── docs/preview-studio.png      appearance studio preview
+├── docs/preview-token.png       token radar preview
+├── docs/preview-token-chart.png token 30-day candles preview
+├── docs/token-radar.md          token price and time-window guide
 ├── docs/preview-studio-sound.png gradient and selection sound preview
 ├── docs/preview-studio-io.png   appearance import/export preview
 ├── docs/preview-studio-image.png imported window image preview
@@ -280,14 +290,14 @@ python -m pytest tests
 ```
 
 See [PUBLISHING.md](PUBLISHING.md) for the Beta release and Market submission
-notes. The GitHub Release is created; Market notification remains manual.
+notes. The last GitHub Release is `v0.2.3-beta`; `0.3.2` is not published yet.
 
 ## Versioning and release
 
-- Manifest version: `0.2.3-beta`
-- Display version: **0.2.3 Beta**
+- Manifest version: `0.3.2-beta`
+- Display version: **0.3.2 Beta**
 - Release channel: **Beta (pre-release)**
-- Published GitHub Release: **v0.2.3-beta**
+- Published GitHub Release: **v0.2.3-beta** (0.3.2 not published yet)
 - Market: **not submitted**; the Beta channel submission is manual
 
 ## Credits

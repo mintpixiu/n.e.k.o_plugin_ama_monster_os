@@ -29,6 +29,7 @@ CAPABILITY_EVENTS = "events.record"
 CAPABILITY_WEB_SEARCH = "web.search"
 CAPABILITY_STEAM_PRICES = "steam.prices"
 CAPABILITY_STEAM_DEALS = "steam.deals"
+CAPABILITY_TOKEN_PRICES = "tokens.prices"
 HOSTED_CAPABILITIES = (
     CAPABILITY_ENVIRONMENT,
     CAPABILITY_ACTIVITY,
@@ -37,6 +38,7 @@ HOSTED_CAPABILITIES = (
     CAPABILITY_WEB_SEARCH,
     CAPABILITY_STEAM_PRICES,
     CAPABILITY_STEAM_DEALS,
+    CAPABILITY_TOKEN_PRICES,
 )
 
 # These are deliberately declared, but not advertised as implemented yet.
@@ -86,6 +88,7 @@ ENTRYPOINTS = {
     "web_search": "ama_web_search",
     "steam_search": "ama_steam_search",
     "steam_deals": "ama_steam_deals",
+    "token_prices": "ama_token_prices",
     "ui_profile": "ama_ui_profile_save",
     "contract": "ama_system_contract",
 }
@@ -206,7 +209,7 @@ def validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
     if not isinstance(entrypoints, dict):
         errors.append("entrypoints must be an object")
     else:
-        for key in ("context", "pulse", "web_search", "steam_search", "steam_deals", "ui_profile", "contract"):
+        for key in ("context", "pulse", "web_search", "steam_search", "steam_deals", "token_prices", "ui_profile", "contract"):
             if not isinstance(entrypoints.get(key), str) or not entrypoints.get(key):
                 errors.append(f"entrypoints.{key} is missing")
     return errors
@@ -220,6 +223,7 @@ __all__ = [
     "CAPABILITY_EVENTS",
     "CAPABILITY_STEAM_PRICES",
     "CAPABILITY_STEAM_DEALS",
+    "CAPABILITY_TOKEN_PRICES",
     "CAPABILITY_WEB_SEARCH",
     "CONTRACT_ID",
     "CONTRACT_VERSION",

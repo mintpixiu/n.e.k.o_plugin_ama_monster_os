@@ -185,7 +185,7 @@ def test_snapshot_is_versioned_and_serializable() -> None:
     snapshot = asyncio.run(runtime.snapshot())
 
     assert snapshot["ok"] is True
-    assert snapshot["shell"]["version"] == "0.2.3 Beta"
+    assert snapshot["shell"]["version"] == "0.3.2 Beta"
     assert snapshot["shell"]["name"] == "Ama Monster OS"
     assert snapshot["preview"] is True
     assert snapshot["bridge"]["contract_version"] == CONTRACT_VERSION
@@ -250,10 +250,12 @@ def test_contract_validates() -> None:
     assert manifest["entrypoints"]["web_search"] == "ama_web_search"
     assert manifest["entrypoints"]["steam_search"] == "ama_steam_search"
     assert manifest["entrypoints"]["steam_deals"] == "ama_steam_deals"
+    assert manifest["entrypoints"]["token_prices"] == "ama_token_prices"
     assert manifest["entrypoints"]["ui_profile"] == "ama_ui_profile_save"
     assert "web.search" in manifest["capabilities"]
     assert "steam.prices" in manifest["capabilities"]
     assert "steam.deals" in manifest["capabilities"]
+    assert "tokens.prices" in manifest["capabilities"]
     assert "web.fetch" in {item["id"] for item in manifest["reserved"]}
 
 
@@ -295,6 +297,7 @@ def test_ui_profile_is_normalized_and_in_snapshot() -> None:
     assert profile["brand"] == "My Shell"
     assert profile["accent"] == "#e88aa8"
     assert profile["radius"] == 28
+    assert snapshot["token_radar"]["status"] == "idle"
     assert snapshot["ui_profile"]["theme"] == "dark"
     assert snapshot["ui_profile"]["brand"] == "My Shell"
 

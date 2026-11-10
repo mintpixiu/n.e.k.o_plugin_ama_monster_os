@@ -278,6 +278,24 @@ Rules:
 - Export envelopes use `{"format": "ama.ui.profile", "version": 1, "profile": {...}}`.
   Import accepts that envelope or a direct profile object.
 
+### Token radar
+
+The snapshot includes a `token_radar` object populated by `ama_token_prices`:
+
+- `source`: `models.dev 公开目录`
+- `currency` / `unit`: `USD` / `1M tokens`
+- `models`: 20 normalized models from 10 providers
+- `history`: per-model 30-day OHLC candles (`open/high/low/close` and output fields)
+- `history_meta`: `days`, `baseline`, and an honesty note
+- `status`: `ok`, `cached`, `stale`, or `error`
+
+`ama_token_prices` accepts an optional `force` boolean. It uses a 55-second
+cache, writes `token_radar_cache.json` and `token_radar_history.json` in the
+plugin data folder, and never requires a provider API key. The UI polls it every
+60 seconds. Historical candles start as a backfilled catalog baseline and then
+accumulate local observations; the UI labels that distinction. The capability is
+advertised as `tokens.prices`.
+
 ### Sale calendar
 
 The runtime adds `steam.sale` to the snapshot from
@@ -407,5 +425,6 @@ The shipped tests cover:
 - Steam deal filtering, hoard-worthy flags, and free-to-play shelf links;
 - Steam sale calendar current/next evaluation, local countdown inputs, and TBD handling;
 - UI profile normalization, gradient/sound validation, import envelope validation, and persistence path;
+- token radar normalization, history persistence, cache fallback, and DeepSeek peak/off-peak metadata;
 - runtime boot, pulse, web search, Steam price lookup, shutdown, and degraded-host behaviour;
 - serializability of the complete snapshot.

@@ -1,8 +1,8 @@
 [plugin]
 id = "ama_monster_os"
 name = "N.E.K.O Ama Monster OS"
-description = "《N.E.K.O Ama Monster OS》0.2.3 Beta：给 N.E.K.O 的猫娘风格系统壳窗口，带实时状态、联网搜索、Steam 价格与历史最低价、Steam 国区当前价（CNY）、Steam 促销精选、免费即玩、促销日历、用户自定义 UI 外观与导入导出、最多 30 色渐变、Steam 风格选取音效与自定义音效、系统桥契约，以及为未来独立软件预留的内置系统接口。搜索优先调用 N.E.K.O 的 web_search 插件，并在其未运行时使用固定 Bing RSS 回退；Steam 全球价格与促销日程来自 CheapShark 与 Steamworks 官方快照（USD），国区当前价来自 Steam 官方商店 API（CNY）。只发送查询文字，不自动抓取网页；不收集 Steam 密码。当前版本是可运行的窗口预览，不冒充完整操作系统。"
-short_description = "A NEKO-styled OS shell window with live status, web search, Steam price history, sale picks, free-to-play shelf, sale calendar, a customizable UI studio with gradients and selection sounds, JSON import/export, and a versioned system-bridge seam."
+description = "《N.E.K.O Ama Monster OS》0.3.2 Beta：给 N.E.K.O 的猫娘风格系统壳窗口，带实时状态、联网搜索、Steam 价格与历史最低价、Steam 国区当前价（CNY）、Steam 促销精选、免费即玩、促销日历、Token 看板（国内外主流模型公开目录价、30 日 K 线、峰谷时段）、用户自定义 UI 外观与导入导出、最多 30 色渐变、Steam 风格选取音效与自定义音效、系统桥契约，以及为未来独立软件预留的内置系统接口。搜索优先调用 N.E.K.O 的 web_search 插件，并在其未运行时使用固定 Bing RSS 回退；Steam 全球价格与促销日程来自 CheapShark 与 Steamworks 官方快照（USD），国区当前价来自 Steam 官方商店 API（CNY）；Token 目录价来自 models.dev 公开目录（USD/1M tokens），DeepSeek 峰谷规则来自官方文档。只发送查询文字，不自动抓取网页；不收集 Steam 密码。当前版本是可运行的窗口预览，不冒充完整操作系统。"
+short_description = "A NEKO-styled OS shell with live status, web search, Steam prices and sale calendar, a token price radar with 30-day candles and peak/off-peak windows, a customizable UI studio, and a versioned system-bridge seam."
 keywords = [
     "ama monster os",
     "ama os",
@@ -45,6 +45,9 @@ keywords = [
     "颜色渐变",
     "选取音效",
     "自定义音效",
+    "Token 看板",
+    "模型价格",
+    "K 线",
     "教程",
     "store price",
     "price history",
@@ -54,7 +57,7 @@ keywords = [
     "shell preview",
     "system bridge",
 ]
-version = "0.2.3-beta"
+version = "0.3.2-beta"
 type = "plugin"
 entry = "plugin.plugins.ama_monster_os:AmaMonsterOsPlugin"
 
@@ -94,6 +97,14 @@ permissions = [
 id = "ui_studio"
 title = "自定义外观与导入导出教程"
 entry = "docs/ui-studio.md"
+permissions = [
+    "state:read",
+]
+
+[[plugin.ui.guide]]
+id = "token_radar"
+title = "Token 看板与价格时段说明"
+entry = "docs/token-radar.md"
 permissions = [
     "state:read",
 ]

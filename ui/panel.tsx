@@ -1,7 +1,7 @@
-import { FileDownload, useState } from "@neko/plugin-ui"
+import { FileDownload, useEffect, useState } from "@neko/plugin-ui"
 import type { HostedAction, PluginSurfaceProps } from "@neko/plugin-ui"
 
-type ViewId = "home" | "web" | "steam" | "studio" | "core" | "bridge" | "about"
+type ViewId = "home" | "web" | "steam" | "tokens" | "studio" | "core" | "bridge" | "about"
 type ChromeMode = "normal" | "max" | "min" | "asleep"
 type ThemeMode = "light" | "dark"
 type UiWallpaper = "grid" | "dots" | "aurora" | "stars" | "plain"
@@ -219,6 +219,126 @@ function windowBackgroundValue(profile: UiProfile): string {
   return "var(--paper)"
 }
 
+function formatTokenPrice(value: any): string {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return "—"
+  if (number === 0) return "$0"
+  if (number < 0.01) return `$${number.toFixed(4)}`
+  if (number < 1) return `$${number.toFixed(3)}`
+  if (number < 10) return `$${number.toFixed(2)}`
+  return `$${number.toFixed(1)}`
+}
+
+function formatTokenContext(value: any): string {
+  const number = Number(value)
+  if (!Number.isFinite(number) || number <= 0) return "—"
+  if (number >= 1_000_000) return `${(number / 1_000_000).toFixed(number % 1_000_000 === 0 ? 0 : 1)}M`
+  if (number >= 1000) return `${Math.round(number / 1000)}K`
+  return String(Math.round(number))
+}
+
+function tokenHistoryChange(candles: TokenCandle[], metric: "input" | "output"): number {
+  if (!Array.isArray(candles) || candles.length < 2) return 0
+  const first = candles[0]
+  const last = candles[candles.length - 1]
+  const start = Number(metric === "input" ? first.close : first.output_close)
+  const end = Number(metric === "input" ? last.close : last.output_close)
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start <= 0) return 0
+  return ((end - start) / start) * 100
+}
+
+function TokenKLine(props: { candles: TokenCandle[]; metric: "input" | "output"; label: string }) {
+  const [hover, setHover] = useState(-1)
+  const candles = Array.isArray(props.candles) ? props.candles.slice(-30) : []
+  if (candles.length === 0) {
+    return <div className="ama-token-chart-empty">{props.label} · 暂无历史点位</div>
+  }
+  const openKey = props.metric === "input" ? "open" : "output_open"
+  const highKey = props.metric === "input" ? "high" : "output_high"
+  const lowKey = props.metric === "input" ? "low" : "output_low"
+  const closeKey = props.metric === "input" ? "close" : "output_close"
+  const values = candles.flatMap((candle) => [Number(candle[highKey]), Number(candle[lowKey])]).filter(Number.isFinite)
+  let min = Math.min(...values)
+  let max = Math.max(...values)
+  if (!Number.isFinite(min) || !Number.isFinite(max)) min = max = 0
+  if (max === min) {
+    const pad = Math.max(Math.abs(max) * 0.18, 0.01)
+    min = Math.max(0, min - pad)
+    max += pad
+  } else {
+    const pad = (max - min) * 0.12
+    min = Math.max(0, min - pad)
+    max += pad
+  }
+  const ticks = [0, 1, 2, 3, 4].map((index) => min + ((max - min) / 4) * index)
+  const latest = candles[candles.length - 1]
+  const latestValue = Number(latest[closeKey])
+  const yPct = (value: number) => ((value - min) / (max - min)) * 100
+  const bodyWidth = Math.max(3, Math.min(12, 420 / candles.length))
+  const change = tokenHistoryChange(candles, props.metric)
+  return (
+    <div className="ama-token-chart">
+      <div className="ama-token-chart-top">
+        <div>
+          <strong>{formatTokenPrice(latestValue)}</strong>
+          <span>{props.label} · USD / 1M</span>
+        </div>
+        <span className={`ama-token-chart-change ${change >= 0 ? "is-up" : "is-down"}`}>
+          {change >= 0 ? "+" : ""}{change.toFixed(2)}% · 30D
+        </span>
+      </div>
+      <div className="ama-token-chart-body">
+        <div className="ama-token-y-axis">
+          {ticks.map((tick, index) => (
+            <span key={`tick-${index}`} style={{ bottom: `${(index / 4) * 100}%` }}>{formatTokenPrice(tick)}</span>
+          ))}
+        </div>
+        <div className="ama-token-plot">
+          {ticks.map((tick, index) => (
+            <i className="ama-token-gridline" key={`grid-${index}`} style={{ bottom: `${(index / 4) * 100}%` }} />
+          ))}
+          {candles.map((candle, index) => {
+            const open = Number(candle[openKey])
+            const close = Number(candle[closeKey])
+            const high = Number(candle[highKey])
+            const low = Number(candle[lowKey])
+            const up = close >= open
+            const lowPct = yPct(low)
+            const highPct = yPct(high)
+            const bodyBottom = yPct(Math.min(open, close))
+            const bodyHeight = Math.abs(yPct(open) - yPct(close))
+            return (
+              <div
+                className={`ama-token-candle ${candle.baseline ? "is-baseline" : ""}`}
+                key={candle.date}
+                style={{ left: `${((index + 0.5) / candles.length) * 100}%` }}
+                onMouseEnter={() => setHover(index)}
+                title={`${candle.date} · 开 ${formatTokenPrice(open)} / 高 ${formatTokenPrice(high)} / 低 ${formatTokenPrice(low)} / 收 ${formatTokenPrice(close)}${candle.baseline ? " · 目录基线" : ""}`}
+              >
+                <i className={`ama-token-wick ${up ? "is-up" : "is-down"}`} style={{ bottom: `${lowPct}%`, height: `${Math.max(1, highPct - lowPct)}%` }} />
+                <i
+                  className={`ama-token-body ${up ? "is-up" : "is-down"} ${hover === index ? "is-hover" : ""}`}
+                  style={{ bottom: `${bodyBottom}%`, height: `${Math.max(2.2, bodyHeight)}%`, width: `${bodyWidth}px` }}
+                />
+                <i className={`ama-token-close-dot ${up ? "is-up" : "is-down"}`} style={{ bottom: `${yPct(close)}%` }} />
+              </div>
+            )
+          })}
+          {candles.map((candle, index) => {
+            if (!(index === 0 || index === candles.length - 1 || index % 6 === 0)) return null
+            return <span className="ama-token-x-label" key={`label-${candle.date}`} style={{ left: `${((index + 0.5) / candles.length) * 100}%` }}>{candle.date.slice(5)}</span>
+          })}
+        </div>
+      </div>
+      <div className="ama-token-chart-foot">
+        <span><i className="ama-token-dot is-up" /> 上涨 / 收高</span>
+        <span><i className="ama-token-dot is-down" /> 下跌 / 收低</span>
+        <span>悬停蜡烛查看 OHLC</span>
+      </div>
+    </div>
+  )
+}
+
 function uiProfileDownloadUrl(value: any): string {
   const json = JSON.stringify(value, null, 2)
   const bytes = new TextEncoder().encode(json)
@@ -418,6 +538,75 @@ type SaleCalendar = {
   evaluated_at?: string
 }
 
+type TokenCandle = {
+  date: string
+  open: number
+  high: number
+  low: number
+  close: number
+  output_open: number
+  output_high: number
+  output_low: number
+  output_close: number
+  samples: number
+  baseline: boolean
+}
+
+type TokenTimePolicy = {
+  kind?: "flat" | "deepseek_peak" | string
+  timezone?: string
+  peak_windows_utc?: Array<{ start: string; end: string }>
+  local_windows?: Array<{ start: string; end: string }>
+  local_timezone?: string
+  weekdays?: number[]
+  weekend_off_peak?: boolean
+  off_peak_multiplier?: number
+  peak_multiplier?: number
+  note?: string
+  peak_input?: number
+  peak_output?: number
+  peak_cache?: number
+  off_peak_input?: number
+  off_peak_output?: number
+  off_peak_cache?: number
+}
+
+type TokenModel = {
+  id: string
+  provider: string
+  provider_name: string
+  provider_zh: string
+  provider_region: string
+  provider_color: string
+  name: string
+  input: number
+  output: number
+  cache_read: number
+  cache_write?: number
+  context?: number
+  max_output?: number
+  release_date?: string
+  cache_discount?: number
+  tier?: { threshold: number; input: number; output: number } | null
+  time_policy?: TokenTimePolicy
+}
+
+type TokenRadar = {
+  ok?: boolean
+  status?: string
+  message?: string
+  source?: string
+  source_url?: string
+  currency?: string
+  unit?: string
+  fetched_at?: string
+  checked_at?: string
+  models?: TokenModel[]
+  history?: Record<string, TokenCandle[]>
+  history_meta?: { days?: number; baseline?: boolean; note?: string }
+  time_note?: string
+}
+
 type BootEvent = { name?: string; at?: string; detail?: string }
 
 type ShellState = {
@@ -429,6 +618,7 @@ type ShellState = {
   pulse?: PulseInfo
   web?: WebInfo
   steam?: SteamInfo
+  token_radar?: TokenRadar
   ui_profile?: UiProfile
   events?: BootEvent[]
   preview?: boolean
@@ -441,6 +631,7 @@ const VIEWS: Array<{ id: ViewId; key: string; glyph: string }> = [
   { id: "home", key: "nav.home", glyph: "⌂" },
   { id: "web", key: "nav.web", glyph: "◎" },
   { id: "steam", key: "nav.steam", glyph: "◈" },
+  { id: "tokens", key: "nav.tokens", glyph: "₮" },
   { id: "studio", key: "nav.studio", glyph: "✎" },
   { id: "core", key: "nav.core", glyph: "✦" },
   { id: "bridge", key: "nav.bridge", glyph: "⇄" },
@@ -1385,6 +1576,112 @@ const STYLES = `
 .ama-studio-sound-row > span { flex: 0 0 auto; color: var(--muted); font-size: 8px; }
 .ama-studio-sound-row .ama-studio-range { flex: 1; min-width: 70px; }
 .ama-studio-sound-row > strong { min-width: 28px; color: var(--ink-soft); font-size: 8px; text-align: right; }
+.ama-token-head-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
+.ama-token-live { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--muted); font-size: 8px; font-weight: 750; animation: ama-token-pop .45s ease both; }
+.ama-token-live i { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); }
+.ama-token-live.is-ok i, .ama-token-live.is-cached i { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 14%, transparent); }
+.ama-token-live.is-stale i { background: #d9a441; }
+.ama-token-live.is-error i { background: var(--danger); }
+.ama-token-live.is-updating i, .ama-token-live.is-idle i { background: var(--sky); animation: ama-token-blink 1s ease infinite; }
+.ama-token-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.ama-token-stat { min-width: 0; padding: 10px 11px; border: 1px solid var(--line); border-radius: 13px; background: linear-gradient(135deg, color-mix(in srgb, var(--sky-soft) 55%, var(--card)), var(--card)); }
+.ama-token-stat > span { display: block; color: var(--muted); font-size: 8px; font-weight: 750; }
+.ama-token-stat > strong { display: block; margin-top: 2px; font-size: 20px; letter-spacing: -.04em; color: var(--ink); }
+.ama-token-stat > small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 8px; }
+.ama-token-note { margin-bottom: 10px; }
+.ama-token-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, .88fr); gap: 10px; align-items: start; }
+.ama-token-board { min-width: 0; }
+.ama-token-board .ama-panel-head h2, .ama-token-chart-panel .ama-panel-head h2 { margin: 3px 0 0; font-size: 15px; letter-spacing: -.02em; }
+.ama-token-board .ama-panel-head p, .ama-token-chart-panel .ama-panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 8.5px; }
+.ama-token-filters { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0 7px; }
+.ama-token-filter { display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border: 1px solid var(--line); border-radius: 7px; background: var(--card); color: var(--muted); font: inherit; font-size: 8px; font-weight: 750; cursor: pointer; }
+.ama-token-filter i { width: 5px; height: 5px; border-radius: 50%; }
+.ama-token-filter small { color: var(--muted); font-size: 7px; font-weight: 500; }
+.ama-token-filter.is-active { border-color: var(--sky); background: var(--sky-soft); color: var(--sky-deep); }
+.ama-token-list { display: grid; gap: 3px; max-height: 390px; overflow: auto; padding-right: 2px; }
+.ama-token-row { display: grid; grid-template-columns: 7px minmax(0, 1fr) 56px 56px 43px; align-items: center; gap: 7px; width: 100%; padding: 6px 6px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.ama-token-row:hover { background: var(--panel-2); border-color: var(--line); }
+.ama-token-row.is-active { border-color: color-mix(in srgb, var(--sky) 50%, var(--line)); background: color-mix(in srgb, var(--sky-soft) 70%, var(--card)); }
+.ama-token-provider-dot { width: 6px; height: 6px; border-radius: 50%; }
+.ama-token-model { min-width: 0; }
+.ama-token-model strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; font-weight: 800; }
+.ama-token-model small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 7.5px; }
+.ama-token-price-cell { text-align: right; }
+.ama-token-price-cell strong { display: block; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 9px; font-weight: 700; color: var(--ink-soft); }
+.ama-token-price-cell small { display: block; color: var(--muted); font-size: 7px; }
+.ama-token-row-change { color: var(--muted); font-size: 8px; font-weight: 750; text-align: right; }
+.ama-token-row-change.is-up, .ama-token-chart-change.is-up, .ama-token-change-big strong.is-up { color: var(--success); }
+.ama-token-row-change.is-down, .ama-token-chart-change.is-down, .ama-token-change-big strong.is-down { color: var(--danger); }
+.ama-token-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 36px 0; color: var(--muted); font-size: 10px; }
+.ama-token-source { margin: 8px 0 0; color: var(--muted); font-size: 7.5px; }
+.ama-token-source a { color: var(--sky-deep); text-decoration: none; }
+.ama-token-side { min-width: 0; }
+.ama-token-focus .ama-panel-head, .ama-token-clock .ama-panel-head { align-items: flex-start; }
+.ama-token-focus .ama-panel-head h2 { max-width: 260px; overflow-wrap: anywhere; }
+.ama-token-large-dot { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 7px; box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 10%, transparent); }
+.ama-token-focus-prices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-top: 10px; }
+.ama-token-focus-prices > div { min-width: 0; padding: 7px; border: 1px dashed var(--line-strong); border-radius: 8px; background: var(--panel-2); }
+.ama-token-focus-prices span { display: block; color: var(--muted); font-size: 7px; }
+.ama-token-focus-prices strong { display: block; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
+.ama-token-focus-facts { display: flex; flex-wrap: wrap; gap: 5px 8px; margin-top: 7px; color: var(--muted); font-size: 7.5px; }
+.ama-token-focus-facts strong { color: var(--ink-soft); }
+.ama-token-change-big { display: flex; align-items: baseline; gap: 5px; margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line); }
+.ama-token-change-big span { color: var(--muted); font-size: 8px; }
+.ama-token-change-big strong { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 16px; }
+.ama-token-change-big small { margin-left: auto; color: var(--muted); font-size: 7px; }
+.ama-token-now { flex: 0 0 auto; padding: 3px 6px; border-radius: 999px; font-size: 7.5px; font-weight: 800; }
+.ama-token-now.is-peak { color: #a34e5f; background: #ffe3e9; }
+.ama-token-now.is-offpeak { color: #28795c; background: #dff6ec; }
+.ama-token-clockbar { position: relative; display: flex; gap: 1px; height: 20px; margin: 11px 0 3px; overflow: visible; border-radius: 5px; }
+.ama-token-clockbar > span { flex: 1; min-width: 0; height: 100%; background: #dff6ec; }
+.ama-token-clockbar > span:first-child { border-radius: 5px 0 0 5px; }
+.ama-token-clockbar > span:last-of-type { border-radius: 0 5px 5px 0; }
+.ama-token-clockbar > span.is-peak { background: #ffd6e0; }
+.ama-token-clockbar.is-flat > span { background: color-mix(in srgb, var(--sky) 15%, var(--card)); }
+.ama-token-clock-now { position: absolute; top: -3px; width: 2px; height: 26px; border-radius: 2px; background: var(--ink); box-shadow: 0 0 0 2px var(--card); pointer-events: none; }
+.ama-token-clock-labels { display: flex; justify-content: space-between; color: var(--muted); font-size: 6.5px; }
+.ama-token-clock-note { margin: 8px 0 0; color: var(--muted); font-size: 7.5px; line-height: 1.55; }
+.ama-token-window-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
+.ama-token-window-prices > div { padding: 6px 7px; border-radius: 7px; background: var(--panel-2); }
+.ama-token-window-prices span { display: block; color: var(--muted); font-size: 7px; }
+.ama-token-window-prices strong { display: block; margin-top: 1px; font-size: 8.5px; }
+.ama-token-window-prices > small { grid-column: 1 / -1; color: var(--muted); font-size: 7px; line-height: 1.45; }
+.ama-token-chart-panel { margin-top: 10px; }
+.ama-token-chart-tools { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.ama-token-chart { margin-top: 6px; }
+.ama-token-chart-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-bottom: 1px; }
+.ama-token-chart-top strong { display: block; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 19px; letter-spacing: -.04em; }
+.ama-token-chart-top span { display: block; color: var(--muted); font-size: 7.5px; }
+.ama-token-chart-change { flex: 0 0 auto; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 8px !important; font-weight: 750; }
+.ama-token-chart-body { display: flex; gap: 7px; margin-top: 8px; }
+.ama-token-y-axis { position: relative; flex: 0 0 42px; height: 210px; }
+.ama-token-y-axis span { position: absolute; right: 2px; transform: translateY(50%); color: var(--muted); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 6.5px; white-space: nowrap; }
+.ama-token-plot { position: relative; flex: 1; min-width: 0; height: 210px; margin: 0 4px 22px 0; border-bottom: 1px solid var(--line); }
+.ama-token-gridline { position: absolute; right: 0; left: 0; height: 1px; border-top: 1px dashed color-mix(in srgb, var(--line) 85%, transparent); pointer-events: none; }
+.ama-token-candle { position: absolute; bottom: 0; height: 100%; transform: translateX(-50%); cursor: crosshair; }
+.ama-token-candle.is-baseline { opacity: .62; }
+.ama-token-wick { position: absolute; left: 50%; width: 1px; transform: translateX(-50%); background: #3ba66b; opacity: .8; pointer-events: none; }
+.ama-token-wick.is-down { background: #d76a7a; }
+.ama-token-body { position: absolute; left: 50%; min-height: 3px; transform: translateX(-50%); border-radius: 1px; background: #55bf85; pointer-events: none; }
+.ama-token-body.is-down { background: #e88aa8; }
+.ama-token-body.is-hover { outline: 1px solid var(--ink); }
+.ama-token-close-dot { position: absolute; left: 50%; width: 3px; height: 3px; transform: translate(-50%, 50%); border-radius: 50%; background: var(--sky-deep); pointer-events: none; }
+.ama-token-close-dot.is-down { background: #d76a7a; }
+.ama-token-x-label { position: absolute; top: calc(100% + 6px); transform: translateX(-50%); color: var(--muted); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 6px; white-space: nowrap; }
+.ama-token-chart-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 1px; color: var(--muted); font-size: 7px; }
+.ama-token-chart-foot span { display: inline-flex; align-items: center; gap: 3px; }
+.ama-token-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; }
+.ama-token-dot.is-up { background: #55bf85; }
+.ama-token-dot.is-down { background: #e88aa8; }
+.ama-token-chart-empty { display: grid; place-items: center; min-height: 150px; color: var(--muted); font-size: 9px; }
+.ama-token-footnote { margin: 7px 0 0; color: var(--muted); font-size: 7.5px; line-height: 1.55; }
+@keyframes ama-token-pop { from { opacity: .5; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ama-token-blink { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+@media (max-width: 1000px) {
+  .ama-token-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ama-token-grid { grid-template-columns: 1fr; }
+  .ama-token-list { max-height: 260px; }
+}
 .ama-studio-fields { display: grid; grid-template-columns: 1fr 72px; gap: 7px; }
 .ama-studio-field { min-width: 0; }
 .ama-studio-field label { display: block; margin-bottom: 3px; color: var(--muted); font-size: 7.5px; }
@@ -1501,20 +1798,49 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.2.3 Beta"
+  const version = shell.version || "0.3.2 Beta"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
   const webSearchAction = actionById(actions || [], "ama_web_search")
   const steamSearchAction = actionById(actions || [], "ama_steam_search")
   const steamDealsAction = actionById(actions || [], "ama_steam_deals")
+  const tokenAction = actionById(actions || [], "ama_token_prices")
   const uiProfileSaveAction = actionById(actions || [], "ama_ui_profile_save")
   const initialUiProfile = normalizeUiProfile(safeState.ui_profile)
+  const initialTokenRadar = safeState.token_radar || {}
+  const initialTokenModels = Array.isArray(initialTokenRadar.models) ? initialTokenRadar.models : []
+  const initialTokenHistory = initialTokenRadar.history && typeof initialTokenRadar.history === "object"
+    ? initialTokenRadar.history as Record<string, TokenCandle[]>
+    : {}
 
   const [view, setView] = props.useLocalState<ViewId>("ama.view", "home")
   const [chrome, setChrome] = props.useLocalState<ChromeMode>("ama.chrome", "normal")
   const [uiProfile, setUiProfile] = props.useLocalState<UiProfile>("ama.ui.profile", initialUiProfile)
+  const [tokenModels, setTokenModels] = useState<TokenModel[]>(initialTokenModels)
+  const [tokenHistory, setTokenHistory] = useState<Record<string, TokenCandle[]>>(initialTokenHistory)
+  const [tokenSelected, setTokenSelected] = useState(String(initialTokenModels[0]?.id || ""))
+  const [tokenProvider, setTokenProvider] = useState("all")
+  const [tokenMetric, setTokenMetric] = useState<"input" | "output">("input")
+  const [tokenAuto, setTokenAuto] = useState(true)
+  const [tokenLoading, setTokenLoading] = useState(false)
+  const [tokenStatus, setTokenStatus] = useState(String(initialTokenRadar.status || "idle"))
+  const [tokenUpdatedAt, setTokenUpdatedAt] = useState(String(initialTokenRadar.checked_at || initialTokenRadar.fetched_at || ""))
+  const [tokenMessage, setTokenMessage] = useState(String(initialTokenRadar.message || ""))
+  const [tokenHistoryMeta, setTokenHistoryMeta] = useState(initialTokenRadar.history_meta || {})
+  const [tokenPulse, setTokenPulse] = useState(0)
   const [uiSaving, setUiSaving] = useState(false)
+
+  useEffect(() => {
+    if (view !== "tokens" || tokenModels.length > 0) return
+    void loadTokenPrices(false)
+  }, [view])
+
+  useEffect(() => {
+    if (view !== "tokens" || !tokenAuto) return
+    const timer = setInterval(() => { void loadTokenPrices(false) }, 60000)
+    return () => clearInterval(timer)
+  }, [view, tokenAuto, tokenLoading])
   const [uiDirty, setUiDirty] = useState(false)
   const [uiMessage, setUiMessage] = useState("")
   const [importText, setImportText] = useState("")
@@ -1568,7 +1894,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     return value && value !== key ? value : fallback
   }
 
-  const validViews: ViewId[] = ["home", "web", "steam", "studio", "core", "bridge", "about"]
+  const validViews: ViewId[] = ["home", "web", "steam", "tokens", "studio", "core", "bridge", "about"]
   const activeView: ViewId = validViews.indexOf(view) >= 0 ? view : "home"
   const validChrome: ChromeMode[] = ["normal", "max", "min", "asleep"]
   const activeChrome: ChromeMode = validChrome.indexOf(chrome) >= 0 ? chrome : "normal"
@@ -1877,6 +2203,39 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     return tr(key, fallback).replace("{days}", String(days)).replace("{hours}", String(hours))
   }
 
+  async function loadTokenPrices(force = false) {
+    if (!tokenAction || tokenLoading) return
+    setTokenLoading(true)
+    setTokenMessage("")
+    try {
+      const result = unwrapResult(
+        await props.api.call(tokenAction.id || "ama_token_prices", { force }, { timeoutMs: 45000 }),
+      )
+      const radar = result.token_radar && typeof result.token_radar === "object" ? result.token_radar : result
+      const models = Array.isArray(radar.models) ? radar.models as TokenModel[] : []
+      const history = radar.history && typeof radar.history === "object"
+        ? radar.history as Record<string, TokenCandle[]>
+        : {}
+      if (models.length > 0) {
+        setTokenModels(models)
+        setTokenHistory(history)
+        setTokenSelected((current) => models.some((model) => model.id === current) ? current : models[0].id)
+        setTokenProvider((current) => current === "all" || models.some((model) => model.provider === current) ? current : "all")
+      }
+      const nextStatus = String(radar.status || (result.ok === false ? "error" : "ok"))
+      setTokenStatus(nextStatus)
+      setTokenUpdatedAt(String(radar.checked_at || radar.fetched_at || new Date().toISOString()))
+      setTokenMessage(String(radar.message || (result.ok === false ? result.error || "" : "")))
+      setTokenHistoryMeta(radar.history_meta || {})
+      setTokenPulse((value) => value + 1)
+    } catch (_error) {
+      setTokenStatus("error")
+      setTokenMessage(tr("tokens.fetchFailed", "Could not refresh token prices. Showing the last snapshot."))
+    } finally {
+      setTokenLoading(false)
+    }
+  }
+
   async function runPulse() {
     if (!pulseAction || pulse.status === "running") {
       setPulse({
@@ -2133,6 +2492,61 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const saleUpcoming = Array.isArray(sale.upcoming) ? sale.upcoming : []
   const saleTbd = Array.isArray(sale.all) ? sale.all.filter((event) => event.tbd) : []
   const saleOfficialUrl = sale.source_url || "https://partner.steamgames.com/doc/marketing/upcoming_events"
+
+  const tokenProviderOptions: Array<{ id: string; name: string; zh: string; color: string }> = []
+  for (const model of tokenModels) {
+    if (!tokenProviderOptions.some((item) => item.id === model.provider)) {
+      tokenProviderOptions.push({ id: model.provider, name: model.provider_name, zh: model.provider_zh, color: model.provider_color })
+    }
+  }
+  const visibleTokenModels = tokenProvider === "all"
+    ? tokenModels
+    : tokenModels.filter((model) => model.provider === tokenProvider)
+  const tokenSelectedModel = visibleTokenModels.find((model) => model.id === tokenSelected)
+    || visibleTokenModels[0]
+    || tokenModels[0]
+    || null
+  const tokenCandles = tokenSelectedModel ? tokenHistory[tokenSelectedModel.id] || [] : []
+  const tokenPriceSort = [...tokenModels].filter((model) => model.input > 0).sort((a, b) => a.input - b.input)
+  const tokenCheapest = tokenPriceSort[0] || null
+  const tokenPriciest = tokenPriceSort[tokenPriceSort.length - 1] || null
+  const tokenBiggestMove = tokenModels.reduce((best, model) => {
+    const move = Math.abs(tokenHistoryChange(tokenHistory[model.id] || [], tokenMetric))
+    return move > best.move ? { move, model } : best
+  }, { move: 0, model: tokenModels[0] || null })
+  const tokenPolicy = tokenSelectedModel?.time_policy || {}
+  const tokenNow = new Date()
+  const tokenUtcMinutes = tokenNow.getUTCHours() * 60 + tokenNow.getUTCMinutes()
+  const tokenWeekday = tokenNow.getUTCDay()
+  const tokenPeak = tokenPolicy.kind === "deepseek_peak"
+    && tokenWeekday >= 1
+    && tokenWeekday <= 5
+    && (tokenPolicy.peak_windows_utc || []).some((window) => {
+      const start = Number(String(window.start).split(":")[0]) * 60 + Number(String(window.start).split(":")[1] || 0)
+      const end = Number(String(window.end).split(":")[0]) * 60 + Number(String(window.end).split(":")[1] || 0)
+      return tokenUtcMinutes >= start && tokenUtcMinutes < end
+    })
+  const tokenPeakHours = new Set<number>()
+  if (tokenPolicy.kind === "deepseek_peak") {
+    for (const window of tokenPolicy.peak_windows_utc || []) {
+      const start = Number(String(window.start).split(":")[0])
+      const end = Number(String(window.end).split(":")[0])
+      for (let hour = start; hour < end; hour += 1) tokenPeakHours.add(hour)
+    }
+  }
+  const tokenIsWeekend = tokenWeekday === 0 || tokenWeekday === 6
+  const tokenStatusText = tokenLoading
+    ? tr("tokens.updating", "更新中…")
+    : tokenStatus === "stale"
+      ? tr("tokens.stale", "缓存价")
+      : tokenStatus === "error"
+        ? tr("tokens.errorShort", "价格源异常")
+        : tokenStatus === "idle"
+          ? tr("tokens.idle", "待刷新")
+          : tr("tokens.live", "实时目录价")
+  const tokenUpdatedLabel = tokenUpdatedAt
+    ? new Date(tokenUpdatedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+    : "—"
 
   const nav = VIEWS.map((item) => (
     <button
@@ -2502,6 +2916,215 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           <p className="ama-web-note">{tr("web.sourceNote", "Results are third-party content. Opening one leaves N.E.K.O.")}</p>
         </div>
       )}
+    </>
+  )
+
+  const tokenView = (
+    <>
+      <div className="ama-view-head ama-token-head">
+        <div>
+          <div className="ama-kicker"><span className="ama-kicker-line" />TOKEN RADAR</div>
+          <h1 className="ama-view-title">{tr("tokens.title", "Token 看板")}</h1>
+          <p className="ama-view-sub">{tr("tokens.subtitle", "国内外主流模型的公开目录价、30 日 K 线和峰谷时段。")}</p>
+        </div>
+        <div className="ama-token-head-actions">
+          <span key={`token-live-${tokenPulse}`} className={`ama-token-live is-${tokenStatus}`}><i />{tokenStatusText}</span>
+          <button type="button" className="ama-btn ama-btn-primary" disabled={tokenLoading} onClick={() => void loadTokenPrices(true)}>
+            {tokenLoading ? tr("tokens.updating", "更新中…") : tr("tokens.refresh", "刷新价格")}
+          </button>
+          <button type="button" className={`ama-web-chip ${tokenAuto ? "is-active" : ""}`} onClick={() => setTokenAuto((value) => !value)}>
+            {tokenAuto ? tr("tokens.autoOn", "60s 自动") : tr("tokens.autoOff", "手动")}
+          </button>
+        </div>
+      </div>
+
+      <div className="ama-token-stats">
+        <article className="ama-token-stat">
+          <span>{tr("tokens.stats.models", "覆盖模型")}</span>
+          <strong>{tokenModels.length}</strong>
+          <small>{tokenProviderOptions.length} {tr("tokens.stats.providers", "家厂商")}</small>
+        </article>
+        <article className="ama-token-stat">
+          <span>{tr("tokens.stats.cheapest", "最低输入价")}</span>
+          <strong>{tokenCheapest ? formatTokenPrice(tokenCheapest.input) : "—"}</strong>
+          <small>{tokenCheapest ? tokenCheapest.name : tr("tokens.waiting", "等待价格")}</small>
+        </article>
+        <article className="ama-token-stat">
+          <span>{tr("tokens.stats.priciest", "最高输入价")}</span>
+          <strong>{tokenPriciest ? formatTokenPrice(tokenPriciest.input) : "—"}</strong>
+          <small>{tokenPriciest ? tokenPriciest.name : "—"}</small>
+        </article>
+        <article className="ama-token-stat">
+          <span>{tr("tokens.stats.move", "30 日最大波动")}</span>
+          <strong>{tokenBiggestMove.model ? `${tokenBiggestMove.move.toFixed(2)}%` : "—"}</strong>
+          <small>{tokenBiggestMove.model ? tokenBiggestMove.model.name : tr("tokens.baseline", "目录基线")}</small>
+        </article>
+      </div>
+
+      {tokenMessage ? <div className="ama-note ama-token-note">{tokenMessage}</div> : null}
+
+      <div className="ama-token-grid">
+        <section className="ama-panel ama-token-board">
+          <div className="ama-panel-head">
+            <div>
+              <div className="ama-kicker">{tr("tokens.catalogKicker", "PUBLIC CATALOG")}</div>
+              <h2>{tr("tokens.catalog", "模型目录价")}</h2>
+              <p>{tr("tokens.catalogHint", "USD / 1M tokens · 60 秒轮询 · 厂商调价才跳动")}</p>
+            </div>
+            <span className="ama-badge is-lilac">{tokenUpdatedLabel}</span>
+          </div>
+          <div className="ama-token-filters">
+            <button type="button" className={`ama-token-filter ${tokenProvider === "all" ? "is-active" : ""}`} onClick={() => setTokenProvider("all")}>
+              {tr("tokens.all", "全部")} <small>{tokenModels.length}</small>
+            </button>
+            {tokenProviderOptions.map((provider) => (
+              <button
+                type="button"
+                key={provider.id}
+                className={`ama-token-filter ${tokenProvider === provider.id ? "is-active" : ""}`}
+                onClick={() => setTokenProvider(provider.id)}
+              >
+                <i style={{ background: provider.color }} />{provider.name} <small>{tokenModels.filter((model) => model.provider === provider.id).length}</small>
+              </button>
+            ))}
+          </div>
+          {visibleTokenModels.length > 0 ? (
+            <div className="ama-token-list">
+              {visibleTokenModels.map((model) => {
+                const change = tokenHistoryChange(tokenHistory[model.id] || [], tokenMetric)
+                const active = tokenSelectedModel?.id === model.id
+                return (
+                  <button
+                    type="button"
+                    key={model.id}
+                    className={`ama-token-row ${active ? "is-active" : ""}`}
+                    onClick={() => setTokenSelected(model.id)}
+                  >
+                    <i className="ama-token-provider-dot" style={{ background: model.provider_color }} />
+                    <span className="ama-token-model">
+                      <strong>{model.name}</strong>
+                      <small>{model.provider_name} · {model.provider_zh}{model.provider_region === "china" ? ` · ${tr("tokens.cn", "国内")}` : ""}</small>
+                    </span>
+                    <span className="ama-token-price-cell">
+                      <strong>{formatTokenPrice(model.input)}</strong>
+                      <small>{tr("tokens.input", "输入")}</small>
+                    </span>
+                    <span className="ama-token-price-cell">
+                      <strong>{formatTokenPrice(model.output)}</strong>
+                      <small>{tr("tokens.output", "输出")}</small>
+                    </span>
+                    <span className={`ama-token-row-change ${change >= 0 ? "is-up" : "is-down"}`}>
+                      {change >= 0 ? "+" : ""}{change.toFixed(2)}%
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="ama-token-empty">
+              <span>{tokenLoading ? tr("tokens.updating", "更新中…") : tr("tokens.empty", "暂无模型价格")}</span>
+              {!tokenLoading ? <button type="button" className="ama-web-chip" onClick={() => void loadTokenPrices(true)}>{tr("tokens.retry", "重试")}</button> : null}
+            </div>
+          )}
+          <p className="ama-token-source">
+            {tr("tokens.source", "数据源")}：
+            <a href="https://models.dev/" target="_blank" rel="noreferrer">models.dev</a>
+            <span> · {tokenUpdatedAt ? new Date(tokenUpdatedAt).toLocaleString("zh-CN") : "—"}</span>
+          </p>
+        </section>
+
+        <aside className="ama-token-side">
+          <section className="ama-panel ama-token-focus">
+            <div className="ama-panel-head">
+              <div>
+                <div className="ama-kicker">{tr("tokens.focusKicker", "SELECTED MODEL")}</div>
+                <h2>{tokenSelectedModel?.name || "—"}</h2>
+                <p>{tokenSelectedModel ? `${tokenSelectedModel.provider_name} · ${tokenSelectedModel.provider_zh}` : tr("tokens.pick", "选择一个模型")}</p>
+              </div>
+              {tokenSelectedModel ? <i className="ama-token-large-dot" style={{ background: tokenSelectedModel.provider_color }} /> : null}
+            </div>
+            {tokenSelectedModel ? (
+              <>
+                <div className="ama-token-focus-prices">
+                  <div><span>{tr("tokens.input", "输入")}</span><strong>{formatTokenPrice(tokenSelectedModel.input)}</strong></div>
+                  <div><span>{tr("tokens.output", "输出")}</span><strong>{formatTokenPrice(tokenSelectedModel.output)}</strong></div>
+                  <div><span>{tr("tokens.cache", "缓存命中")}</span><strong>{formatTokenPrice(tokenSelectedModel.cache_read)}</strong></div>
+                </div>
+                <div className="ama-token-focus-facts">
+                  <span>{tr("tokens.context", "上下文")} <strong>{formatTokenContext(tokenSelectedModel.context)}</strong></span>
+                  <span>{tr("tokens.release", "发布")} <strong>{tokenSelectedModel.release_date || "—"}</strong></span>
+                  {tokenSelectedModel.tier ? <span>{tr("tokens.tier", "超过 {size} 后").replace("{size}", formatTokenContext(tokenSelectedModel.tier.threshold))} <strong>{formatTokenPrice(tokenSelectedModel.tier.input)}</strong></span> : null}
+                </div>
+                <div className="ama-token-change-big">
+                  <span>{tr("tokens.change30", "30 日变化")}</span>
+                  <strong className={tokenHistoryChange(tokenCandles, tokenMetric) >= 0 ? "is-up" : "is-down"}>
+                    {tokenHistoryChange(tokenCandles, tokenMetric) >= 0 ? "+" : ""}{tokenHistoryChange(tokenCandles, tokenMetric).toFixed(2)}%
+                  </strong>
+                  <small>{tokenHistoryMeta.baseline ? tr("tokens.baseline", "目录基线") : tr("tokens.observed", "本机观测")}</small>
+                </div>
+              </>
+            ) : null}
+          </section>
+
+          <section className="ama-panel ama-token-clock">
+            <div className="ama-panel-head">
+              <div>
+                <div className="ama-kicker">{tr("tokens.clockKicker", "PRICE WINDOW")}</div>
+                <h2>{tr("tokens.clock", "价格时段")}</h2>
+              </div>
+              <span className={`ama-token-now ${tokenPeak ? "is-peak" : "is-offpeak"}`}>
+                {tokenPolicy.kind === "deepseek_peak"
+                  ? (tokenIsWeekend ? tr("tokens.weekend", "周末非高峰") : tokenPeak ? tr("tokens.peak", "高峰价") : tr("tokens.offPeak", "非高峰价"))
+                  : tr("tokens.flat", "全天同价")}
+              </span>
+            </div>
+            <div className={`ama-token-clockbar ${tokenPolicy.kind === "deepseek_peak" ? "" : "is-flat"}`}>
+              {Array.from({ length: 24 }, (_, hour) => (
+                <span
+                  key={hour}
+                  className={tokenPolicy.kind === "deepseek_peak" && tokenPeakHours.has(hour) ? "is-peak" : "is-offpeak"}
+                  title={`${String(hour).padStart(2, "0")}:00 UTC`}
+                />
+              ))}
+              <i className="ama-token-clock-now" style={{ left: `${(tokenUtcMinutes / 1440) * 100}%` }} />
+            </div>
+            <div className="ama-token-clock-labels"><span>00</span><span>06</span><span>12</span><span>18</span><span>24 UTC</span></div>
+            <p className="ama-token-clock-note">
+              {tokenPolicy.note || tr("tokens.flatNote", "厂商按 token 统一目录价计费，没有早晚峰谷。")}
+            </p>
+            {tokenPolicy.kind === "deepseek_peak" ? (
+              <div className="ama-token-window-prices">
+                <div><span>{tr("tokens.peak", "高峰价")}</span><strong>{formatTokenPrice(tokenPolicy.peak_input)} / {formatTokenPrice(tokenPolicy.peak_output)}</strong></div>
+                <div><span>{tr("tokens.offPeak", "非高峰价")}</span><strong>{formatTokenPrice(tokenPolicy.off_peak_input)} / {formatTokenPrice(tokenPolicy.off_peak_output)}</strong></div>
+                <small>{tr("tokens.localWindows", "北京时间 09:00–12:00、14:00–18:00（周一至周五）")}</small>
+              </div>
+            ) : (
+              <div className="ama-token-window-prices">
+                <div><span>{tr("tokens.cache", "缓存命中")}</span><strong>{formatTokenPrice(tokenSelectedModel?.cache_read)}</strong></div>
+                <div><span>{tr("tokens.cacheSaving", "缓存节省")}</span><strong>{Math.round((tokenSelectedModel?.cache_discount || 0) * 100)}%</strong></div>
+                <small>{tr("tokens.flatCheap", "便宜来自缓存命中、Batch 批处理与上下文档位，不是早晚时段。")}</small>
+              </div>
+            )}
+          </section>
+        </aside>
+      </div>
+
+      <section className="ama-panel ama-token-chart-panel">
+        <div className="ama-panel-head">
+          <div>
+            <div className="ama-kicker">30 DAY CANDLES</div>
+            <h2>{tr("tokens.chart", "近 30 日价格 K 线")}</h2>
+            <p>{tokenSelectedModel ? `${tokenSelectedModel.name} · ${tokenMetric === "input" ? tr("tokens.input", "输入") : tr("tokens.output", "输出")}价 · USD / 1M` : tr("tokens.pick", "选择一个模型")}</p>
+          </div>
+          <div className="ama-token-chart-tools">
+            <button type="button" className={`ama-web-chip ${tokenMetric === "input" ? "is-active" : ""}`} onClick={() => setTokenMetric("input")}>{tr("tokens.input", "输入")}</button>
+            <button type="button" className={`ama-web-chip ${tokenMetric === "output" ? "is-active" : ""}`} onClick={() => setTokenMetric("output")}>{tr("tokens.output", "输出")}</button>
+            <span className="ama-badge">{tokenHistoryMeta.days || tokenCandles.length}D</span>
+          </div>
+        </div>
+        <TokenKLine candles={tokenCandles} metric={tokenMetric} label={tokenSelectedModel?.name || tr("tokens.chart", "近 30 日价格 K 线")} />
+        <p className="ama-token-footnote">{tokenHistoryMeta.note || tr("tokens.historyNote", "首次采集以当前目录价回填基线；之后每日记录开高低收。")}</p>
+      </section>
     </>
   )
 
@@ -3392,7 +4015,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     </>
   )
 
-  const content = activeView === "web" ? webView : activeView === "steam" ? steamView : activeView === "studio" ? studioView : activeView === "core" ? coreView : activeView === "bridge" ? bridgeView : activeView === "about" ? aboutView : homeView
+  const content = activeView === "web" ? webView : activeView === "steam" ? steamView : activeView === "tokens" ? tokenView : activeView === "studio" ? studioView : activeView === "core" ? coreView : activeView === "bridge" ? bridgeView : activeView === "about" ? aboutView : homeView
 
   const uiStyle = {
     "--sky": uiProfile.accent,
