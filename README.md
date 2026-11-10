@@ -191,8 +191,8 @@ a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
-- Any Market publication. The **0.3.2 Beta** GitHub Release is live; **0.3.3 Beta
-  is being prepared** and its Market submission remains manual.
+- Any Market publication. The **0.3.3 Beta** GitHub Release is live; its Market
+  Beta submission remains manual.
 
 ## Install and open the window
 
@@ -290,14 +290,14 @@ python -m pytest tests
 ```
 
 See [PUBLISHING.md](PUBLISHING.md) for the Beta release and Market submission
-notes. The latest live GitHub Release is `v0.3.2-beta`; `v0.3.3-beta` is being prepared.
+notes. The latest GitHub Release is `v0.3.3-beta`; Market notification remains manual.
 
 ## Versioning and release
 
 - Manifest version: `0.3.3-beta`
 - Display version: **0.3.3 Beta**
 - Release channel: **Beta (pre-release)**
-- Published GitHub Release: **v0.3.2-beta** (0.3.3 preparing)
+- Published GitHub Release: **v0.3.3-beta**
 - Market: **not submitted**; the Beta channel submission is manual
 
 ## Credits
