@@ -4,6 +4,9 @@ from arknights_codex import (
     CLASS_COLORS,
     CLASSES,
     OPERATORS,
+    SKINS,
+    TOOLS,
+    codex_detail,
     codex_payload,
     codex_summary,
     filter_operators,
@@ -74,6 +77,47 @@ def test_summary_counts_match_data() -> None:
     assert sum(summary["rarities"].values()) == len(OPERATORS)
     assert set(summary["classes"]) == set(CLASSES)
     assert "官方资料" in summary["disclaimer"]
+
+
+def test_skin_samples_reference_known_operators() -> None:
+    ids = {item["id"] for item in OPERATORS}
+    assert SKINS
+    assert set(SKINS) <= ids
+    for entries in SKINS.values():
+        assert entries
+        for skin in entries:
+            assert skin["name"] and skin["series"] and skin["release"] and skin["obtain"]
+
+
+def test_tools_are_external_https_links() -> None:
+    assert len(TOOLS) >= 6
+    ids = [tool["id"] for tool in TOOLS]
+    assert len(ids) == len(set(ids))
+    for tool in TOOLS:
+        assert tool["name"]
+        assert str(tool["url"]).startswith("https://")
+        assert tool["kind"]
+        assert isinstance(tool["download"], bool)
+
+
+def test_codex_detail_returns_skins_story_and_tools() -> None:
+    detail = codex_detail("silverash")
+    assert detail["ok"] is True
+    assert detail["operator"]["name_cn"] == "银灰"
+    assert detail["skins"]
+    assert detail["skin_note"]
+    assert detail["story"]["lines"]
+    assert detail["story"]["link"].startswith("https://prts.wiki/w/")
+    assert detail["tools"]
+
+    empty = codex_detail("fang")
+    assert empty["ok"] is True
+    assert empty["skins"] == []
+    assert empty["story"]["lines"]
+
+    missing = codex_detail("not-an-operator")
+    assert missing["ok"] is False
+    assert missing["error"] == "not_found"
 
 
 def test_payload_shape() -> None:

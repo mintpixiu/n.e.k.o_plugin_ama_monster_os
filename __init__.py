@@ -23,7 +23,7 @@ from plugin.sdk.plugin import (
     ui,
 )
 
-from .arknights_codex import codex_payload, codex_summary
+from .arknights_codex import codex_detail, codex_payload, codex_summary, tools_payload
 from .shell_runtime import SHELL_CHANNEL, SHELL_DISPLAY_VERSION, SHELL_NAME, AmaOsRuntime
 from .steam_account import SteamAccountService
 from .system_port import NekoHostSystemPort
@@ -138,6 +138,17 @@ CODEX_SCHEMA: dict[str, Any] = {
             "default": 120,
         },
     },
+}
+
+CODEX_DETAIL_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "operator_id": {
+            "type": "string",
+            "description": "Codex operator id, e.g. silverash.",
+        },
+    },
+    "required": ["operator_id"],
 }
 
 STEAM_LOGIN_SCHEMA: dict[str, Any] = {
@@ -447,6 +458,44 @@ class AmaMonsterOsPlugin(NekoPluginBase):
             **payload,
             "summary": self.i18n.t("entries.codex.summary", default="Codex matched {count} operator(s).")
             .replace("{count}", str(payload["count"])),
+        })
+
+    @ui.action(
+        id="ama_arknights_detail",
+        label=tr("actions.codex_detail.label", default="Operator detail"),
+        icon="search",
+        tone="default",
+        order=30,
+        refresh_context=False,
+    )
+    @plugin_entry(
+        id="ama_arknights_detail",
+        name=tr("entries.codex_detail.name", default="Operator detail"),
+        description=tr(
+            "entries.codex_detail.description",
+            default=(
+                "Return one codex operator with bundled skin samples, a data-only "
+                "story brief, and a list of external Arknights helper tools."
+            ),
+        ),
+        input_schema=CODEX_DETAIL_SCHEMA,
+        llm_result_fields=["summary"],
+        timeout=10,
+    )
+    async def ama_arknights_detail(self, operator_id: Any = "", **_):
+        payload = await asyncio.to_thread(codex_detail, str(operator_id or ""))
+        if not payload.get("ok"):
+            return Ok({
+                "ok": False,
+                "error": "not_found",
+                "summary": self.i18n.t("entries.codex_detail.missing", default="Operator not found in the codex."),
+            })
+        operator = payload.get("operator") or {}
+        return Ok({
+            **payload,
+            "tools": tools_payload(),
+            "summary": self.i18n.t("entries.codex_detail.summary", default="Codex detail for {name}.")
+            .replace("{name}", str(operator.get("name_cn") or "")),
         })
 
     @ui.action(

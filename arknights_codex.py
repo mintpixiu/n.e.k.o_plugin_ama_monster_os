@@ -220,19 +220,162 @@ def codex_payload(
         "count": len(results),
         "results": results,
         "summary": codex_summary(),
+        "tools": [dict(item) for item in TOOLS],
         "disclaimer": CODEX_DISCLAIMER,
         "updated": CODEX_UPDATED,
     }
 
 
+# A deliberately small, clearly partial skin sample. Full skin lists live on the
+# official wiki; the window links out instead of bundling artwork.
+SKINS: dict[str, tuple[dict[str, str], ...]] = {
+    "amiya": (
+        {"name": "报童", "series": "罗德岛", "release": "2019", "obtain": "活动获取"},
+    ),
+    "silverash": (
+        {"name": "约克的寒风", "series": "时代", "release": "2020", "obtain": "采购凭证"},
+    ),
+    "chen": (
+        {"name": "岁红霞", "series": "岁岁平安", "release": "2020", "obtain": "采购凭证"},
+    ),
+    "texas": (
+        {"name": "寒冬信使", "series": "寒武纪", "release": "2020", "obtain": "采购凭证"},
+    ),
+    "saria": (
+        {"name": "铁律", "series": "斗争血脉", "release": "2020", "obtain": "采购凭证"},
+    ),
+    "skadi": (
+        {"name": "静谧海流", "series": "珊瑚海岸", "release": "2020", "obtain": "采购凭证"},
+    ),
+}
+
+SKIN_NOTE = "本地只收录少量示例皮肤，完整皮肤与立绘请查看 PRTS 或游戏内干员档案。"
+
+# Curated helper tools. Every entry is an external link opened in the browser;
+# nothing is bundled or downloaded by the plugin.
+TOOLS: tuple[dict[str, Any], ...] = (
+    {
+        "id": "prts",
+        "name": "PRTS 明日方舟 Wiki",
+        "kind": "wiki",
+        "url": "https://prts.wiki/",
+        "note": "最全的中文资料站：干员、皮肤、剧情、活动、材料掉率。",
+        "download": False,
+    },
+    {
+        "id": "skland",
+        "name": "森空岛（官方社区）",
+        "kind": "official",
+        "url": "https://www.skland.com/",
+        "note": "鹰角官方社区，含官方资讯、干员资料与客户端下载入口。",
+        "download": True,
+    },
+    {
+        "id": "official",
+        "name": "明日方舟官网",
+        "kind": "official",
+        "url": "https://ak.hypergryph.com/",
+        "note": "官方公告与 PC / Android / iOS 客户端下载渠道。",
+        "download": True,
+    },
+    {
+        "id": "arkntools",
+        "name": "Arkntools 工具箱",
+        "kind": "tool",
+        "url": "https://arkntools.app/",
+        "note": "开源的养成规划、材料计算与抽卡统计工具。",
+        "download": False,
+    },
+    {
+        "id": "penguin",
+        "name": "企鹅物流数据统计",
+        "kind": "data",
+        "url": "https://penguin-stats.io/",
+        "note": "社区掉率统计，查材料去哪刷最省理智。",
+        "download": False,
+    },
+    {
+        "id": "fandom",
+        "name": "Arknights Wiki (EN)",
+        "kind": "wiki",
+        "url": "https://arknights.fandom.com/",
+        "note": "英文资料站，适合对照英文名与海外活动。",
+        "download": False,
+    },
+    {
+        "id": "gamepress",
+        "name": "GamePress Arknights",
+        "kind": "guide",
+        "url": "https://gamepress.gg/arknights/",
+        "note": "英文攻略与干员评价。",
+        "download": False,
+    },
+    {
+        "id": "nga",
+        "name": "NGA 明日方舟版",
+        "kind": "community",
+        "url": "https://bbs.nga.cn/thread.php?fid=-34587507",
+        "note": "中文玩家社区，攻略、节奏榜与活动讨论。",
+        "download": False,
+    },
+)
+
+
+def _story_brief(operator: Mapping[str, Any]) -> dict[str, Any]:
+    """Build an honest, data-only story brief.
+
+    The plugin deliberately does not invent lore or copy wiki prose.  The brief
+    only restates fields already in the codex and points to the official wiki
+    for the full story.
+    """
+
+    return {
+        "lines": [
+            f"{operator['name_cn']}（{operator['name_en']}）是{operator['faction']}的{operator['class']}干员。",
+            f"种族：{operator['race'] or '资料未明确'}；星级：{operator['rarity']}★。",
+            f"战场定位：{operator['role']}",
+        ],
+        "link": f"https://prts.wiki/w/{operator['name_cn']}",
+        "link_label": "PRTS 上的完整剧情与档案",
+        "note": "这里只做入门速览，不转载剧情原文；完整的背景故事请以游戏内剧情与官方资料为准。",
+    }
+
+
+def codex_detail(operator_id: str) -> dict[str, Any]:
+    """Return one operator with skins and a story brief."""
+
+    for operator in OPERATORS:
+        if operator["id"] != operator_id:
+            continue
+        skins = [dict(item) for item in SKINS.get(operator_id, ())]
+        return {
+            "ok": True,
+            "operator": dict(operator),
+            "skins": skins,
+            "skin_note": SKIN_NOTE,
+            "story": _story_brief(operator),
+            "tools": [dict(item) for item in TOOLS],
+        }
+    return {"ok": False, "error": "not_found", "operator": None}
+
+
+def tools_payload() -> list[dict[str, Any]]:
+    return [dict(item) for item in TOOLS]
+
+
 __all__ = [
     "CLASSES",
     "CLASS_COLORS",
+    "SKINS",
+    "SKIN_NOTE",
+    "TOOLS",
     "CODEX_DISCLAIMER",
     "CODEX_UPDATED",
     "CODEX_VERSION",
     "OPERATORS",
+    "codex_detail",
     "codex_payload",
     "codex_summary",
     "filter_operators",
+    "tools_payload",
 ]

@@ -582,6 +582,24 @@ type CodexOperator = {
   initial?: string
 }
 
+type CodexSkin = { name: string; series?: string; release?: string; obtain?: string }
+
+type CodexDetail = {
+  skins?: CodexSkin[]
+  skin_note?: string
+  story?: { lines?: string[]; link?: string; link_label?: string; note?: string }
+  tools?: CodexTool[]
+}
+
+type CodexTool = {
+  id: string
+  name: string
+  kind: string
+  url: string
+  note?: string
+  download?: boolean
+}
+
 type CodexSummary = {
   version?: string
   updated?: string
@@ -1886,6 +1904,26 @@ const STYLES = `
 .ama-codex-role { margin: 10px 0 0; color: var(--ink-soft); font-size: 8.5px; line-height: 1.6; }
 .ama-codex-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
 .ama-codex-tags span { padding: 2px 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--muted); font-size: 7px; }
+.ama-codex-tabs { display: flex; gap: 4px; margin-top: 12px; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); }
+.ama-codex-tab { flex: 1; padding: 5px 6px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font: inherit; font-size: 8px; font-weight: 750; cursor: pointer; }
+.ama-codex-tab.is-active { background: var(--card); color: var(--sky-deep); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.ama-codex-skins { display: grid; gap: 6px; margin-top: 10px; }
+.ama-skin-card { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 8px; padding: 7px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); }
+.ama-skin-art { display: grid; place-items: center; width: 44px; height: 52px; border-radius: 8px; background: linear-gradient(150deg, color-mix(in srgb, var(--sky) 55%, #fff), color-mix(in srgb, var(--pink) 45%, #fff)); color: #fff; text-shadow: 0 1px 2px rgb(0 0 0 / 0.25); }
+.ama-skin-art span { font-size: 15px; font-weight: 900; }
+.ama-skin-art small { font-size: 6.5px; }
+.ama-skin-body strong { display: block; font-size: 9px; }
+.ama-skin-body small { display: block; color: var(--muted); font-size: 7px; }
+.ama-codex-skin-note { margin: 8px 0 6px; color: var(--muted); font-size: 7px; line-height: 1.55; }
+.ama-codex-story p { margin: 8px 0 0; color: var(--ink-soft); font-size: 8.5px; line-height: 1.65; }
+.ama-codex-tools { margin-top: 10px; }
+.ama-tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; margin-top: 4px; }
+.ama-tool-card { display: flex; flex-direction: column; min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel-2); }
+.ama-tool-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.ama-tool-top strong { font-size: 9px; font-weight: 850; }
+.ama-tool-kind { flex: 0 0 auto; padding: 1px 5px; border-radius: 4px; background: color-mix(in srgb, var(--sky) 14%, transparent); color: var(--sky-deep); font-size: 6.5px; font-weight: 800; }
+.ama-tool-card p { flex: 1; margin: 5px 0 7px; color: var(--muted); font-size: 7.5px; line-height: 1.55; }
+.ama-tool-card .ama-web-open { align-self: flex-start; }
 .ama-codex-disclaimer { margin: 12px 0 0; padding-top: 8px; border-top: 1px dashed var(--line); color: var(--muted); font-size: 7px; line-height: 1.55; }
 @media (max-width: 1000px) {
   .ama-codex-layout { grid-template-columns: 1fr; }
@@ -2750,7 +2788,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.6.0 Beta"
+  const version = shell.version || "0.6.1 Beta"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
@@ -2759,6 +2797,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const steamDealsAction = actionById(actions || [], "ama_steam_deals")
   const steamFreeAction = actionById(actions || [], "ama_steam_free")
   const codexAction = actionById(actions || [], "ama_arknights_codex")
+  const codexDetailAction = actionById(actions || [], "ama_arknights_detail")
   const steamLoginAction = actionById(actions || [], "ama_steam_login")
   const steamAccountAction = actionById(actions || [], "ama_steam_account")
   const steamLogoutAction = actionById(actions || [], "ama_steam_logout")
@@ -2796,6 +2835,10 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const [codexLoading, setCodexLoading] = useState(false)
   const [codexLoaded, setCodexLoaded] = useState(false)
   const [codexMessage, setCodexMessage] = useState("")
+  const [codexDetail, setCodexDetail] = useState<CodexDetail>({})
+  const [codexTools, setCodexTools] = useState<CodexTool[]>([])
+  const [codexTab, setCodexTab] = useState<"overview" | "skins" | "story">("overview")
+  const [codexDetailLoading, setCodexDetailLoading] = useState(false)
   const [uiSaving, setUiSaving] = useState(false)
 
   useEffect(() => {
@@ -3269,6 +3312,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       }
       const results = Array.isArray(result.results) ? result.results as CodexOperator[] : []
       setCodexOperators(results)
+      if (Array.isArray(result.tools)) setCodexTools(result.tools as CodexTool[])
       if (result.summary && typeof result.summary === "object") setCodexSummary(result.summary as CodexSummary)
       setCodexLoaded(true)
       setCodexMessage(results.length === 0 ? tr("codex.empty", "图鉴里还没有数据。") : "")
@@ -3283,6 +3327,30 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     if (view !== "codex" || codexLoaded || codexLoading) return
     void loadCodex()
   }, [view])
+
+  async function selectCodexOperator(operatorId: string) {
+    setCodexSelected(operatorId)
+    setCodexTab("overview")
+    if (!codexDetailAction) return
+    setCodexDetailLoading(true)
+    try {
+      const result = unwrapResult(
+        await props.api.call(codexDetailAction.id || "ama_arknights_detail", { operator_id: operatorId }, { timeoutMs: 10000 }),
+      )
+      if (result.ok === false) return
+      setCodexDetail({
+        skins: Array.isArray(result.skins) ? result.skins as CodexSkin[] : [],
+        skin_note: String(result.skin_note || ""),
+        story: result.story && typeof result.story === "object" ? result.story : {},
+        tools: Array.isArray(result.tools) ? result.tools as CodexTool[] : [],
+      })
+      if (Array.isArray(result.tools) && result.tools.length > 0) setCodexTools(result.tools as CodexTool[])
+    } catch (_error) {
+      // Keep the previous detail panel.
+    } finally {
+      setCodexDetailLoading(false)
+    }
+  }
 
   async function runPulse() {
     if (!pulseAction || pulse.status === "running") {
@@ -4176,7 +4244,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                   type="button"
                   key={operator.id}
                   className={`ama-codex-card${codexCurrent?.id === operator.id ? " is-active" : ""}`}
-                  onClick={() => setCodexSelected(operator.id)}
+                  onClick={() => void selectCodexOperator(operator.id)}
                 >
                   <span
                     className="ama-codex-avatar"
@@ -4212,16 +4280,76 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                   <span className="ama-codex-stars">{"★".repeat(codexCurrent.rarity)}</span>
                 </div>
               </div>
-              <dl className="ama-codex-facts">
-                <div><dt>{tr("codex.class", "职业")}</dt><dd>{codexCurrent.class}</dd></div>
-                <div><dt>{tr("codex.rarity", "星级")}</dt><dd>{codexCurrent.rarity}★</dd></div>
-                <div><dt>{tr("codex.faction", "阵营")}</dt><dd>{codexCurrent.faction || "—"}</dd></div>
-                <div><dt>{tr("codex.race", "种族")}</dt><dd>{codexCurrent.race || "—"}</dd></div>
-              </dl>
-              <p className="ama-codex-role">{codexCurrent.role}</p>
-              <div className="ama-codex-tags">
-                {(codexCurrent.tags || []).map((tag) => <span key={tag}>{tag}</span>)}
+              <div className="ama-codex-tabs" role="tablist" aria-label={tr("codex.detailTabs", "档案分页")}>
+                {([
+                  ["overview", tr("codex.tabOverview", "概览")],
+                  ["skins", tr("codex.tabSkins", "皮肤")],
+                  ["story", tr("codex.tabStory", "故事")],
+                ] as Array<["overview" | "skins" | "story", string]>).map(([id, label]) => (
+                  <button
+                    type="button"
+                    key={id}
+                    role="tab"
+                    aria-selected={codexTab === id}
+                    className={`ama-codex-tab${codexTab === id ? " is-active" : ""}`}
+                    onClick={() => setCodexTab(id)}
+                  >{label}</button>
+                ))}
               </div>
+              {codexTab === "overview" ? (
+                <>
+                  <dl className="ama-codex-facts">
+                    <div><dt>{tr("codex.class", "职业")}</dt><dd>{codexCurrent.class}</dd></div>
+                    <div><dt>{tr("codex.rarity", "星级")}</dt><dd>{codexCurrent.rarity}★</dd></div>
+                    <div><dt>{tr("codex.faction", "阵营")}</dt><dd>{codexCurrent.faction || "—"}</dd></div>
+                    <div><dt>{tr("codex.race", "种族")}</dt><dd>{codexCurrent.race || "—"}</dd></div>
+                  </dl>
+                  <p className="ama-codex-role">{codexCurrent.role}</p>
+                  <div className="ama-codex-tags">
+                    {(codexCurrent.tags || []).map((tag) => <span key={tag}>{tag}</span>)}
+                  </div>
+                </>
+              ) : null}
+              {codexTab === "skins" ? (
+                <div className="ama-codex-skins">
+                  {codexDetailLoading ? <p className="ama-studio-note">{tr("codex.loadingDetail", "读取中…")}</p> : null}
+                  {(codexDetail.skins || []).length > 0 ? (
+                    (codexDetail.skins || []).map((skin) => (
+                      <article className="ama-skin-card" key={skin.name}>
+                        <div className="ama-skin-art" aria-hidden="true">
+                          <span>{codexCurrent.initial || codexCurrent.name_cn.slice(0, 1)}</span>
+                          <small>{codexCurrent.class}</small>
+                        </div>
+                        <div className="ama-skin-body">
+                          <strong>{skin.name}</strong>
+                          <small>{[skin.series, skin.release, skin.obtain].filter(Boolean).join(" · ")}</small>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <p className="ama-codex-role">{tr("codex.noSkins", "本地暂未收录这位干员的皮肤。")}</p>
+                  )}
+                  <p className="ama-codex-skin-note">{codexDetail.skin_note || tr("codex.skinNote", "本地只收录少量示例皮肤，完整列表见 PRTS。")}</p>
+                  <FileDownload
+                    href={`https://prts.wiki/w/${encodeURIComponent(codexCurrent.name_cn)}`}
+                    label={tr("codex.skinLink", "在 PRTS 查看皮肤与立绘")}
+                    className="ama-web-open"
+                  />
+                </div>
+              ) : null}
+              {codexTab === "story" ? (
+                <div className="ama-codex-story">
+                  {((codexDetail.story || {}).lines || []).map((line) => <p key={line}>{line}</p>)}
+                  <p className="ama-codex-skin-note">{((codexDetail.story || {}).note) || tr("codex.storyNote", "这里只做入门速览，不转载剧情原文。")}</p>
+                  {(codexDetail.story || {}).link ? (
+                    <FileDownload
+                      href={String((codexDetail.story || {}).link)}
+                      label={String((codexDetail.story || {}).link_label || tr("codex.storyLink", "查看完整剧情"))}
+                      className="ama-web-open"
+                    />
+                  ) : null}
+                </div>
+              ) : null}
             </>
           ) : (
             <div className="ama-web-state">
@@ -4232,6 +4360,34 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           <p className="ama-codex-disclaimer">{codexSummary.disclaimer || tr("codex.disclaimer", "本地整理，不含官方立绘与剧情文本，以游戏内资料为准。")}</p>
         </aside>
       </div>
+
+      <section className="ama-panel ama-codex-tools">
+        <div className="ama-panel-head">
+          <div>
+            <div className="ama-kicker">HELPER TOOLS</div>
+            <h2>{tr("codex.toolsTitle", "明日方舟辅助工具与下载渠道")}</h2>
+            <p>{tr("codex.toolsHint", "全部为外部链接，点击在浏览器打开；插件不下载、不内置这些软件。")}</p>
+          </div>
+          <span className="ama-badge is-muted">{codexTools.length}</span>
+        </div>
+        <div className="ama-tool-grid">
+          {codexTools.map((tool) => (
+            <article className="ama-tool-card" key={tool.id}>
+              <div className="ama-tool-top">
+                <strong>{tool.name}</strong>
+                <span className={`ama-tool-kind is-${tool.kind}`}>
+                  {tool.download ? tr("codex.toolDownload", "含下载") : tr("codex.toolWeb", "网页")}
+                </span>
+              </div>
+              <p>{tool.note}</p>
+              <FileDownload href={tool.url} label={tr("codex.toolOpen", "打开")} className="ama-web-open" />
+            </article>
+          ))}
+        </div>
+        <p className="ama-codex-disclaimer">
+          {tr("codex.toolsNote", "第三方站点与官方客户端以各自页面为准；下载请在官网或官方社区进行，注意辨别仿冒站点。")}
+        </p>
+      </section>
     </>
   )
 
