@@ -788,6 +788,62 @@ function webDomain(result: WebResult): string {
   }
 }
 
+function normalizeHex(value: string): string {
+  const text = String(value || "").trim().toLowerCase()
+  const withHash = text.startsWith("#") ? text : `#${text}`
+  return /^#[0-9a-f]{6}$/.test(withHash) ? withHash : ""
+}
+
+function hexLuminance(color: string): number {
+  const hex = normalizeHex(color)
+  if (!hex) return 0.5
+  const channels = [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16) / 255)
+  const linear = channels.map((value) => (value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4))
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+}
+
+function ColorHexField(props: { value: string; label: string; onCommit: (value: string) => void }) {
+  const [draft, setDraft] = useState(props.value)
+  const [bad, setBad] = useState(false)
+  useEffect(() => {
+    setDraft(props.value)
+    setBad(false)
+  }, [props.value])
+  const commit = () => {
+    const next = normalizeHex(draft)
+    if (!next) {
+      setBad(true)
+      return
+    }
+    setBad(false)
+    setDraft(next)
+    props.onCommit(next)
+  }
+  return (
+    <input
+      className={`ama-hex-input${bad ? " is-bad" : ""}`}
+      value={draft}
+      maxLength={7}
+      spellCheck={false}
+      autoComplete="off"
+      aria-label={props.label}
+      aria-invalid={bad || undefined}
+      onInput={(event: any) => setDraft(String(event.target.value))}
+      onBlur={commit}
+      onKeyDown={(event: any) => {
+        if (event.key === "Enter") {
+          event.preventDefault()
+          commit()
+        }
+        if (event.key === "Escape") {
+          setDraft(props.value)
+          setBad(false)
+        }
+      }}
+    />
+  )
+}
+
 const STYLES = `
 .ama-root {
   --ink: #22394c;
@@ -1625,7 +1681,7 @@ const STYLES = `
 .ama-studio-group:first-of-type { border-top: 0; padding-top: 0; }
 .ama-studio-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; color: var(--ink-soft); font-size: 9px; font-weight: 850; }
 .ama-studio-label small { color: var(--muted); font-size: 8px; font-weight: 600; }
-.ama-studio-presets { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 6px; }
+.ama-studio-presets { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 .ama-preset { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); color: var(--ink-soft); font: inherit; font-size: 8px; font-weight: 750; cursor: pointer; text-align: left; }
 .ama-preset:hover { border-color: var(--line-strong); }
 .ama-preset.is-active { border-color: var(--sky); box-shadow: 0 0 0 2px color-mix(in srgb, var(--sky) 14%, transparent); }
@@ -1652,6 +1708,26 @@ const STYLES = `
 .ama-gradient-row code { color: var(--ink-soft); font-size: 8px; }
 .ama-gradient-remove { display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: var(--card); color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; }
 .ama-gradient-remove:disabled { opacity: .3; cursor: not-allowed; }
+.ama-hex-input {
+  width: 72px;
+  min-height: 22px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--ink-soft);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 8px;
+  letter-spacing: .02em;
+}
+.ama-hex-input:focus { outline: none; border-color: var(--sky); box-shadow: 0 0 0 2px color-mix(in srgb, var(--sky) 26%, transparent); }
+.ama-hex-input.is-bad { border-color: var(--error); color: var(--error); box-shadow: 0 0 0 2px color-mix(in srgb, var(--error) 20%, transparent); }
+.ama-color-row { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 7px; }
+.ama-recent-row { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.ama-recent-row > span { color: var(--muted); font-size: 7.5px; }
+.ama-recent-dot { width: 15px; height: 15px; padding: 0; border: 1px solid var(--line-strong); border-radius: 5px; cursor: pointer; }
+.ama-recent-dot.is-active { box-shadow: 0 0 0 2px color-mix(in srgb, var(--sky) 45%, transparent); }
+.ama-gradient-tools { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
 .ama-studio-sound-row { display: flex; align-items: center; gap: 7px; margin-top: 7px; }
 .ama-studio-sound-row > span { flex: 0 0 auto; color: var(--muted); font-size: 8px; }
 .ama-studio-sound-row .ama-studio-range { flex: 1; min-width: 70px; }
@@ -1747,6 +1823,8 @@ const STYLES = `
 .ama-token-peak-tag.is-offpeak { color: #28795c; background: #dff6ec; }
 @media (max-width: 1000px) {
   .ama-token-peak-body { grid-template-columns: 1fr; }
+  .ama-studio-presets { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ama-material-preview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .ama-token-chart-panel { margin-top: 10px; }
 .ama-token-chart-tools { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
@@ -2568,7 +2646,7 @@ const STYLES = `
 }
 
 /* material preview swatches in the studio */
-.ama-material-preview { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.ama-material-preview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .ama-material-option.is-metal {
   background:
     repeating-linear-gradient(90deg, rgb(255 255 255 / 0.08) 0 1px, transparent 1px 3px),
@@ -2607,7 +2685,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.5.3 Beta"
+  const version = shell.version || "0.5.4 Beta"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
@@ -2656,6 +2734,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   }, [view, tokenAuto, tokenLoading])
   const [uiDirty, setUiDirty] = useState(false)
   const [uiMessage, setUiMessage] = useState("")
+  const [recentColors, setRecentColors] = props.useLocalState<string[]>("ama.studio.recent", [])
   const [importText, setImportText] = useState("")
   const [pulse, setPulse] = useState<{ status: PulseStatus; message: string }>({
     status: "idle",
@@ -2771,6 +2850,41 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setUiProfile(normalizeUiProfile({ ...uiProfile, ...patch }))
     setUiDirty(true)
     setUiMessage("")
+  }
+
+  function rememberColor(color: string) {
+    const next = normalizeHex(color)
+    if (!next) return
+    setRecentColors((current) => [next, ...(Array.isArray(current) ? current : []).filter((item) => item !== next)].slice(0, 8))
+  }
+
+  function setAccent(color: string) {
+    patchUiProfile({ accent: color })
+    rememberColor(color)
+  }
+
+  function reverseGradient() {
+    setUiProfile(normalizeUiProfile({
+      ...uiProfile,
+      window_bg: "gradient",
+      gradient_colors: [...uiProfile.gradient_colors].reverse(),
+    }))
+    setUiDirty(true)
+  }
+
+  function shuffleGradient() {
+    const count = Math.max(3, Math.min(6, uiProfile.gradient_colors.length))
+    const baseHue = Math.round(Math.random() * 360)
+    const colors = Array.from({ length: count }, (_, index) =>
+      hslToHex((baseHue + index * Math.round(360 / count)) % 360, 64, 58 + (index % 2) * 8))
+    setUiProfile(normalizeUiProfile({ ...uiProfile, window_bg: "gradient", gradient_colors: colors }))
+    colors.forEach(rememberColor)
+    setUiDirty(true)
+  }
+
+  function commitGradientColor(index: number, color: string) {
+    setGradientColor(index, color)
+    rememberColor(color)
   }
 
   function applyPreset(preset: typeof UI_PRESETS[number]) {
@@ -4757,7 +4871,10 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           </div>
 
           <div className="ama-studio-group">
-            <div className="ama-studio-label">{tr("studio.accent", "Accent")}<small>{uiProfile.accent}</small></div>
+            <div className="ama-studio-label">
+              {tr("studio.accent", "Accent")}
+              <small>{hexLuminance(uiProfile.accent) > 0.82 ? tr("studio.accentLight", "偏亮，浅色背景上对比度低") : uiProfile.accent}</small>
+            </div>
             <div className="ama-swatches">
               {UI_ACCENTS.map((color) => (
                 <button
@@ -4765,7 +4882,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                   key={color}
                   className={`ama-swatch${uiProfile.accent === color ? " is-active" : ""}`}
                   aria-label={`${tr("studio.accent", "Accent")} ${color}`}
-                  onClick={() => patchUiProfile({ accent: color })}
+                  onClick={() => setAccent(color)}
                 ><span style={{ background: color }} /></button>
               ))}
               <input
@@ -4773,9 +4890,30 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                 type="color"
                 value={uiProfile.accent}
                 aria-label={tr("studio.accent", "Accent")}
-                onInput={(event: any) => patchUiProfile({ accent: event.target.value })}
+                onInput={(event: any) => patchUiProfile({ accent: String(event.target.value) })}
+                onBlur={(event: any) => rememberColor(String(event.target.value))}
               />
             </div>
+            <div className="ama-color-row">
+              <ColorHexField value={uiProfile.accent} label={tr("studio.accentHex", "Accent hex")} onCommit={setAccent} />
+              <span className="ama-studio-note">{tr("studio.hexHint", "输入 #RRGGBB 后回车")}</span>
+            </div>
+            {Array.isArray(recentColors) && recentColors.length > 0 ? (
+              <div className="ama-recent-row">
+                <span>{tr("studio.recent", "最近使用")}</span>
+                {recentColors.map((color) => (
+                  <button
+                    type="button"
+                    key={color}
+                    className={`ama-recent-dot${uiProfile.accent === color ? " is-active" : ""}`}
+                    style={{ background: color }}
+                    aria-label={`${tr("studio.recent", "最近使用")} ${color}`}
+                    title={color}
+                    onClick={() => setAccent(color)}
+                  />
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="ama-studio-group">
@@ -4882,7 +5020,11 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                   aria-label={tr("studio.windowColor", "Window colour")}
                   onInput={(event: any) => patchUiProfile({ window_color: event.target.value })}
                 />
-                <span className="ama-studio-note">{uiProfile.window_color}</span>
+                <ColorHexField
+                  value={uiProfile.window_color}
+                  label={tr("studio.windowColorHex", "Window colour hex")}
+                  onCommit={(color) => { patchUiProfile({ window_color: color }); rememberColor(color) }}
+                />
               </div>
             ) : null}
             {uiProfile.window_bg === "gradient" ? (
@@ -4906,7 +5048,11 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                         aria-label={`${tr("studio.gradientColor", "Gradient colour")} ${index + 1}`}
                         onInput={(event: any) => setGradientColor(index, event.target.value)}
                       />
-                      <code>{color}</code>
+                      <ColorHexField
+                        value={color}
+                        label={`${tr("studio.gradientColor", "Gradient colour")} ${index + 1}`}
+                        onCommit={(next) => commitGradientColor(index, next)}
+                      />
                       <button
                         type="button"
                         className="ama-gradient-remove"
@@ -4917,15 +5063,17 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                     </div>
                   ))}
                 </div>
-                <div className="ama-studio-image-row">
+                <div className="ama-gradient-tools">
                   <button
                     type="button"
                     className="ama-web-chip"
                     disabled={uiProfile.gradient_colors.length >= 30}
                     onClick={addGradientColor}
                   >+ {tr("studio.addColor", "Add colour")}</button>
-                  <span className="ama-studio-note">{tr("studio.gradientHint", "2–30 colours, evenly spaced.")}</span>
+                  <button type="button" className="ama-web-chip" onClick={reverseGradient}>{tr("studio.gradientReverse", "Reverse")}</button>
+                  <button type="button" className="ama-web-chip" onClick={shuffleGradient}>{tr("studio.gradientShuffle", "Shuffle palette")}</button>
                 </div>
+                <p className="ama-studio-note">{tr("studio.gradientHint", "2–30 colours, evenly spaced.")}</p>
                 <div className="ama-studio-label">
                   {tr("studio.gradientAngle", "Gradient angle")}
                   <small>{uiProfile.gradient_angle}°</small>

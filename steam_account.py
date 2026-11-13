@@ -37,7 +37,7 @@ MAX_HTTP_BYTES = 512 * 1024
 HTTP_TIMEOUT_SECONDS = 20.0
 LOGIN_TTL_SECONDS = 600.0
 _ACCOUNT_FILE = "steam_account.json"
-_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AmaMonsterOS/0.5.3"
+_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AmaMonsterOS/0.5.4"
 
 SPEEDUP_HOSTS = (
     "steamcommunity.com",
