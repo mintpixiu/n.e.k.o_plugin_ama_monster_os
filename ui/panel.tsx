@@ -1,7 +1,7 @@
 import { FileDownload, useEffect, useState } from "@neko/plugin-ui"
 import type { HostedAction, PluginSurfaceProps } from "@neko/plugin-ui"
 
-type ViewId = "home" | "web" | "steam" | "tokens" | "studio" | "core" | "bridge" | "about"
+type ViewId = "home" | "web" | "steam" | "codex" | "tokens" | "studio" | "core" | "bridge" | "about"
 type ChromeMode = "normal" | "max" | "min" | "asleep"
 type ThemeMode = "light" | "dark"
 type UiWallpaper = "grid" | "dots" | "aurora" | "stars" | "plain"
@@ -568,6 +568,31 @@ type SteamInfo = {
   login?: string
 }
 
+type CodexOperator = {
+  id: string
+  name_cn: string
+  name_en: string
+  class: string
+  rarity: number
+  faction: string
+  race?: string
+  tags?: string[]
+  role?: string
+  class_color?: string
+  initial?: string
+}
+
+type CodexSummary = {
+  version?: string
+  updated?: string
+  total?: number
+  classes?: Record<string, number>
+  rarities?: Record<string, number>
+  factions?: string[]
+  disclaimer?: string
+  class_colors?: Record<string, string>
+}
+
 type SteamAccount = {
   steam_id?: string
   nickname?: string
@@ -710,6 +735,7 @@ type ShellState = {
   web?: WebInfo
   steam?: SteamInfo
   token_radar?: TokenRadar
+  codex?: CodexSummary
   ui_profile?: UiProfile
   events?: BootEvent[]
   preview?: boolean
@@ -722,6 +748,7 @@ const VIEWS: Array<{ id: ViewId; key: string; glyph: string }> = [
   { id: "home", key: "nav.home", glyph: "⌂" },
   { id: "web", key: "nav.web", glyph: "◎" },
   { id: "steam", key: "nav.steam", glyph: "◈" },
+  { id: "codex", key: "nav.codex", glyph: "▤" },
   { id: "tokens", key: "nav.tokens", glyph: "₮" },
   { id: "studio", key: "nav.studio", glyph: "✎" },
   { id: "core", key: "nav.core", glyph: "✦" },
@@ -1826,6 +1853,44 @@ const STYLES = `
   .ama-studio-presets { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .ama-material-preview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+.ama-codex-toolbar { display: grid; gap: 9px; margin-bottom: 10px; }
+.ama-codex-toolbar .ama-web-input-wrap { max-width: 460px; }
+.ama-codex-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.ama-codex-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--card); color: var(--muted); font: inherit; font-size: 8px; font-weight: 750; cursor: pointer; }
+.ama-codex-chip small { color: var(--muted); font-size: 7px; font-weight: 500; }
+.ama-codex-chip.is-active { border-color: var(--sky); background: var(--sky-soft); color: var(--sky-deep); }
+.ama-codex-count { margin-left: auto; color: var(--muted); font-size: 7.5px; }
+.ama-codex-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(230px, 0.8fr); gap: 10px; align-items: start; }
+.ama-codex-list { min-width: 0; max-height: 560px; overflow: auto; }
+.ama-codex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 7px; }
+.ama-codex-card { display: grid; grid-template-columns: 38px minmax(0, 1fr); align-items: center; gap: 8px; padding: 7px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel-2); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: border-color .16s ease, transform .16s ease, background .16s ease; }
+.ama-codex-card:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.ama-codex-card.is-active { border-color: color-mix(in srgb, var(--sky) 55%, var(--line)); background: color-mix(in srgb, var(--sky-soft) 65%, var(--card)); }
+.ama-codex-avatar { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; color: #fff; font-size: 16px; font-weight: 900; text-shadow: 0 1px 2px rgb(0 0 0 / 0.28); }
+.ama-codex-avatar.is-large { width: 56px; height: 56px; border-radius: 16px; font-size: 24px; }
+.ama-codex-body { min-width: 0; }
+.ama-codex-body strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; font-weight: 850; }
+.ama-codex-body small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 7.5px; }
+.ama-codex-meta { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.ama-codex-meta em { padding: 0 4px; border-radius: 4px; background: color-mix(in srgb, var(--sky) 14%, transparent); color: var(--sky-deep); font-size: 7px; font-style: normal; font-weight: 800; }
+.ama-codex-meta i { color: #d9a441; font-size: 7.5px; font-style: normal; letter-spacing: .5px; }
+.ama-codex-detail { min-width: 0; position: sticky; top: 0; }
+.ama-codex-detail-head { display: flex; align-items: center; gap: 10px; }
+.ama-codex-detail-head h2 { margin: 0; font-size: 16px; letter-spacing: -.02em; }
+.ama-codex-detail-head p { margin: 1px 0 0; color: var(--muted); font-size: 8px; }
+.ama-codex-stars { color: #d9a441; font-size: 9px; letter-spacing: 1px; }
+.ama-codex-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 12px 0 0; }
+.ama-codex-facts > div { padding: 7px 8px; border: 1px dashed var(--line-strong); border-radius: 8px; background: var(--panel-2); }
+.ama-codex-facts dt { color: var(--muted); font-size: 7px; }
+.ama-codex-facts dd { margin: 1px 0 0; color: var(--ink-soft); font-size: 9.5px; font-weight: 750; }
+.ama-codex-role { margin: 10px 0 0; color: var(--ink-soft); font-size: 8.5px; line-height: 1.6; }
+.ama-codex-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.ama-codex-tags span { padding: 2px 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--muted); font-size: 7px; }
+.ama-codex-disclaimer { margin: 12px 0 0; padding-top: 8px; border-top: 1px dashed var(--line); color: var(--muted); font-size: 7px; line-height: 1.55; }
+@media (max-width: 1000px) {
+  .ama-codex-layout { grid-template-columns: 1fr; }
+  .ama-codex-detail { position: static; }
+}
 .ama-token-chart-panel { margin-top: 10px; }
 .ama-token-chart-tools { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 .ama-token-chart { margin-top: 6px; }
@@ -2685,7 +2750,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.5.4 Beta"
+  const version = shell.version || "0.6.0 Beta"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
@@ -2693,6 +2758,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const steamSearchAction = actionById(actions || [], "ama_steam_search")
   const steamDealsAction = actionById(actions || [], "ama_steam_deals")
   const steamFreeAction = actionById(actions || [], "ama_steam_free")
+  const codexAction = actionById(actions || [], "ama_arknights_codex")
   const steamLoginAction = actionById(actions || [], "ama_steam_login")
   const steamAccountAction = actionById(actions || [], "ama_steam_account")
   const steamLogoutAction = actionById(actions || [], "ama_steam_logout")
@@ -2720,6 +2786,16 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const [tokenMessage, setTokenMessage] = useState(String(initialTokenRadar.message || ""))
   const [tokenHistoryMeta, setTokenHistoryMeta] = useState(initialTokenRadar.history_meta || {})
   const [tokenPulse, setTokenPulse] = useState(0)
+  const initialCodex = safeState.codex || {}
+  const [codexQuery, setCodexQuery] = useState("")
+  const [codexClass, setCodexClass] = useState("全部")
+  const [codexRarity, setCodexRarity] = useState(0)
+  const [codexOperators, setCodexOperators] = useState<CodexOperator[]>([])
+  const [codexSummary, setCodexSummary] = useState<CodexSummary>(initialCodex)
+  const [codexSelected, setCodexSelected] = useState("")
+  const [codexLoading, setCodexLoading] = useState(false)
+  const [codexLoaded, setCodexLoaded] = useState(false)
+  const [codexMessage, setCodexMessage] = useState("")
   const [uiSaving, setUiSaving] = useState(false)
 
   useEffect(() => {
@@ -2799,7 +2875,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     return value && value !== key ? value : fallback
   }
 
-  const validViews: ViewId[] = ["home", "web", "steam", "tokens", "studio", "core", "bridge", "about"]
+  const validViews: ViewId[] = ["home", "web", "steam", "codex", "tokens", "studio", "core", "bridge", "about"]
   const activeView: ViewId = validViews.indexOf(view) >= 0 ? view : "home"
   const validChrome: ChromeMode[] = ["normal", "max", "min", "asleep"]
   const activeChrome: ChromeMode = validChrome.indexOf(chrome) >= 0 ? chrome : "normal"
@@ -3178,6 +3254,35 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       setTokenLoading(false)
     }
   }
+
+  async function loadCodex() {
+    if (!codexAction || codexLoading) return
+    setCodexLoading(true)
+    setCodexMessage("")
+    try {
+      const result = unwrapResult(
+        await props.api.call(codexAction.id || "ama_arknights_codex", { query: "", classes: [], rarities: [], max_results: 200 }, { timeoutMs: 15000 }),
+      )
+      if (result.ok === false) {
+        setCodexMessage(tr("codex.error", "图鉴读取失败，可以重试。"))
+        return
+      }
+      const results = Array.isArray(result.results) ? result.results as CodexOperator[] : []
+      setCodexOperators(results)
+      if (result.summary && typeof result.summary === "object") setCodexSummary(result.summary as CodexSummary)
+      setCodexLoaded(true)
+      setCodexMessage(results.length === 0 ? tr("codex.empty", "图鉴里还没有数据。") : "")
+    } catch (_error) {
+      setCodexMessage(tr("codex.error", "图鉴读取失败，可以重试。"))
+    } finally {
+      setCodexLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (view !== "codex" || codexLoaded || codexLoading) return
+    void loadCodex()
+  }, [view])
 
   async function runPulse() {
     if (!pulseAction || pulse.status === "running") {
@@ -3973,6 +4078,160 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           <p className="ama-web-note">{tr("web.sourceNote", "Results are third-party content. Opening one leaves N.E.K.O.")}</p>
         </div>
       )}
+    </>
+  )
+
+  const codexClassNames = Array.isArray(Object.keys(codexSummary.classes || {})) && Object.keys(codexSummary.classes || {}).length > 0
+    ? Object.keys(codexSummary.classes || {})
+    : ["先锋", "近卫", "重装", "狙击", "术师", "医疗", "辅助", "特种"]
+  const codexFiltered = codexOperators.filter((operator) => {
+    if (codexClass !== "全部" && operator.class !== codexClass) return false
+    if (codexRarity > 0 && Number(operator.rarity) !== codexRarity) return false
+    const needle = codexQuery.trim().toLowerCase()
+    if (!needle) return true
+    const haystack = [operator.name_cn, operator.name_en, operator.class, operator.faction, operator.race, ...(operator.tags || [])]
+      .filter(Boolean).join(" ").toLowerCase()
+    return haystack.indexOf(needle) >= 0
+  })
+  const codexCurrent = codexFiltered.find((operator) => operator.id === codexSelected) || codexFiltered[0] || null
+
+  const codexView = (
+    <>
+      <div className="ama-view-head">
+        <div>
+          <div className="ama-kicker"><span className="ama-kicker-line" />OPERATOR CODEX</div>
+          <h1 className="ama-view-title">{tr("codex.title", "干员图鉴")}</h1>
+          <p className="ama-view-sub">
+            {tr("codex.subtitle", "离线整理的干员档案：职业、星级、阵营与一句话定位。")}
+            {codexSummary.updated ? ` · ${tr("codex.updated", "快照 {date}").replace("{date}", String(codexSummary.updated))}` : ""}
+          </p>
+        </div>
+        <span className="ama-badge is-lilac">{codexOperators.length || codexSummary.total || 0}</span>
+      </div>
+
+      <section className="ama-panel ama-codex-toolbar">
+        <div className="ama-web-input-wrap">
+          <span className="ama-web-glyph" aria-hidden="true">⌕</span>
+          <input
+            className="ama-web-input"
+            type="search"
+            value={codexQuery}
+            maxLength={40}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder={tr("codex.search", "搜索中文名、英文名、阵营或标签…")}
+            aria-label={tr("codex.search", "搜索中文名、英文名、阵营或标签…")}
+            onInput={(event: any) => setCodexQuery(String(event.target.value))}
+          />
+        </div>
+        <div className="ama-codex-filters">
+          {["全部", ...codexClassNames].map((name) => (
+            <button
+              type="button"
+              key={name}
+              className={`ama-codex-chip${codexClass === name ? " is-active" : ""}`}
+              onClick={() => setCodexClass(name)}
+            >
+              {name === "全部" ? tr("codex.all", "全部") : name}
+              <small>{name === "全部" ? codexOperators.length : (codexSummary.classes?.[name] || 0)}</small>
+            </button>
+          ))}
+        </div>
+        <div className="ama-codex-filters">
+          {[0, 6, 5, 4, 3].map((rarity) => (
+            <button
+              type="button"
+              key={`rarity-${rarity}`}
+              className={`ama-codex-chip${codexRarity === rarity ? " is-active" : ""}`}
+              onClick={() => setCodexRarity(rarity)}
+            >
+              {rarity === 0 ? tr("codex.anyRarity", "全部星级") : `${rarity}★`}
+            </button>
+          ))}
+          <span className="ama-codex-count">
+            {tr("codex.matched", "匹配 {count} 位").replace("{count}", String(codexFiltered.length))}
+          </span>
+        </div>
+      </section>
+
+      {codexMessage ? <div className="ama-note">{codexMessage}</div> : null}
+
+      <div className="ama-codex-layout">
+        <section className="ama-panel ama-codex-list">
+          {codexLoading && codexOperators.length === 0 ? (
+            <div className="ama-web-state" role="status">
+              <div className="ama-web-spinner" aria-hidden="true" />
+              <h3>{tr("codex.loading", "正在读取图鉴…")}</h3>
+            </div>
+          ) : codexFiltered.length === 0 ? (
+            <div className="ama-web-state">
+              <div className="ama-web-state-glyph" aria-hidden="true">▤</div>
+              <h3>{tr("codex.empty", "没有匹配的干员")}</h3>
+              <p>{tr("codex.emptyHint", "换个关键词，或把职业 / 星级切回全部。")}</p>
+            </div>
+          ) : (
+            <div className="ama-codex-grid">
+              {codexFiltered.map((operator) => (
+                <button
+                  type="button"
+                  key={operator.id}
+                  className={`ama-codex-card${codexCurrent?.id === operator.id ? " is-active" : ""}`}
+                  onClick={() => setCodexSelected(operator.id)}
+                >
+                  <span
+                    className="ama-codex-avatar"
+                    style={{ background: `linear-gradient(150deg, ${operator.class_color || "#4a90d9"}, color-mix(in srgb, ${operator.class_color || "#4a90d9"} 62%, #1b2a3a))` }}
+                    aria-hidden="true"
+                  >{operator.initial || operator.name_cn.slice(0, 1)}</span>
+                  <span className="ama-codex-body">
+                    <strong>{operator.name_cn}</strong>
+                    <small>{operator.name_en}</small>
+                    <span className="ama-codex-meta">
+                      <em>{operator.class}</em>
+                      <i>{"★".repeat(operator.rarity)}</i>
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <aside className="ama-panel ama-codex-detail">
+          {codexCurrent ? (
+            <>
+              <div className="ama-codex-detail-head">
+                <span
+                  className="ama-codex-avatar is-large"
+                  style={{ background: `linear-gradient(150deg, ${codexCurrent.class_color || "#4a90d9"}, color-mix(in srgb, ${codexCurrent.class_color || "#4a90d9"} 60%, #1b2a3a))` }}
+                  aria-hidden="true"
+                >{codexCurrent.initial || codexCurrent.name_cn.slice(0, 1)}</span>
+                <div>
+                  <h2>{codexCurrent.name_cn}</h2>
+                  <p>{codexCurrent.name_en}</p>
+                  <span className="ama-codex-stars">{"★".repeat(codexCurrent.rarity)}</span>
+                </div>
+              </div>
+              <dl className="ama-codex-facts">
+                <div><dt>{tr("codex.class", "职业")}</dt><dd>{codexCurrent.class}</dd></div>
+                <div><dt>{tr("codex.rarity", "星级")}</dt><dd>{codexCurrent.rarity}★</dd></div>
+                <div><dt>{tr("codex.faction", "阵营")}</dt><dd>{codexCurrent.faction || "—"}</dd></div>
+                <div><dt>{tr("codex.race", "种族")}</dt><dd>{codexCurrent.race || "—"}</dd></div>
+              </dl>
+              <p className="ama-codex-role">{codexCurrent.role}</p>
+              <div className="ama-codex-tags">
+                {(codexCurrent.tags || []).map((tag) => <span key={tag}>{tag}</span>)}
+              </div>
+            </>
+          ) : (
+            <div className="ama-web-state">
+              <div className="ama-web-state-glyph" aria-hidden="true">▤</div>
+              <h3>{tr("codex.pick", "选一位干员")}</h3>
+            </div>
+          )}
+          <p className="ama-codex-disclaimer">{codexSummary.disclaimer || tr("codex.disclaimer", "本地整理，不含官方立绘与剧情文本，以游戏内资料为准。")}</p>
+        </aside>
+      </div>
     </>
   )
 
@@ -5281,7 +5540,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     </>
   )
 
-  const content = activeView === "web" ? webView : activeView === "steam" ? steamView : activeView === "tokens" ? tokenView : activeView === "studio" ? studioView : activeView === "core" ? coreView : activeView === "bridge" ? bridgeView : activeView === "about" ? aboutView : homeView
+  const content = activeView === "web" ? webView : activeView === "steam" ? steamView : activeView === "codex" ? codexView : activeView === "tokens" ? tokenView : activeView === "studio" ? studioView : activeView === "core" ? coreView : activeView === "bridge" ? bridgeView : activeView === "about" ? aboutView : homeView
 
   const uiStyle = {
     "--sky": uiProfile.accent,

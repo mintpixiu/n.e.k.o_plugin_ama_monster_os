@@ -302,6 +302,15 @@ plugin data folder, and never requires a provider API key. The UI polls it every
 accumulate local observations; the UI labels that distinction. The capability is
 advertised as `tokens.prices`.
 
+### Arknights codex
+
+`ama_arknights_codex` returns a filtered offline operator list:
+
+- inputs: `query`, `classes[]`, `rarities[]`, `max_results`
+- output: `results[]`, `count`, `summary` (counts by class and rarity), `disclaimer`
+- data lives in `arknights_codex.py`; no network access, no official artwork
+- the snapshot exposes a compact `codex` summary built at startup
+
 ### Steam account (OpenID)
 
 `ama_steam_login`, `ama_steam_account`, and `ama_steam_logout` implement Steam

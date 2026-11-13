@@ -6,7 +6,7 @@
 - name: `N.E.K.O Ama Monster OS`
 - entry: `plugin.plugins.ama_monster_os:AmaMonsterOsPlugin`
 - main class: `AmaMonsterOsPlugin`
-- version: `0.5.4-beta` (displayed as **0.5.4 Beta**)
+- version: `0.6.0-beta` (displayed as **0.6.0 Beta**)
 
 ## Purpose
 
@@ -30,6 +30,7 @@ from the first version.
 - A curated, versioned free-to-play shelf (18 titles in 3 rotating groups) with fixed Steam store links.
 - Rotating sale-pick batches: a 60-deal candidate pool is filtered to ~50 titles and split into 10 groups, so refresh returns different games.
 - A **UI Studio** with presets, accent colour, light/dark theme, **window background**, desktop backdrop pattern, radius, density, window title/glyph, a **2–30 colour gradient builder**, **Steam-style selection sounds with custom sound import**, live preview, persistent profile, and JSON import/export.
+- An **offline Arknights operator codex** (81 entries) with class, rarity, faction, race and tags. Data is bundled text only: no official artwork, voice lines, story text or wiki copy, and no runtime fetching.
 - **Five materials** — glass, metal, cream, ink, solid — controlled by `material`, `glass_blur` and `glass_alpha` in the UI profile. All are pure CSS (no remote assets, no injected styles).
 - A **Token radar** for 10 providers and 20 models, using the public models.dev list-price catalog; it polls every 60 seconds, persists daily OHLC candles, and explicitly distinguishes DeepSeek peak/off-peak pricing from flat providers.
 - A versioned Steam sale calendar snapshot sourced from Steamworks, with current/next event, next seasonal sale, local countdowns, and an official schedule link.
@@ -42,7 +43,7 @@ from the first version.
 ## Out of Scope
 
 - A general browser or arbitrary-URL reader; only search is implemented.
-- Steam library, achievements, wallet, friends, or inventory in 0.5.4 Beta. Sign-in is limited to the public OpenID profile.
+- Steam library, achievements, wallet, friends, or inventory in 0.6.0 Beta. Sign-in is limited to the public OpenID profile.
 - Native desktop windows, process control, filesystem browsing, voice pipeline, real chat/memory/tool/style modules.
 - Any claim that the preview is a complete operating system.
 - Publishing to the N.E.K.O Market. The repository owner publishes manually.
@@ -59,7 +60,7 @@ from the first version.
 - sale calendar: versioned `steam_sales.py` snapshot from Steamworks; dates shown in local time; Valve can change them
 - UI profile: `ui_profile.py` schema, persisted to `data/ui_profile.json`, exported as `ama.ui.profile` JSON
 - UI surfaces: one `panel` (`ui/panel.tsx`), one Markdown guide, one Markdown docs page
-- state/config: read-only snapshot plus in-memory last search and price lookup; no persistent config in 0.5.4 Beta
+- state/config: read-only snapshot plus in-memory last search and price lookup; no persistent config in 0.6.0 Beta
 - lifecycle/background work: startup/shutdown only; no timers or background tasks
 - external integrations: N.E.K.O web search plugin, Bing RSS fallback, CheapShark price API
 
@@ -105,5 +106,5 @@ plugins such as `lifekit` and `mcp_adapter`.
   update date and an official Steamworks link so users can verify changed dates.
 - Window chrome controls are presentation state inside one hosted panel; they
   do not control the N.E.K.O application window.
-- Version `0.5.4-beta` is a pre-release; the user publishes manually with their
+- Version `0.6.0-beta` is a pre-release; the user publishes manually with their
   own tag and Market confirmation.

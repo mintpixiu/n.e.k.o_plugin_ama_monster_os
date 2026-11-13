@@ -44,8 +44,8 @@ except ImportError:  # pragma: no cover - direct test import fallback
     from ui_profile import DEFAULT_UI_PROFILE, normalize_ui_profile  # type: ignore[no-redef]
 
 SHELL_NAME = "Ama Monster OS"
-SHELL_VERSION = "0.5.4-beta"
-SHELL_DISPLAY_VERSION = "0.5.4 Beta"
+SHELL_VERSION = "0.6.0-beta"
+SHELL_DISPLAY_VERSION = "0.6.0 Beta"
 SHELL_CHANNEL = "Beta"
 SHELL_CODENAME = "Ama-01"
 _MAX_QUERY_CHARS = 200
@@ -175,6 +175,7 @@ class AmaOsRuntime:
             "login": "idle",
         }
         self._ui_profile = normalize_ui_profile(DEFAULT_UI_PROFILE)
+        self._codex: dict[str, Any] = {"version": "", "updated": "", "total": 0, "classes": {}, "rarities": {}, "factions": [], "disclaimer": ""}
         self._deals_offset = 0
         self._free_shelf_offset = 0
         self._free_shelf: tuple[list[dict[str, Any]], int, int] = ([], 1, 1)
@@ -300,6 +301,11 @@ class AmaOsRuntime:
             self._token_radar = {str(key): value for key, value in radar.items()}
         return dict(self._token_radar)
 
+    def set_codex(self, summary: Mapping[str, Any] | None) -> dict[str, Any]:
+        if isinstance(summary, Mapping):
+            self._codex = {str(key): value for key, value in summary.items()}
+        return dict(self._codex)
+
     def set_steam_account(self, value: Mapping[str, Any] | None) -> dict[str, Any]:
         if isinstance(value, Mapping):
             self._steam_account = {str(key): value for key, value in value.items()}
@@ -392,6 +398,7 @@ class AmaOsRuntime:
             "events": [event.as_dict() for event in self._events[-8:]],
             "ui_profile": dict(self._ui_profile),
             "token_radar": dict(self._token_radar),
+            "codex": dict(self._codex),
             "preview": True,
         }
 

@@ -23,6 +23,7 @@ from plugin.sdk.plugin import (
     ui,
 )
 
+from .arknights_codex import codex_payload, codex_summary
 from .shell_runtime import SHELL_CHANNEL, SHELL_DISPLAY_VERSION, SHELL_NAME, AmaOsRuntime
 from .steam_account import SteamAccountService
 from .system_port import NekoHostSystemPort
@@ -113,6 +114,32 @@ STEAM_FREE_SCHEMA: dict[str, Any] = {
     "properties": {},
 }
 
+CODEX_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "query": {
+            "type": "string",
+            "description": "Operator name (Chinese or English), faction, race, or tag to search.",
+        },
+        "classes": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Optional class filter, e.g. 狙击 / 近卫.",
+        },
+        "rarities": {
+            "type": "array",
+            "items": {"type": "integer"},
+            "description": "Optional rarity filter, e.g. 6 for six-star operators.",
+        },
+        "max_results": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 120,
+        },
+    },
+}
+
 STEAM_LOGIN_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {},
@@ -179,6 +206,10 @@ class AmaMonsterOsPlugin(NekoPluginBase):
     @lifecycle(id="startup")
     async def on_startup(self, **_):
         self._load_ui_profile()
+        try:
+            self._runtime.set_codex(codex_summary())
+        except Exception as exc:
+            self.logger.warning("Could not build the codex summary: %s", exc)
         try:
             self._runtime.set_steam_account(self._steam_account().status())
         except Exception as exc:
@@ -367,6 +398,55 @@ class AmaMonsterOsPlugin(NekoPluginBase):
                 "entries.steam_free.summary",
                 default="Free shelf group {group}/{groups}.",
             ).replace("{group}", str(result["group"])).replace("{groups}", str(result["groups"])),
+        })
+
+    @ui.action(
+        id="ama_arknights_codex",
+        label=tr("actions.codex.label", default="Arknights codex"),
+        icon="search",
+        tone="default",
+        order=29,
+        refresh_context=True,
+    )
+    @plugin_entry(
+        id="ama_arknights_codex",
+        name=tr("entries.codex.name", default="Arknights codex"),
+        description=tr(
+            "entries.codex.description",
+            default=(
+                "Search the bundled offline Arknights operator codex by name, "
+                "class, rarity or faction. Contains no official artwork."
+            ),
+        ),
+        input_schema=CODEX_SCHEMA,
+        llm_result_fields=["summary"],
+        timeout=10,
+    )
+    async def ama_arknights_codex(self, query: Any = "", classes: Any = None, rarities: Any = None, max_results: Any = 120, **_):
+        class_filter = [str(item) for item in classes] if isinstance(classes, (list, tuple)) else []
+        rarity_filter: list[int] = []
+        if isinstance(rarities, (list, tuple)):
+            for item in rarities:
+                try:
+                    rarity_filter.append(int(item))
+                except (TypeError, ValueError):
+                    continue
+        try:
+            limit = int(max_results)
+        except (TypeError, ValueError):
+            limit = 120
+        payload = await asyncio.to_thread(
+            codex_payload,
+            str(query or ""),
+            class_filter,
+            rarity_filter,
+            limit,
+        )
+        self._runtime.set_codex(payload["summary"])
+        return Ok({
+            **payload,
+            "summary": self.i18n.t("entries.codex.summary", default="Codex matched {count} operator(s).")
+            .replace("{count}", str(payload["count"])),
         })
 
     @ui.action(

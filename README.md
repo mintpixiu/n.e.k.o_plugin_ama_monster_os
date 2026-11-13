@@ -1,6 +1,6 @@
 # N.E.K.O Ama Monster OS
 
-> **0.5.4 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
+> **0.6.0 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
 > web search, a Steam price radar, a token price radar, and a versioned system
 > bridge reserved for a future standalone build.
 
@@ -8,7 +8,7 @@
 
 This is the first window of **Ama Monster OS**, not a finished operating
 system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
-0.5.4 Beta contains.
+0.6.0 Beta contains.
 
 ## What is real in this version
 
@@ -29,6 +29,9 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
 - A **Token radar** for public model list prices from OpenAI, Anthropic, Google,
   xAI, Mistral, DeepSeek, Qwen, Kimi, GLM, and Volcengine: 20 models, 30-day
   candlesticks, 60-second refresh, and explicit peak/off-peak windows.
+- An **offline Arknights codex**: 81 operators with class, rarity, faction,
+  race, tags and a one-line role, searchable and filterable. No official art,
+  voice lines or story text is bundled.
 - **Five materials**: **glass** (Apple / Xiaomi style translucent panels with
   backdrop blur and rim light), **metal** (brushed steel with chamfered
   highlights), **cream** (cartoon cream with thick outlines and sticker
@@ -196,6 +199,8 @@ a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting
 
 ![Ama Monster OS appearance studio](docs/preview-studio.png)
 
+![Arknights operator codex](docs/preview-codex.png)
+
 ![AI peak hours on the token radar](docs/preview-token-peak.png)
 
 ![Token price radar](docs/preview-token.png)
@@ -222,7 +227,7 @@ a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
-- Any Market publication. The **0.5.4 Beta** GitHub Release is live; its Market
+- Any Market publication. The **0.6.0 Beta** GitHub Release is live; its Market
   Beta submission remains manual.
 
 ## Install and open the window
@@ -268,6 +273,7 @@ ama_monster_os/
 ├── plugin.toml                 manifest and Hosted UI surfaces
 ├── __init__.py                 SDK facade, context, entries, lifecycle
 ├── shell_runtime.py            host-free shell runtime
+├── arknights_codex.py          offline operator codex data
 ├── steam_catalog.py            versioned free-to-play shelf
 ├── steam_sales.py              versioned Steam sale calendar
 ├── ui_profile.py               validated UI profile + import/export
@@ -284,6 +290,7 @@ ama_monster_os/
 ├── docs/preview-picks.png       sale picks preview
 ├── docs/preview-free.png        free-to-play shelf preview
 ├── docs/preview-glass.png       glass material preview
+├── docs/preview-codex.png       operator codex preview
 ├── docs/preview-metal.png       metal material preview
 ├── docs/preview-cream.png       cream material preview
 ├── docs/preview-ink.png         ink material preview
@@ -327,14 +334,14 @@ python -m pytest tests
 ```
 
 See [PUBLISHING.md](PUBLISHING.md) for the Beta release and Market submission
-notes. The latest GitHub Release is `v0.5.4-beta`; Market notification remains manual.
+notes. The latest GitHub Release is `v0.6.0-beta`; Market notification remains manual.
 
 ## Versioning and release
 
-- Manifest version: `0.5.4-beta`
-- Display version: **0.5.4 Beta**
+- Manifest version: `0.6.0-beta`
+- Display version: **0.6.0 Beta**
 - Release channel: **Beta (pre-release)**
-- Published GitHub Release: **v0.5.4-beta**
+- Published GitHub Release: **v0.6.0-beta**
 - Market: **not submitted**; the Beta channel submission is manual
 
 ## Credits
