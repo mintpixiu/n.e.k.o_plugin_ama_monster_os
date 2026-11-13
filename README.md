@@ -1,6 +1,6 @@
 # N.E.K.O Ama Monster OS
 
-> **0.3.5 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
+> **0.3.6 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
 > web search, a Steam price radar, a token price radar, and a versioned system
 > bridge reserved for a future standalone build.
 
@@ -8,7 +8,7 @@
 
 This is the first window of **Ama Monster OS**, not a finished operating
 system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
-0.3.5 Beta contains.
+0.3.6 Beta contains.
 
 ## What is real in this version
 
@@ -29,6 +29,9 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
 - A **Token radar** for public model list prices from OpenAI, Anthropic, Google,
   xAI, Mistral, DeepSeek, Qwen, Kimi, GLM, and Volcengine: 20 models, 30-day
   candlesticks, 60-second refresh, and explicit peak/off-peak windows.
+- A **glass material** (Apple / Xiaomi style): translucent panels, backdrop blur,
+  rim light and soft depth, with adjustable blur and density; a solid mode stays
+  available for low-end machines.
 - A **UI Studio** for custom accent, light/dark theme, **window background**
   (including an imported local image), desktop backdrop, corner radius, compact
   density, window title, and glyph. It also includes a **2–30 colour gradient
@@ -179,6 +182,10 @@ validator before it is written to disk.
 **Step-by-step tutorial:** [docs/ui-studio.md](docs/ui-studio.md) — covers making
 a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting.
 
+![Glass material in daylight](docs/preview-glass.png)
+
+![Glass material in moonlight](docs/preview-glass-dark.png)
+
 ![Ama Monster OS appearance studio](docs/preview-studio.png)
 
 ![Token price radar](docs/preview-token.png)
@@ -205,7 +212,7 @@ a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
-- Any Market publication. The **0.3.5 Beta** GitHub Release is live; its Market
+- Any Market publication. The **0.3.6 Beta** GitHub Release is live; its Market
   Beta submission remains manual.
 
 ## Install and open the window
@@ -266,6 +273,8 @@ ama_monster_os/
 ├── docs/preview-sale.png        Steam sale radar preview
 ├── docs/preview-picks.png       sale picks preview
 ├── docs/preview-free.png        free-to-play shelf preview
+├── docs/preview-glass.png       glass material preview
+├── docs/preview-glass-dark.png  glass material (dark) preview
 ├── docs/preview-studio.png      appearance studio preview
 ├── docs/preview-token.png       token radar preview
 ├── docs/preview-token-chart.png token 30-day candles preview
@@ -304,14 +313,14 @@ python -m pytest tests
 ```
 
 See [PUBLISHING.md](PUBLISHING.md) for the Beta release and Market submission
-notes. The latest GitHub Release is `v0.3.5-beta`; Market notification remains manual.
+notes. The latest GitHub Release is `v0.3.6-beta`; Market notification remains manual.
 
 ## Versioning and release
 
-- Manifest version: `0.3.5-beta`
-- Display version: **0.3.5 Beta**
+- Manifest version: `0.3.6-beta`
+- Display version: **0.3.6 Beta**
 - Release channel: **Beta (pre-release)**
-- Published GitHub Release: **v0.3.5-beta**
+- Published GitHub Release: **v0.3.6-beta**
 - Market: **not submitted**; the Beta channel submission is manual
 
 ## Credits

@@ -24,6 +24,7 @@ WINDOW_BACKGROUNDS = ("paper", "mist", "sakura", "glass", "gradient", "image", "
 SOUND_MODES = ("steam", "soft", "mechanical", "custom")
 DENSITIES = ("comfortable", "compact")
 THEMES = ("light", "dark")
+MATERIALS = ("glass", "solid")
 _ACCENT_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 _IMAGE_RE = re.compile(r"^data:image/(png|jpeg|jpg|webp|gif);base64,([A-Za-z0-9+/=\s]+)$")
 _AUDIO_RE = re.compile(r"^data:audio/(wav|mpeg|mp3|ogg);base64,([A-Za-z0-9+/=\s]+)$")
@@ -45,6 +46,9 @@ DEFAULT_UI_PROFILE: dict[str, Any] = {
     "sound_volume": 0.55,
     "sound_data": "",
     "sound_name": "",
+    "material": "glass",
+    "glass_blur": 24,
+    "glass_alpha": 58,
     "radius": 16,
     "density": "comfortable",
     "theme": "light",
@@ -178,6 +182,19 @@ def normalize_ui_profile(value: Any = None) -> dict[str, Any]:
         "Custom sound" if sound_mode == "custom" else "",
         80,
     )
+    material = str(source.get("material") or "").strip().lower()
+    if material not in MATERIALS:
+        material = str(DEFAULT_UI_PROFILE["material"])
+    try:
+        glass_blur = int(source.get("glass_blur", DEFAULT_UI_PROFILE["glass_blur"]))
+    except (TypeError, ValueError):
+        glass_blur = int(DEFAULT_UI_PROFILE["glass_blur"])
+    glass_blur = max(6, min(40, glass_blur))
+    try:
+        glass_alpha = int(source.get("glass_alpha", DEFAULT_UI_PROFILE["glass_alpha"]))
+    except (TypeError, ValueError):
+        glass_alpha = int(DEFAULT_UI_PROFILE["glass_alpha"])
+    glass_alpha = max(28, min(92, glass_alpha))
     density = str(source.get("density") or "").strip().lower()
     if density not in DENSITIES:
         density = str(DEFAULT_UI_PROFILE["density"])
@@ -201,6 +218,9 @@ def normalize_ui_profile(value: Any = None) -> dict[str, Any]:
         "sound_volume": sound_volume,
         "sound_data": sound_data,
         "sound_name": sound_name,
+        "material": material,
+        "glass_blur": glass_blur,
+        "glass_alpha": glass_alpha,
         "radius": radius,
         "density": density,
         "theme": theme,
@@ -247,6 +267,7 @@ __all__ = [
     "DENSITIES",
     "MAX_UI_PROFILE_BYTES",
     "MAX_SOUND_BYTES",
+    "MATERIALS",
     "MAX_WINDOW_IMAGE_BYTES",
     "SOUND_MODES",
     "THEMES",

@@ -1,6 +1,6 @@
 # 自定义外观与导入导出教程
 
-**Ama Monster OS 0.3.5 Beta** · UI Studio · `ama.ui.profile` v1
+**Ama Monster OS 0.3.6 Beta** · UI Studio · `ama.ui.profile` v1
 
 这篇教程讲三件事：
 
@@ -66,6 +66,9 @@
 | `profile.sound_volume` | 数字 | 音量，0–1 |
 | `profile.sound_data` | 字符串 | 自定义音效的本地 data URL；不要手填远程 URL |
 | `profile.sound_name` | 字符串 | 自定义音效显示名，最长 80 字符 |
+| `profile.material` | 字符串 | 材质：`glass`（玻璃）/ `solid`（实心） |
+| `profile.glass_blur` | 数字 | 玻璃模糊强度，6–40，默认 24 |
+| `profile.glass_alpha` | 数字 | 玻璃浓度，28–92，默认 58 |
 | `profile.radius` | 数字 | 圆角，8–28，超出会截断 |
 | `profile.density` | 字符串 | `comfortable` / `compact` |
 | `profile.theme` | 字符串 | `light` / `dark` |
@@ -130,6 +133,26 @@
 - 配置写入插件数据目录的 `data/ui_profile.json`
 - 重新打开窗口或重启插件后会自动恢复
 - 如果只预览没保存，重开窗口会回到上次保存的版本
+
+### 第 5 步：选择材质（苹果 / 小米式玻璃）
+
+外观工坊新增 **材质**：
+
+- **玻璃**：半透明面板 + 背景模糊 + 高光边缘 + 柔和投影
+- **实心**：不透明，最省性能
+
+选中玻璃后可以调：
+
+- **模糊强度**：6–40px
+- **玻璃浓度**：28–92%
+
+玻璃模式下窗口、标题栏、侧边栏、卡片、输入框和按钮都会统一成同一套材质；暗色主题有单独的玻璃配色，避免发灰。
+
+![玻璃材质（浅色）](preview-glass.png)
+
+![玻璃材质（暗色）](preview-glass-dark.png)
+
+> 玻璃效果依赖浏览器的 `backdrop-filter`。老浏览器会自动退回接近不透明的背景，保证文字可读。
 
 ### 第 5 步：导入外部图片作为窗口背景
 

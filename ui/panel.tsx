@@ -7,6 +7,7 @@ type ThemeMode = "light" | "dark"
 type UiWallpaper = "grid" | "dots" | "aurora" | "stars" | "plain"
 type UiWindowBg = "paper" | "mist" | "sakura" | "glass" | "gradient" | "image" | "custom"
 type UiDensity = "comfortable" | "compact"
+type UiMaterial = "glass" | "solid"
 type SoundMode = "steam" | "soft" | "mechanical" | "custom"
 
 type UiProfile = {
@@ -26,6 +27,9 @@ type UiProfile = {
   sound_volume: number
   sound_data: string
   sound_name: string
+  material: UiMaterial
+  glass_blur: number
+  glass_alpha: number
   radius: number
   density: UiDensity
   theme: ThemeMode
@@ -48,16 +52,20 @@ const DEFAULT_UI_PROFILE: UiProfile = {
   sound_volume: 0.55,
   sound_data: "",
   sound_name: "",
+  material: "glass",
+  glass_blur: 24,
+  glass_alpha: 58,
   radius: 16,
   density: "comfortable",
   theme: "light",
 }
 
-const UI_PRESETS: Array<{ id: string; labelKey: string; accent: string; wallpaper: UiWallpaper; window_bg: UiWindowBg; theme: ThemeMode }> = [
-  { id: "cloud", labelKey: "studio.preset.cloud", accent: "#44b8f2", wallpaper: "grid", window_bg: "paper", theme: "light" },
-  { id: "sakura", labelKey: "studio.preset.sakura", accent: "#e88aa8", wallpaper: "dots", window_bg: "sakura", theme: "light" },
-  { id: "mint", labelKey: "studio.preset.mint", accent: "#4fc3a1", wallpaper: "aurora", window_bg: "mist", theme: "light" },
-  { id: "night", labelKey: "studio.preset.night", accent: "#8bdcff", wallpaper: "stars", window_bg: "glass", theme: "dark" },
+const UI_PRESETS: Array<{ id: string; labelKey: string; accent: string; wallpaper: UiWallpaper; window_bg: UiWindowBg; theme: ThemeMode; material?: UiMaterial; glass_blur?: number; glass_alpha?: number }> = [
+  { id: "glass", labelKey: "studio.preset.glass", accent: "#4fb6f0", wallpaper: "aurora", window_bg: "glass", theme: "light", material: "glass", glass_blur: 28, glass_alpha: 52 },
+  { id: "cloud", labelKey: "studio.preset.cloud", accent: "#44b8f2", wallpaper: "grid", window_bg: "paper", theme: "light", material: "glass", glass_blur: 20, glass_alpha: 66 },
+  { id: "sakura", labelKey: "studio.preset.sakura", accent: "#e88aa8", wallpaper: "dots", window_bg: "sakura", theme: "light", material: "glass", glass_blur: 22, glass_alpha: 60 },
+  { id: "mint", labelKey: "studio.preset.mint", accent: "#4fc3a1", wallpaper: "aurora", window_bg: "mist", theme: "light", material: "glass", glass_blur: 24, glass_alpha: 56 },
+  { id: "night", labelKey: "studio.preset.night", accent: "#8bdcff", wallpaper: "stars", window_bg: "glass", theme: "dark", material: "glass", glass_blur: 26, glass_alpha: 46 },
 ]
 
 const UI_WALLPAPERS: UiWallpaper[] = ["grid", "dots", "aurora", "stars", "plain"]
@@ -173,6 +181,9 @@ function normalizeUiProfile(value: any): UiProfile {
   const soundData = soundMode === "custom" && validSoundData(source.sound_data) ? String(source.sound_data) : ""
   const sound_mode: SoundMode = soundMode === "custom" && !soundData ? "steam" : soundMode
   const soundVolume = Math.max(0, Math.min(1, Number(source.sound_volume ?? DEFAULT_UI_PROFILE.sound_volume)))
+  const material: UiMaterial = source.material === "solid" ? "solid" : "glass"
+  const glassBlur = Math.max(6, Math.min(40, Math.round(Number(source.glass_blur) || DEFAULT_UI_PROFILE.glass_blur)))
+  const glassAlpha = Math.max(28, Math.min(92, Math.round(Number(source.glass_alpha) || DEFAULT_UI_PROFILE.glass_alpha)))
   const density: UiDensity = source.density === "compact" ? "compact" : "comfortable"
   const theme: ThemeMode = source.theme === "dark" ? "dark" : "light"
   const brand = String(source.brand || "").trim().slice(0, 24) || DEFAULT_UI_PROFILE.brand
@@ -195,6 +206,9 @@ function normalizeUiProfile(value: any): UiProfile {
     sound_volume: Math.round(soundVolume * 100) / 100,
     sound_data: soundData,
     sound_name: String(source.sound_name || "").trim().slice(0, 80),
+    material,
+    glass_blur: glassBlur,
+    glass_alpha: glassAlpha,
     radius,
     density,
     theme,
@@ -1577,7 +1591,7 @@ const STYLES = `
 .ama-studio-group:first-of-type { border-top: 0; padding-top: 0; }
 .ama-studio-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; color: var(--ink-soft); font-size: 9px; font-weight: 850; }
 .ama-studio-label small { color: var(--muted); font-size: 8px; font-weight: 600; }
-.ama-studio-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.ama-studio-presets { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 6px; }
 .ama-preset { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); color: var(--ink-soft); font: inherit; font-size: 8px; font-weight: 750; cursor: pointer; text-align: left; }
 .ama-preset:hover { border-color: var(--line-strong); }
 .ama-preset.is-active { border-color: var(--sky); box-shadow: 0 0 0 2px color-mix(in srgb, var(--sky) 14%, transparent); }
@@ -1809,6 +1823,315 @@ const STYLES = `
 @media (prefers-reduced-motion: reduce) {
   .ama-root *, .ama-root *::before, .ama-root *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
+
+
+/* ============================================================
+   Glass material — Apple / Xiaomi style layered translucency
+   ============================================================ */
+.ama-root[data-material="glass"] {
+  --glass-rgb: 255 255 255;
+  --glass-edge: rgb(255 255 255 / 0.72);
+  --glass-edge-soft: rgb(255 255 255 / 0.46);
+  --glass-hairline: rgb(255 255 255 / 0.34);
+  --glass-sheen: rgb(255 255 255 / 0.5);
+  --glass-shadow: 0 34px 80px rgb(24 74 108 / 0.26), 0 8px 22px rgb(24 74 108 / 0.1);
+  --glass-card-shadow: 0 14px 32px rgb(24 74 108 / 0.12), 0 2px 6px rgb(24 74 108 / 0.06);
+  --card: rgb(var(--glass-rgb) / calc(var(--glass-alpha) * 0.74%));
+  --panel-2: rgb(var(--glass-rgb) / calc(var(--glass-alpha) * 0.55%));
+  --title-1: rgb(var(--glass-rgb) / 0.46);
+  --title-2: rgb(var(--glass-rgb) / 0.2);
+  --side-1: rgb(var(--glass-rgb) / 0.36);
+  --side-2: rgb(var(--glass-rgb) / 0.16);
+  --hero-1: rgb(var(--glass-rgb) / 0.5);
+  --hero-2: rgb(var(--glass-rgb) / 0.16);
+  --line: rgb(var(--glass-rgb) / 0.5);
+  --line-strong: rgb(var(--glass-rgb) / 0.72);
+  --hover: rgb(var(--glass-rgb) / 0.62);
+}
+.ama-root[data-material="glass"].ama-theme-dark {
+  --glass-rgb: 30 44 60;
+  --glass-edge: rgb(255 255 255 / 0.14);
+  --glass-edge-soft: rgb(255 255 255 / 0.09);
+  --glass-hairline: rgb(255 255 255 / 0.07);
+  --glass-sheen: rgb(255 255 255 / 0.14);
+  --glass-shadow: 0 34px 90px rgb(0 0 0 / 0.55), 0 8px 24px rgb(0 0 0 / 0.3);
+  --glass-card-shadow: 0 12px 28px rgb(0 0 0 / 0.28);
+  --line: rgb(255 255 255 / 0.1);
+  --line-strong: rgb(255 255 255 / 0.16);
+}
+.ama-root[data-material="glass"] .ama-desktop {
+  background:
+    radial-gradient(circle at 14% 9%, rgb(255 255 255 / 0.95), transparent 26%),
+    radial-gradient(circle at 84% 14%, color-mix(in srgb, var(--sky) 62%, transparent), transparent 46%),
+    radial-gradient(circle at 72% 88%, color-mix(in srgb, var(--pink) 58%, transparent), transparent 46%),
+    radial-gradient(circle at 18% 94%, color-mix(in srgb, var(--lilac) 54%, transparent), transparent 48%),
+    linear-gradient(150deg, var(--desktop-1) 0%, var(--desktop-2) 48%, var(--desktop-3) 100%);
+}
+.ama-root[data-material="glass"].ama-theme-dark .ama-desktop {
+  background:
+    radial-gradient(circle at 16% 10%, color-mix(in srgb, var(--sky) 34%, transparent), transparent 44%),
+    radial-gradient(circle at 82% 16%, color-mix(in srgb, var(--lilac) 30%, transparent), transparent 46%),
+    radial-gradient(circle at 70% 90%, color-mix(in srgb, var(--pink) 24%, transparent), transparent 44%),
+    linear-gradient(150deg, var(--desktop-1) 0%, var(--desktop-2) 50%, var(--desktop-3) 100%);
+}
+.ama-root[data-material="glass"] .ama-desktop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle 120px at 9% 26%, color-mix(in srgb, var(--sky) 55%, transparent), transparent 70%),
+    radial-gradient(circle 86px at 22% 72%, color-mix(in srgb, var(--pink) 52%, transparent), transparent 70%),
+    radial-gradient(circle 150px at 78% 18%, color-mix(in srgb, var(--sky) 42%, transparent), transparent 72%),
+    radial-gradient(circle 96px at 88% 66%, color-mix(in srgb, var(--lilac) 56%, transparent), transparent 70%),
+    radial-gradient(circle 70px at 54% 92%, color-mix(in srgb, var(--mint) 58%, transparent), transparent 70%),
+    radial-gradient(ellipse at center, transparent 52%, rgb(24 74 108 / 0.06) 100%);
+  filter: blur(6px) saturate(125%);
+}
+.ama-root[data-material="glass"] .ama-window {
+  border: 1px solid var(--glass-edge);
+  background:
+    linear-gradient(
+      152deg,
+      rgb(var(--glass-rgb) / calc(var(--glass-alpha) * 0.62%)) 0%,
+      rgb(var(--glass-rgb) / calc(var(--glass-alpha) * 0.3%)) 50%,
+      rgb(var(--glass-rgb) / calc(var(--glass-alpha) * 0.46%)) 100%
+    );
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.62px)) saturate(205%) brightness(1.04);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.62px)) saturate(205%) brightness(1.04);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-edge), inset 0 0 0 1px rgb(255 255 255 / 0.14);
+}
+.ama-root[data-material="glass"][data-window-bg="image"] .ama-window,
+.ama-root[data-material="glass"][data-window-bg="gradient"] .ama-window,
+.ama-root[data-material="glass"][data-window-bg="custom"] .ama-window {
+  background:
+    linear-gradient(
+      152deg,
+      rgb(var(--glass-rgb) / calc(var(--glass-alpha) * 0.42%)) 0%,
+      rgb(var(--glass-rgb) / calc(var(--glass-alpha) * 0.2%)) 50%,
+      rgb(var(--glass-rgb) / calc(var(--glass-alpha) * 0.32%)) 100%
+    ),
+    var(--window-bg);
+}
+.ama-root[data-material="glass"] .ama-window::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  z-index: 2;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.9), transparent);
+  opacity: .8;
+  pointer-events: none;
+}
+.ama-root[data-material="glass"] .ama-window::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 8% -10%, var(--glass-sheen), transparent 46%),
+    radial-gradient(90% 60% at 104% 8%, rgb(255 255 255 / 0.28), transparent 55%),
+    linear-gradient(118deg, transparent 32%, rgb(255 255 255 / 0.14) 48%, transparent 62%);
+  mix-blend-mode: soft-light;
+}
+.ama-root[data-material="glass"] .ama-titlebar,
+.ama-root[data-material="glass"] .ama-body,
+.ama-root[data-material="glass"] .ama-footer { position: relative; z-index: 1; }
+.ama-root[data-material="glass"] .ama-titlebar {
+  border-bottom: 1px solid var(--glass-hairline);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.7px)) saturate(170%);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.7px)) saturate(170%);
+}
+.ama-root[data-material="glass"] .ama-sidebar {
+  border-right: 1px solid var(--glass-hairline);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.55px)) saturate(160%);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.55px)) saturate(160%);
+}
+.ama-root[data-material="glass"] .ama-panel,
+.ama-root[data-material="glass"] .ama-web-hero,
+.ama-root[data-material="glass"] .ama-web-result,
+.ama-root[data-material="glass"] .ama-web-state,
+.ama-root[data-material="glass"] .ama-sale-panel,
+.ama-root[data-material="glass"] .ama-picks-section,
+.ama-root[data-material="glass"] .ama-free-section,
+.ama-root[data-material="glass"] .ama-hero,
+.ama-root[data-material="glass"] .ama-core-card,
+.ama-root[data-material="glass"] .ama-about-card,
+.ama-root[data-material="glass"] .ama-studio-preview-card,
+.ama-root[data-material="glass"] .ama-steam-card,
+.ama-root[data-material="glass"] .ama-deal-card,
+.ama-root[data-material="glass"] .ama-free-card,
+.ama-root[data-material="glass"] .ama-profile,
+.ama-root[data-material="glass"] .ama-token-stat,
+.ama-root[data-material="glass"] .ama-token-focus,
+.ama-root[data-material="glass"] .ama-token-clock {
+  border: 1px solid var(--glass-edge-soft);
+  background-image: linear-gradient(158deg, rgb(255 255 255 / 0.34) 0%, rgb(255 255 255 / 0.06) 46%, rgb(255 255 255 / 0.16) 100%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.42px)) saturate(175%);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.42px)) saturate(175%);
+  box-shadow: var(--glass-card-shadow), inset 0 1px 0 var(--glass-edge-soft);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.ama-root[data-material="glass"]:not(.ama-theme-dark) .ama-panel,
+.ama-root[data-material="glass"]:not(.ama-theme-dark) .ama-web-hero,
+.ama-root[data-material="glass"]:not(.ama-theme-dark) .ama-picks-section,
+.ama-root[data-material="glass"]:not(.ama-theme-dark) .ama-free-section,
+.ama-root[data-material="glass"]:not(.ama-theme-dark) .ama-steam-card,
+.ama-root[data-material="glass"]:not(.ama-theme-dark) .ama-deal-card,
+.ama-root[data-material="glass"]:not(.ama-theme-dark) .ama-free-card,
+.ama-root[data-material="glass"]:not(.ama-theme-dark) .ama-profile,
+.ama-root[data-material="glass"]:not(.ama-theme-dark) .ama-token-stat,
+.ama-root[data-material="glass"]:not(.ama-theme-dark) .ama-token-focus,
+.ama-root[data-material="glass"]:not(.ama-theme-dark) .ama-token-clock {
+  background-image: linear-gradient(158deg, rgb(255 255 255 / 0.56) 0%, rgb(255 255 255 / 0.2) 48%, rgb(255 255 255 / 0.3) 100%);
+  border-color: rgb(255 255 255 / 0.62);
+  box-shadow:
+    0 16px 34px rgb(24 74 108 / 0.13),
+    0 2px 6px rgb(24 74 108 / 0.06),
+    inset 0 1px 0 rgb(255 255 255 / 0.92);
+}
+.ama-root[data-material="glass"]:not(.ama-theme-dark) .ama-window {
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 rgb(255 255 255 / 0.85),
+    inset 0 0 0 1px rgb(255 255 255 / 0.2),
+    inset 0 0 70px rgb(24 74 108 / 0.05),
+    inset 1px 1px 0 rgb(255 255 255 / 0.7),
+    inset -2px -2px 18px color-mix(in srgb, var(--sky) 16%, transparent),
+    inset 2px 2px 22px color-mix(in srgb, var(--pink) 12%, transparent);
+}
+.ama-root[data-material="glass"]:not(.ama-theme-dark) .ama-sidebar {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.42), rgb(255 255 255 / 0.16));
+}
+.ama-root[data-material="glass"].ama-theme-dark .ama-panel,
+.ama-root[data-material="glass"].ama-theme-dark .ama-web-hero,
+.ama-root[data-material="glass"].ama-theme-dark .ama-web-result,
+.ama-root[data-material="glass"].ama-theme-dark .ama-web-state,
+.ama-root[data-material="glass"].ama-theme-dark .ama-sale-panel,
+.ama-root[data-material="glass"].ama-theme-dark .ama-picks-section,
+.ama-root[data-material="glass"].ama-theme-dark .ama-free-section,
+.ama-root[data-material="glass"].ama-theme-dark .ama-hero,
+.ama-root[data-material="glass"].ama-theme-dark .ama-core-card,
+.ama-root[data-material="glass"].ama-theme-dark .ama-about-card,
+.ama-root[data-material="glass"].ama-theme-dark .ama-studio-preview-card,
+.ama-root[data-material="glass"].ama-theme-dark .ama-steam-card,
+.ama-root[data-material="glass"].ama-theme-dark .ama-deal-card,
+.ama-root[data-material="glass"].ama-theme-dark .ama-free-card,
+.ama-root[data-material="glass"].ama-theme-dark .ama-profile,
+.ama-root[data-material="glass"].ama-theme-dark .ama-token-stat,
+.ama-root[data-material="glass"].ama-theme-dark .ama-token-focus,
+.ama-root[data-material="glass"].ama-theme-dark .ama-token-clock {
+  background-image: linear-gradient(158deg, rgb(255 255 255 / 0.1) 0%, rgb(255 255 255 / 0.02) 46%, rgb(255 255 255 / 0.06) 100%);
+}
+.ama-root[data-material="glass"] .ama-panel:hover,
+.ama-root[data-material="glass"] .ama-steam-card:hover,
+.ama-root[data-material="glass"] .ama-deal-card:hover,
+.ama-root[data-material="glass"] .ama-free-card:hover {
+  border-color: var(--glass-edge);
+  box-shadow: 0 16px 34px rgb(24 74 108 / 0.14), inset 0 1px 0 var(--glass-edge);
+}
+.ama-root[data-material="glass"] .ama-nav-btn {
+  border: 1px solid transparent;
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.ama-root[data-material="glass"] .ama-nav-btn.is-active {
+  border-color: var(--glass-edge-soft);
+  background: linear-gradient(160deg, rgb(255 255 255 / 0.72), rgb(255 255 255 / 0.3));
+  box-shadow: 0 8px 20px rgb(24 74 108 / 0.12), inset 0 1px 0 var(--glass-edge);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.4px)) saturate(160%);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.4px)) saturate(160%);
+}
+.ama-root[data-material="glass"].ama-theme-dark .ama-nav-btn.is-active {
+  background: linear-gradient(160deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.04));
+}
+.ama-root[data-material="glass"] .ama-pill,
+.ama-root[data-material="glass"] .ama-badge {
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.35px)) saturate(150%);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.35px)) saturate(150%);
+  box-shadow: inset 0 1px 0 var(--glass-edge-soft);
+}
+.ama-root[data-material="glass"] .ama-web-input,
+.ama-root[data-material="glass"] .ama-studio-input,
+.ama-root[data-material="glass"] .ama-web-input-wrap {
+  background: rgb(255 255 255 / 0.42);
+  border-color: var(--glass-edge-soft);
+  box-shadow: inset 0 1px 2px rgb(24 74 108 / 0.08), inset 0 1px 0 var(--glass-edge-soft);
+}
+.ama-root[data-material="glass"].ama-theme-dark .ama-web-input,
+.ama-root[data-material="glass"].ama-theme-dark .ama-studio-input,
+.ama-root[data-material="glass"].ama-theme-dark .ama-web-input-wrap {
+  background: rgb(255 255 255 / 0.06);
+}
+.ama-root[data-material="glass"] .ama-btn {
+  border-color: var(--glass-edge-soft);
+  background: linear-gradient(160deg, rgb(255 255 255 / 0.6), rgb(255 255 255 / 0.26));
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 6px 16px rgb(24 74 108 / 0.08);
+}
+.ama-root[data-material="glass"].ama-theme-dark .ama-btn {
+  background: linear-gradient(160deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.03));
+}
+.ama-root[data-material="glass"] .ama-btn-primary {
+  border-color: transparent;
+  background: linear-gradient(158deg, color-mix(in srgb, var(--sky) 92%, white), color-mix(in srgb, var(--sky) 78%, #0d5f8c));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--sky) 38%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.55);
+}
+.ama-root[data-material="glass"] .ama-footer {
+  border-top: 1px solid var(--glass-hairline);
+  background: rgb(var(--glass-rgb) / 0.34);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.5px)) saturate(150%);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.5px)) saturate(150%);
+}
+.ama-root[data-material="glass"] .ama-deal-grid,
+.ama-root[data-material="glass"] .ama-free-grid { perspective: 900px; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ama-root[data-material="glass"] .ama-window,
+  .ama-root[data-material="glass"] .ama-titlebar,
+  .ama-root[data-material="glass"] .ama-sidebar,
+  .ama-root[data-material="glass"] .ama-panel,
+  .ama-root[data-material="glass"] .ama-hero,
+  .ama-root[data-material="glass"] .ama-steam-card,
+  .ama-root[data-material="glass"] .ama-deal-card {
+    background-color: rgb(var(--glass-rgb) / 0.94);
+  }
+}
+.ama-material-preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 7px;
+}
+.ama-material-option {
+  position: relative;
+  overflow: hidden;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+.ama-material-option small { display: block; margin-top: 2px; color: var(--muted); font-size: 7.5px; font-weight: 600; }
+.ama-material-option.is-active { border-color: var(--sky); box-shadow: 0 0 0 2px color-mix(in srgb, var(--sky) 22%, transparent); }
+.ama-material-option.is-glass {
+  background:
+    linear-gradient(150deg, rgb(255 255 255 / 0.6), rgb(255 255 255 / 0.18)),
+    linear-gradient(120deg, color-mix(in srgb, var(--sky) 30%, transparent), color-mix(in srgb, var(--pink) 26%, transparent));
+  -webkit-backdrop-filter: blur(6px) saturate(160%);
+  backdrop-filter: blur(6px) saturate(160%);
+}
+.ama-root[data-material="glass"] .ama-studio-seg button.is-active {
+  box-shadow: inset 0 1px 0 var(--glass-edge-soft);
+}
+
 `
 
 export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>) {
@@ -1830,7 +2153,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.3.5 Beta"
+  const version = shell.version || "0.3.6 Beta"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
@@ -2003,6 +2326,9 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       wallpaper: preset.wallpaper,
       window_bg: preset.window_bg,
       theme: preset.theme,
+      material: preset.material || uiProfile.material,
+      glass_blur: preset.glass_blur || uiProfile.glass_blur,
+      glass_alpha: preset.glass_alpha || uiProfile.glass_alpha,
     }))
     setUiDirty(true)
     setUiMessage("")
@@ -3933,6 +4259,63 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
 
           <div className="ama-studio-group">
             <div className="ama-studio-label">
+              {tr("studio.material", "材质")}
+              <small>{uiProfile.material === "glass" ? tr("studio.material.glass", "玻璃") : tr("studio.material.solid", "实心")}</small>
+            </div>
+            <div className="ama-material-preview">
+              <button
+                type="button"
+                className={`ama-material-option${uiProfile.material === "glass" ? " is-active" : ""}`}
+                onClick={() => patchUiProfile({ material: "glass" })}
+              >
+                {tr("studio.material.glass", "玻璃")}
+                <small>{tr("studio.material.glassHint", "半透明、背景模糊、高光边缘")}</small>
+              </button>
+              <button
+                type="button"
+                className={`ama-material-option${uiProfile.material === "solid" ? " is-active" : ""}`}
+                onClick={() => patchUiProfile({ material: "solid" })}
+              >
+                {tr("studio.material.solid", "实心")}
+                <small>{tr("studio.material.solidHint", "不透明、最省性能")}</small>
+              </button>
+            </div>
+            {uiProfile.material === "glass" ? (
+              <>
+                <div className="ama-studio-label" style={{ marginTop: "9px" } as any}>
+                  {tr("studio.glassBlur", "模糊强度")}
+                  <small>{uiProfile.glass_blur}px</small>
+                </div>
+                <input
+                  className="ama-studio-range"
+                  type="range"
+                  min={6}
+                  max={40}
+                  step={1}
+                  value={uiProfile.glass_blur}
+                  aria-label={tr("studio.glassBlur", "模糊强度")}
+                  onInput={(event: any) => patchUiProfile({ glass_blur: Number(event.target.value) })}
+                />
+                <div className="ama-studio-label">
+                  {tr("studio.glassAlpha", "玻璃浓度")}
+                  <small>{uiProfile.glass_alpha}%</small>
+                </div>
+                <input
+                  className="ama-studio-range"
+                  type="range"
+                  min={28}
+                  max={92}
+                  step={1}
+                  value={uiProfile.glass_alpha}
+                  aria-label={tr("studio.glassAlpha", "玻璃浓度")}
+                  onInput={(event: any) => patchUiProfile({ glass_alpha: Number(event.target.value) })}
+                />
+              </>
+            ) : null}
+          </div>
+
+          <div className="ama-studio-group">
+            <div className="ama-studio-label">
               {tr("studio.windowBg", "Window background")}
               <small>{uiProfile.window_bg === "custom" ? uiProfile.window_color : tr(`studio.windowBg.${uiProfile.window_bg}`, uiProfile.window_bg)}</small>
             </div>
@@ -4230,6 +4613,8 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
 
   const uiStyle = {
     "--sky": uiProfile.accent,
+    "--glass-blur": uiProfile.glass_blur,
+    "--glass-alpha": uiProfile.glass_alpha,
     "--sky-soft": `color-mix(in srgb, ${uiProfile.accent} 18%, var(--card))`,
     "--sky-deep": `color-mix(in srgb, ${uiProfile.accent} 58%, var(--ink))`,
     "--ui-radius": `${uiProfile.radius}px`,
@@ -4281,6 +4666,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       data-wallpaper={uiProfile.wallpaper}
       data-window-bg={uiProfile.window_bg}
       data-density={uiProfile.density}
+      data-material={uiProfile.material}
       data-radius={uiProfile.radius === DEFAULT_UI_PROFILE.radius ? "default" : "custom"}
       style={uiStyle}
       onClick={handleSelectSound}

@@ -249,6 +249,9 @@ by the Studio UI and the plugin persistence action:
   "sound_volume": 0.55,
   "sound_data": "",
   "sound_name": "",
+  "material": "glass",
+  "glass_blur": 24,
+  "glass_alpha": 58,
   "radius": 16,
   "density": "comfortable",
   "theme": "light"
@@ -271,6 +274,8 @@ Rules:
 - `sound_mode` is `steam`, `soft`, `mechanical`, or `custom`; `sound_volume`
   is 0–1. `sound_data` accepts only a local WAV/MP3/OGG data URL up to 1 MB;
   remote audio URLs are rejected.
+- `material` is `glass` or `solid`; `glass_blur` is 6–40 and `glass_alpha` is
+  28–92. These only drive CSS variables and never inject arbitrary CSS.
 - The whole profile limit is 4 MB.
 - `density` is `comfortable` or `compact`; `theme` is `light` or `dark`.
 - `radius` is clamped to 8–28; text fields are length-limited.

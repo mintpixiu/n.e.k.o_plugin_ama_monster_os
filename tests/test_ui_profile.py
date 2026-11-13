@@ -89,6 +89,24 @@ def test_gradient_colors_are_bounded_and_deduplicated() -> None:
     assert len(fallback["gradient_colors"]) >= 2
 
 
+def test_glass_material_is_normalized() -> None:
+    default = normalize_ui_profile({})
+    assert default["material"] == "glass"
+    assert default["glass_blur"] == 24
+    assert default["glass_alpha"] == 58
+
+    clamped = normalize_ui_profile({"material": "glass", "glass_blur": 999, "glass_alpha": 1})
+    assert clamped["glass_blur"] == 40
+    assert clamped["glass_alpha"] == 28
+
+    solid = normalize_ui_profile({"material": "solid", "glass_blur": 12, "glass_alpha": 70})
+    assert solid["material"] == "solid"
+    assert solid["glass_blur"] == 12
+    assert solid["glass_alpha"] == 70
+
+    assert normalize_ui_profile({"material": "neon"})["material"] == "glass"
+
+
 def test_custom_sound_is_validated() -> None:
     wav = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="
     profile = normalize_ui_profile({
