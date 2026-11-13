@@ -1,15 +1,13 @@
 # Publishing Ama Monster OS
 
 **Status: 0.3.4 Beta published to GitHub Releases as a pre-release.** Standard
-GitHub Actions evidence is present. The Market Beta submission is still manual
-and has not been sent; the API only accepts stable-channel notifications.
+GitHub Actions evidence is present. The Market Beta submission is still manual.
 
 - Release: https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os/releases/tag/v0.3.4-beta
 - Tag: `v0.3.4-beta`
-- Package SHA-256: `a0a311189e71ea1d062d7d6728e76ceab6c07dd2d65bc01fa72aa7b40c6eb203`
+- Package SHA-256: `834d02b2b6da3fc4b0e59e4b55cba2b0d3292a1bc67c8a3acb8e43ca383198cd`
 - Evidence: `market-evidence.json` + `market-release-check.txt`
 - Market: pending manual Beta-channel submission
-- Standard GitHub Actions evidence: `market-evidence.json` + `market-release-check.txt` present
 
 ## Before publishing
 
