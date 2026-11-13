@@ -1,6 +1,6 @@
 # N.E.K.O Ama Monster OS
 
-> **0.3.3 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
+> **0.3.4 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
 > web search, a Steam price radar, a token price radar, and a versioned system
 > bridge reserved for a future standalone build.
 
@@ -8,7 +8,7 @@
 
 This is the first window of **Ama Monster OS**, not a finished operating
 system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
-0.3.3 Beta contains.
+0.3.4 Beta contains.
 
 ## What is real in this version
 
@@ -23,8 +23,9 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
   **Steam China price in CNY** from Valve's store API.
 - A **Steam sale picks** view with high-discount, well-rated games, historical
   lows, CN prices, and a playful **“可以不玩，但不能没有”** flag.
-- A **free-to-play shelf** of permanently free Steam titles, versioned as a
-  curated snapshot rather than a live catalogue.
+- A **free-to-play shelf** of 18 permanently free Steam titles in rotating
+  groups, versioned as a curated snapshot rather than a live catalogue.
+- **Rotating sale picks**: 10 cached batches of high-discount, well-rated games.
 - A **Token radar** for public model list prices from OpenAI, Anthropic, Google,
   xAI, Mistral, DeepSeek, Qwen, Kimi, GLM, and Volcengine: 20 models, 30-day
   candlesticks, 60-second refresh, and explicit peak/off-peak windows.
@@ -110,10 +111,14 @@ The Steam room has two tabs:
 - **促销精选** — a live CheapShark picks list plus the curated free shelf.
 
 Sale picks are filtered to at least **40% off** and a **7/10** CheapShark deal
-rating, then enriched with historical lows, current **CNY** prices, and
-**Chinese titles**. The top six show a **“可以不玩，但不能没有”** badge when they
-are 80%+ off, at or below US$5, or at their all-time low. These are editorial
-picks, not paid placements.
+rating. A larger candidate pool (60 deals) is fetched and filtered down to
+roughly **50 qualifying titles**, split into **10 batches of six**. Pressing
+**换一批** advances to the next batch, so refreshing no longer repeats the same
+six games; a previously viewed batch is cached and returns instantly. Every
+batch is enriched with historical lows, current **CNY** prices, and **Chinese
+titles**. Cards show a **“可以不玩，但不能没有”** badge when they are 80%+ off,
+at or below US$5, or at their all-time low. These are editorial picks, not paid
+placements.
 
 Chinese titles prefer the official Steam `l=schinese` name. Older games whose
 Steam name stays English use a small curated alias map (for example
@@ -121,15 +126,17 @@ Steam name stays English use a small curated alias map (for example
 English original is always the main title, with the Chinese name directly
 underneath.
 
-The free shelf lists six **permanently free-to-play** titles with fixed Steam
-store links. It is a versioned snapshot (updated **2026-11-07**), not a
-limited-time giveaway tracker and not a live full catalogue.
+The free shelf now curates **18 permanently free-to-play** titles with fixed
+Steam store links, split into **3 groups of six**. **换一批** advances to the
+next group, so the shelf is no longer the same fixed six. It is a versioned
+snapshot (updated **2026-11-13**), not a limited-time giveaway tracker and not a
+live full catalogue.
 
 ![Ama Monster OS sale picks and free shelf](docs/preview-picks.png)
 
 ![Ama Monster OS free-to-play shelf](docs/preview-free.png)
 
-**Steam account login is deliberately not enabled in 0.3.3 Beta.** This build
+**Steam account login is deliberately not enabled in 0.3.4 Beta.** This build
 does not ask for a Steam password and does not put Steam's login page inside an
 iframe. The account card says **Login deferred** instead of pretending to be
 connected. A future safe integration can use Steam OpenID (browser redirect,
@@ -191,7 +198,7 @@ a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
-- Any Market publication. The **0.3.3 Beta** GitHub Release is live; its Market
+- Any Market publication. The **0.3.4 Beta** GitHub Release is live; its Market
   Beta submission remains manual.
 
 ## Install and open the window
@@ -290,14 +297,14 @@ python -m pytest tests
 ```
 
 See [PUBLISHING.md](PUBLISHING.md) for the Beta release and Market submission
-notes. The latest GitHub Release is `v0.3.3-beta`; Market notification remains manual.
+notes. The latest GitHub Release is `v0.3.4-beta`; Market notification remains manual.
 
 ## Versioning and release
 
-- Manifest version: `0.3.3-beta`
-- Display version: **0.3.3 Beta**
+- Manifest version: `0.3.4-beta`
+- Display version: **0.3.4 Beta**
 - Release channel: **Beta (pre-release)**
-- Published GitHub Release: **v0.3.3-beta**
+- Published GitHub Release: **v0.3.4-beta**
 - Market: **not submitted**; the Beta channel submission is manual
 
 ## Credits

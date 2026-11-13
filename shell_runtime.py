@@ -15,7 +15,12 @@ from datetime import datetime
 from typing import Any, Mapping
 
 try:  # package-relative import used by the N.E.K.O plugin
-    from .steam_catalog import FREE_TO_PLAY_UPDATED, free_to_play_entries
+    from .steam_catalog import (
+        FREE_TO_PLAY,
+        FREE_TO_PLAY_GROUP_SIZE,
+        FREE_TO_PLAY_UPDATED,
+        free_to_play_entries,
+    )
     from .steam_sales import evaluate_sales
     from .system_contract import (
         SystemEvent,
@@ -24,7 +29,12 @@ try:  # package-relative import used by the N.E.K.O plugin
     )
     from .ui_profile import DEFAULT_UI_PROFILE, normalize_ui_profile
 except ImportError:  # pragma: no cover - direct test import fallback
-    from steam_catalog import FREE_TO_PLAY_UPDATED, free_to_play_entries  # type: ignore[no-redef]
+    from steam_catalog import (  # type: ignore[no-redef]
+        FREE_TO_PLAY,
+        FREE_TO_PLAY_GROUP_SIZE,
+        FREE_TO_PLAY_UPDATED,
+        free_to_play_entries,
+    )
     from steam_sales import evaluate_sales  # type: ignore[no-redef]
     from system_contract import (  # type: ignore[no-redef]
         SystemEvent,
@@ -34,8 +44,8 @@ except ImportError:  # pragma: no cover - direct test import fallback
     from ui_profile import DEFAULT_UI_PROFILE, normalize_ui_profile  # type: ignore[no-redef]
 
 SHELL_NAME = "Ama Monster OS"
-SHELL_VERSION = "0.3.3-beta"
-SHELL_DISPLAY_VERSION = "0.3.3 Beta"
+SHELL_VERSION = "0.3.4-beta"
+SHELL_DISPLAY_VERSION = "0.3.4 Beta"
 SHELL_CHANNEL = "Beta"
 SHELL_CODENAME = "Ama-01"
 _MAX_QUERY_CHARS = 200
@@ -155,8 +165,14 @@ class AmaOsRuntime:
             "currency": "USD",
             "at": None,
             "error": "",
+            "page": 1,
+            "groups": 1,
+            "pool": 0,
         }
         self._ui_profile = normalize_ui_profile(DEFAULT_UI_PROFILE)
+        self._deals_offset = 0
+        self._free_shelf_offset = 0
+        self._free_shelf: tuple[list[dict[str, Any]], int, int] = ([], 1, 1)
         self._token_radar: dict[str, Any] = {
             "ok": True,
             "status": "idle",
@@ -242,6 +258,38 @@ class AmaOsRuntime:
         self._ui_profile = normalize_ui_profile(profile)
         return dict(self._ui_profile)
 
+    def _free_shelf_group(self, advance: bool = False) -> tuple[list[dict[str, Any]], int, int]:
+        """Return the current rotated free shelf group plus its meta.
+
+        The full curated pool is split into ``FREE_TO_PLAY_GROUP_SIZE``
+        windows. ``advance`` moves to the next group; the snapshot itself only
+        renders the current one so background refreshes do not reshuffle it.
+        """
+
+        if advance:
+            self._free_shelf_offset += 1
+        pool_size = len(FREE_TO_PLAY)
+        size = min(int(FREE_TO_PLAY_GROUP_SIZE), pool_size) if pool_size else 1
+        groups = max(1, (pool_size + size - 1) // size) if pool_size else 1
+        group_index = (self._free_shelf_offset % groups) + 1
+        entries = free_to_play_entries(self._free_shelf_offset, size)
+        return entries, group_index, groups
+
+    def shuffle_free_shelf(self) -> dict[str, Any]:
+        """Advance to the next free-to-play group and return it."""
+
+        entries, group, groups = self._free_shelf_group(advance=True)
+        self._free_shelf = (entries, group, groups)
+        self._record("steam.free.shuffle", f"group {group}/{groups}")
+        return {
+            "ok": True,
+            "count": len(entries),
+            "results": entries,
+            "group": group,
+            "groups": groups,
+            "updated": FREE_TO_PLAY_UPDATED,
+        }
+
     def set_token_radar(self, radar: Mapping[str, Any] | None) -> dict[str, Any]:
         if isinstance(radar, Mapping):
             self._token_radar = {str(key): value for key, value in radar.items()}
@@ -281,6 +329,7 @@ class AmaOsRuntime:
                 "activity": dict(self._activity),
             }
         )
+        self._free_shelf = self._free_shelf_group()
         return {
             "ok": True,
             "shell": {
@@ -317,8 +366,10 @@ class AmaOsRuntime:
                 **self._steam,
                 "results": list(self._steam.get("results") or []),
                 "deals": {**self._steam_deals, "results": list(self._steam_deals.get("results") or [])},
-                "free_to_play": free_to_play_entries(),
+                "free_to_play": self._free_shelf[0],
                 "free_to_play_updated": FREE_TO_PLAY_UPDATED,
+                "free_to_play_group": self._free_shelf[1],
+                "free_to_play_groups": self._free_shelf[2],
                 "sale": evaluate_sales(),
             },
             "events": [event.as_dict() for event in self._events[-8:]],
@@ -480,6 +531,8 @@ class AmaOsRuntime:
     async def steam_deals(self, max_results: int = 6) -> dict[str, Any]:
         limit = max(3, min(8, int(max_results or 6)))
         caller = getattr(self._port, "fetch_steam_deals", None)
+        offset = int(self._deals_offset)
+        self._deals_offset += 1
         if caller is None:
             result: Mapping[str, Any] = {
                 "ok": False,
@@ -491,7 +544,11 @@ class AmaOsRuntime:
             }
         else:
             try:
-                raw = await asyncio.wait_for(caller(limit), timeout=35.0)
+                try:
+                    coroutine = caller(limit, offset)
+                except TypeError:
+                    coroutine = caller(limit)
+                raw = await asyncio.wait_for(coroutine, timeout=35.0)
                 result = raw if isinstance(raw, Mapping) else {
                     "ok": False,
                     "available": False,
@@ -527,6 +584,8 @@ class AmaOsRuntime:
         provider = str(result.get("provider") or "CheapShark")[:80]
         success = bool(result.get("ok")) or str(result.get("error") or "") == "no_results"
         error = str(result.get("error") or "")[:120]
+        groups = max(1, int(result.get("groups") or 1))
+        page = (offset % groups) + 1 if groups else 1
         if success:
             status = "ok" if results else "empty"
             self._record("steam.deals", f"{len(results)} game(s)")
@@ -543,6 +602,9 @@ class AmaOsRuntime:
             "currency": str(result.get("currency") or "USD")[:8],
             "at": str(utc_now_iso()),
             "error": error,
+            "page": page,
+            "groups": groups,
+            "pool": max(0, int(result.get("pool") or 0)),
         }
         try:
             self._port.record_event("steam.deals", str(len(results)))
@@ -557,6 +619,9 @@ class AmaOsRuntime:
                 "results": results,
                 "provider": provider,
                 "currency": self._steam_deals["currency"],
+                "page": page,
+                "groups": groups,
+                "pool": self._steam_deals["pool"],
                 "summary": f"Steam sale picks returned {len(results)} game(s).",
             }
         return {

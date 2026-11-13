@@ -107,6 +107,11 @@ UI_PROFILE_SCHEMA: dict[str, Any] = {
     "required": ["profile"],
 }
 
+STEAM_FREE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {},
+}
+
 TOKEN_PRICES_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
@@ -310,6 +315,35 @@ class AmaMonsterOsPlugin(NekoPluginBase):
             limit = 6
         result = await self._runtime.steam_deals(limit)
         return Ok(result)
+
+    @ui.action(
+        id="ama_steam_free",
+        label=tr("actions.steam_free.label", default="Shuffle free shelf"),
+        icon="refresh",
+        tone="default",
+        order=32,
+        refresh_context=True,
+    )
+    @plugin_entry(
+        id="ama_steam_free",
+        name=tr("entries.steam_free.name", default="Shuffle free shelf"),
+        description=tr(
+            "entries.steam_free.description",
+            default="Rotate to the next group of permanently free Steam games.",
+        ),
+        input_schema=STEAM_FREE_SCHEMA,
+        llm_result_fields=["summary"],
+        timeout=10,
+    )
+    async def ama_steam_free(self, **_):
+        result = self._runtime.shuffle_free_shelf()
+        return Ok({
+            **result,
+            "summary": self.i18n.t(
+                "entries.steam_free.summary",
+                default="Free shelf group {group}/{groups}.",
+            ).replace("{group}", str(result["group"])).replace("{groups}", str(result["groups"])),
+        })
 
     @ui.action(
         id="ama_ui_profile_save",

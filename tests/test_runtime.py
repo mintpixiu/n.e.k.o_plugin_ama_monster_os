@@ -185,7 +185,7 @@ def test_snapshot_is_versioned_and_serializable() -> None:
     snapshot = asyncio.run(runtime.snapshot())
 
     assert snapshot["ok"] is True
-    assert snapshot["shell"]["version"] == "0.3.3 Beta"
+    assert snapshot["shell"]["version"] == "0.3.4 Beta"
     assert snapshot["shell"]["name"] == "Ama Monster OS"
     assert snapshot["preview"] is True
     assert snapshot["bridge"]["contract_version"] == CONTRACT_VERSION
@@ -367,9 +367,74 @@ def test_steam_deals_and_free_shelf_in_snapshot() -> None:
     assert snapshot["steam"]["deals"]["results"][0]["history"]["lowest"] == "1.99"
     assert snapshot["steam"]["deals"]["results"][0]["title_cn"] == "无主之地2"
     assert snapshot["steam"]["deals"]["results"][0]["cn"]["price"] == "6.40"
-    assert snapshot["steam"]["free_to_play_updated"] == "2026-11-07"
-    assert any(game["app_id"] == "730" for game in snapshot["steam"]["free_to_play"])
+    assert snapshot["steam"]["free_to_play_updated"] == "2026-11-13"
+    assert 1 <= len(snapshot["steam"]["free_to_play"]) <= 6
+    assert snapshot["steam"]["free_to_play_groups"] >= 2
+    assert any(game["store_url"].startswith("https://store.steampowered.com/app/") for game in snapshot["steam"]["free_to_play"])
     assert [event["name"] for event in snapshot["events"]][-1] == "steam.deals"
+
+
+def test_free_shelf_rotates_on_shuffle_only() -> None:
+    runtime = AmaOsRuntime(FakePort())
+
+    async def scenario() -> tuple[list[str], list[str], list[str], int]:
+        first = await runtime.snapshot()
+        second = await runtime.snapshot()
+        await asyncio.to_thread(runtime.shuffle_free_shelf)
+        after = await runtime.snapshot()
+        return (
+            [game["app_id"] for game in first["steam"]["free_to_play"]],
+            [game["app_id"] for game in second["steam"]["free_to_play"]],
+            [game["app_id"] for game in after["steam"]["free_to_play"]],
+            int(after["steam"]["free_to_play_groups"]),
+        )
+
+    first_ids, second_ids, shuffled_ids, groups = asyncio.run(scenario())
+
+    assert groups >= 2
+    # Background refreshes keep the current group stable.
+    assert first_ids == second_ids
+    # The explicit shuffle moves to a different group.
+    assert shuffled_ids != first_ids
+    assert not set(shuffled_ids) & set(first_ids)
+
+
+def test_free_shuffle_reports_group_meta() -> None:
+    runtime = AmaOsRuntime(FakePort())
+    first = runtime.shuffle_free_shelf()
+    second = runtime.shuffle_free_shelf()
+
+    assert first["ok"] is True
+    assert first["groups"] >= 2
+    assert first["group"] == 2
+    assert second["group"] == 3
+    assert first["results"] and second["results"]
+    assert [game["app_id"] for game in first["results"]] != [game["app_id"] for game in second["results"]]
+
+
+def test_deal_offsets_advance_between_refreshes() -> None:
+    runtime = AmaOsRuntime(FakePort())
+    seen: list[int] = []
+
+    original = FakePort.fetch_steam_deals
+
+    async def tracking(self, max_results: int = 6, offset: int = 0) -> dict[str, Any]:
+        seen.append(offset)
+        return await original(self, max_results, offset) if offset == 0 else {
+            **await original(self, max_results, 0),
+            "page": offset + 1,
+            "groups": 3,
+        }
+
+    FakePort.fetch_steam_deals = tracking  # type: ignore[assignment]
+    try:
+        asyncio.run(runtime.steam_deals(6))
+        asyncio.run(runtime.steam_deals(6))
+        asyncio.run(runtime.steam_deals(6))
+    finally:
+        FakePort.fetch_steam_deals = original  # type: ignore[assignment]
+
+    assert seen == [0, 1, 2]
 
 
 def test_steam_deals_failure_is_reported_without_crashing() -> None:

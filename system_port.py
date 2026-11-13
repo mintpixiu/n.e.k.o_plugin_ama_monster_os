@@ -381,14 +381,40 @@ def _search_cheapshark_sync(
     }
 
 
-def _fetch_steam_deals_sync(limit: int) -> dict[str, Any]:
-    """Fetch high-quality Steam deals and enrich the top picks with lows."""
+def _fetch_deal_details_sync(game_ids: list[str]) -> dict[str, Any]:
+    """Batch-fetch CheapShark game details for a group of sale picks.
+
+    ``/games?ids=1,2,3`` returns one object keyed by game id, which replaces
+    one HTTP round trip per game.
+    """
+
+    ids = [str(item).strip() for item in game_ids if str(item).strip().isdigit()]
+    ids = list(dict.fromkeys(ids))[:20]
+    if not ids:
+        return {}
+    url = f"{_CHEAPSHARK_API}/games?ids={urllib.parse.quote(','.join(ids))}"
+    try:
+        payload = _http_json(url, max_bytes=_MAX_PRICE_HTTP_BYTES, user_agent=_PRICE_USER_AGENT)
+    except Exception:
+        return {}
+    if not isinstance(payload, Mapping):
+        return {}
+    return {str(key): value for key, value in payload.items() if isinstance(value, Mapping)}
+
+
+def _fetch_steam_deals_sync(limit: int, offset: int = 0) -> dict[str, Any]:
+    """Fetch high-quality Steam deals and enrich one rotated group with lows.
+
+    A larger pool is fetched (60 deals) and filtered by the editorial quality
+    bar; ``offset`` picks a round-robin window of ``limit`` titles from that
+    pool, so consecutive refreshes show different games.
+    """
 
     params = {
         "storeID": "1",
         "onSale": "1",
         "sortBy": "Deal Rating",
-        "pageSize": "30",
+        "pageSize": "60",
     }
     url = f"{_CHEAPSHARK_API}/deals?{urllib.parse.urlencode(params)}"
     payload: Any = None
@@ -443,23 +469,24 @@ def _fetch_steam_deals_sync(limit: int) -> dict[str, Any]:
             continue
         candidates.append((rating, item))
     candidates.sort(key=lambda pair: pair[0], reverse=True)
+    pool = [pair[1] for pair in candidates]
+    pool_size = len(pool)
+    groups = max(1, (pool_size + limit - 1) // limit) if pool_size else 1
+    if pool_size:
+        # Never pad with duplicates: when the pool is smaller than ``limit``
+        # the caller simply receives fewer picks.
+        start = (int(offset or 0) % groups) * limit
+        selected = pool[start:start + limit]
+    else:
+        selected = []
 
     results: list[dict[str, Any]] = []
-    for deal_rating, item in candidates[:limit]:
+    details = _fetch_deal_details_sync(
+        [str(item.get("gameID") or "").strip() for item in selected]
+    )
+    for item in selected:
         game_id = str(item.get("gameID") or "").strip()
-        detail: Mapping[str, Any] = {}
-        if game_id.isdigit():
-            try:
-                detail_payload = _http_json(
-                    f"{_CHEAPSHARK_API}/games?id={urllib.parse.quote(game_id)}",
-                    max_bytes=_MAX_PRICE_HTTP_BYTES,
-                    user_agent=_PRICE_USER_AGENT,
-                )
-                if isinstance(detail_payload, Mapping):
-                    detail = detail_payload
-            except Exception:
-                detail = {}
-            time.sleep(0.1)
+        detail: Mapping[str, Any] = details.get(game_id) or {}
 
         title = _clean_text(item.get("title"), 200)
         app_id = str(item.get("steamAppID") or "").strip()
@@ -510,7 +537,7 @@ def _fetch_steam_deals_sync(limit: int) -> dict[str, Any]:
             "gap_to_low": gap_to_low,
             "is_at_low": at_low,
             "hoard_worthy": bool(savings_percent >= 80 or (current_price and float(current_price) <= 5.0) or at_low),
-            "deal_rating": round(float(deal_rating), 1),
+            "deal_rating": round(float(item.get("dealRating") or 0), 1),
             "steam_rating": _clean_text(item.get("steamRatingText"), 40),
             "steam_percent": int(float(item.get("steamRatingPercent") or 0)),
             "metacritic": int(float(item.get("metacriticScore") or 0)),
@@ -539,6 +566,8 @@ def _fetch_steam_deals_sync(limit: int) -> dict[str, Any]:
         "currency": "USD",
         "count": len(results),
         "results": results,
+        "groups": groups,
+        "pool": pool_size,
         "error": "" if results else "no_results",
         "at": utc_now_iso(),
     }
@@ -681,6 +710,8 @@ class NekoHostSystemPort:
         self._events: list[dict[str, str]] = []
         self._price_cache: dict[str, tuple[float, dict[str, Any]]] = {}
         self._deals_cache: tuple[float, dict[str, Any]] | None = None
+        self._deals_group_cache: dict[tuple[int, int], tuple[float, dict[str, Any]]] = {}
+        self._deals_groups = 1
         self._store_names: dict[str, str] = {}
         self._store_names_at = 0.0
 
@@ -852,13 +883,36 @@ class NekoHostSystemPort:
             pass
         return dict(self._store_names)
 
-    async def fetch_steam_deals(self, max_results: int = 6) -> Mapping[str, Any]:
+    async def fetch_steam_deals(self, max_results: int = 6, offset: int = 0) -> Mapping[str, Any]:
+        """Return one rotated group of sale picks.
+
+        ``offset`` selects the group, so pressing refresh again returns a
+        different set of titles instead of the same six. Groups are cached for
+        ``_PRICE_CACHE_SECONDS`` so cycling back is instant, while a new group
+        costs one CheapShark batch request.
+        """
+
         limit = max(3, min(8, int(max_results or 6)))
-        cached = self._deals_cache
-        if cached is not None and (time.monotonic() - cached[0]) < _PRICE_CACHE_SECONDS:
-            return dict(cached[1])
-        raw = await asyncio.to_thread(_fetch_steam_deals_sync, limit)
+        now = time.monotonic()
+        fresh = (
+            self._deals_cache is not None
+            and (now - self._deals_cache[0]) < _PRICE_CACHE_SECONDS
+        )
+        groups = int(self._deals_groups or 1) if fresh else 1
+        page_index = int(offset or 0) % max(1, groups)
+        cache_key = (limit, page_index)
+        if fresh:
+            hit = self._deals_group_cache.get(cache_key)
+            if hit is not None and (now - hit[0]) < _PRICE_CACHE_SECONDS:
+                return dict(hit[1])
+
+        raw = await asyncio.to_thread(_fetch_steam_deals_sync, limit, int(offset or 0))
         self._deals_cache = (time.monotonic(), dict(raw))
+        self._deals_groups = int(raw.get("groups") or 1)
+        self._deals_group_cache[cache_key] = (time.monotonic(), dict(raw))
+        if len(self._deals_group_cache) > 16:
+            oldest = min(self._deals_group_cache, key=lambda key: self._deals_group_cache[key][0])
+            self._deals_group_cache.pop(oldest, None)
         return raw
 
     async def search_game_prices(self, query: str, max_results: int = 3) -> Mapping[str, Any]:

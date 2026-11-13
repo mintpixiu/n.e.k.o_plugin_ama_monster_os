@@ -489,9 +489,14 @@ type SteamInfo = {
     currency?: string
     at?: string | null
     error?: string
+    page?: number
+    groups?: number
+    pool?: number
   }
   free_to_play?: SteamFree[]
   free_to_play_updated?: string
+  free_to_play_group?: number
+  free_to_play_groups?: number
 }
 
 type SteamDeal = SteamPrice & {
@@ -1791,20 +1796,21 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const steamInfo = safeState.steam || {}
   const initialSteamResults = Array.isArray(steamInfo.results) ? steamInfo.results : []
   const initialDeals = Array.isArray(steamInfo.deals?.results) ? steamInfo.deals?.results || [] : []
-  const freeGames = Array.isArray(steamInfo.free_to_play) ? steamInfo.free_to_play : []
+  const initialFreeGames = Array.isArray(steamInfo.free_to_play) ? steamInfo.free_to_play : []
   const modules = Array.isArray(safeState.modules) ? safeState.modules : []
   const events = Array.isArray(safeState.events) ? safeState.events.slice(-5) : []
   const capabilities = safeStringArray(bridge.capabilities)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.3.3 Beta"
+  const version = shell.version || "0.3.4 Beta"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
   const webSearchAction = actionById(actions || [], "ama_web_search")
   const steamSearchAction = actionById(actions || [], "ama_steam_search")
   const steamDealsAction = actionById(actions || [], "ama_steam_deals")
+  const steamFreeAction = actionById(actions || [], "ama_steam_free")
   const tokenAction = actionById(actions || [], "ama_token_prices")
   const uiProfileSaveAction = actionById(actions || [], "ama_ui_profile_save")
   const initialUiProfile = normalizeUiProfile(safeState.ui_profile)
@@ -1888,6 +1894,13 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   )
   const [dealMessage, setDealMessage] = useState("")
   const [dealsLoaded, setDealsLoaded] = useState(initialDeals.length > 0)
+  const [dealPage, setDealPage] = useState(Number(steamInfo.deals?.page) || 1)
+  const [dealGroups, setDealGroups] = useState(Number(steamInfo.deals?.groups) || 1)
+  const [dealPool, setDealPool] = useState(Number(steamInfo.deals?.pool) || 0)
+  const [freeGames, setFreeGames] = useState<SteamFree[]>(initialFreeGames)
+  const [freeShelfPage, setFreeShelfPage] = useState(Number(steamInfo.free_to_play_group) || 1)
+  const [freeShelfGroups, setFreeShelfGroups] = useState(Number(steamInfo.free_to_play_groups) || 1)
+  const [freeShelfBusy, setFreeShelfBusy] = useState(false)
 
   const tr = (key: string, fallback: string): string => {
     const value = t(key)
@@ -2361,6 +2374,9 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       }
       const results = Array.isArray(result.results) ? result.results : []
       setDealResults(results)
+      setDealPage(Number(result.page) || 1)
+      setDealGroups(Number(result.groups) || 1)
+      setDealPool(Number(result.pool) || 0)
       setDealStatus(results.length > 0 ? "success" : "empty")
       setDealMessage(results.length > 0 ? "" : tr("steam.deals.empty", "No qualifying high-discount deals right now."))
       setDealsLoaded(true)
@@ -2381,6 +2397,29 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setSteamTab(next)
     if (next === "picks" && !dealsLoaded && dealStatus !== "searching") {
       void runSteamDeals()
+    }
+  }
+
+  async function shuffleFreeShelf() {
+    if (freeShelfBusy) return
+    setFreeShelfBusy(true)
+    try {
+      if (!steamFreeAction) {
+        await props.api.refresh()
+        return
+      }
+      const result = unwrapResult(
+        await props.api.call(steamFreeAction.id || "ama_steam_free", {}, { timeoutMs: 15000 }),
+      )
+      if (result.ok === false) return
+      const results = Array.isArray(result.results) ? result.results : []
+      if (results.length > 0) setFreeGames(results)
+      setFreeShelfPage(Number(result.group) || 1)
+      setFreeShelfGroups(Number(result.groups) || 1)
+    } catch (_error) {
+      // Keep the current shelf on failure.
+    } finally {
+      setFreeShelfBusy(false)
     }
   }
 
@@ -3379,14 +3418,20 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                 <h2 className="ama-panel-title">{tr("steam.deals.title", "Worth grabbing")}</h2>
                 <p className="ama-panel-hint">{tr("steam.deals.subtitle", "Hand-picked by discount and rating, with historical lows.")}</p>
               </div>
-              <button
-                type="button"
-                className="ama-web-chip"
-                disabled={dealStatus === "searching"}
-                onClick={() => void runSteamDeals()}
-              >
-                {dealStatus === "searching" ? tr("steam.deals.loading", "Finding the best deals...") : tr("steam.deals.refresh", "Refresh picks")}
-              </button>
+              <div className="ama-deal-actions">
+                <span className="ama-deal-page">
+                  {tr("steam.deals.page", "第 {page}/{groups} 批").replace("{page}", String(dealPage || 1)).replace("{groups}", String(dealGroups || 1))}
+                  {dealPool > 0 ? ` · ${dealPool}` : ""}
+                </span>
+                <button
+                  type="button"
+                  className="ama-web-chip"
+                  disabled={dealStatus === "searching"}
+                  onClick={() => void runSteamDeals()}
+                >
+                  {dealStatus === "searching" ? tr("steam.deals.loading", "Finding the best deals...") : tr("steam.deals.shuffle", "换一批")}
+                </button>
+              </div>
             </div>
             {dealStatus === "searching" ? (
               <div className="ama-web-state" role="status">
@@ -3466,7 +3511,19 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                 <h2 className="ama-panel-title">{tr("steam.free.title", "Free to play")}</h2>
                 <p className="ama-panel-hint">{tr("steam.free.subtitle", "Permanently free, not a limited giveaway.")}</p>
               </div>
-              <span className="ama-badge is-peach">{tr("steam.hoard", "Can skip playing; can't skip owning.")}</span>
+              <div className="ama-deal-actions">
+                <span className="ama-deal-page">
+                  {tr("steam.free.page", "第 {page}/{groups} 组").replace("{page}", String(freeShelfPage || 1)).replace("{groups}", String(freeShelfGroups || 1))}
+                </span>
+                <button
+                  type="button"
+                  className="ama-web-chip"
+                  disabled={refreshing || freeShelfBusy}
+                  onClick={() => void shuffleFreeShelf()}
+                >
+                  {freeShelfBusy ? tr("steam.free.loading", "更新中…") : tr("steam.free.shuffle", "换一批")}
+                </button>
+              </div>
             </div>
             <div className="ama-free-grid">
               {freeGames.map((game) => (
