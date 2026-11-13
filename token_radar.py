@@ -31,7 +31,7 @@ HISTORY_DAYS = 30
 HISTORY_KEEP_DAYS = 45
 _CACHE_FILE = "token_radar_cache.json"
 _HISTORY_FILE = "token_radar_history.json"
-_USER_AGENT = "AmaMonsterOS/0.6.1 (+https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os)"
+_USER_AGENT = "AmaMonsterOS/0.6.2 (+https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os)"
 _LOCK = threading.Lock()
 
 

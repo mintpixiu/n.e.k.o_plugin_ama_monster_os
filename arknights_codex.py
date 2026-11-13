@@ -10,6 +10,7 @@ Data is a versioned snapshot; the official game remains the source of truth.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 CODEX_VERSION = "2026.11"
@@ -146,6 +147,54 @@ OPERATORS: tuple[dict[str, Any], ...] = tuple(
 )
 
 
+def _decorate(operator: Mapping[str, Any]) -> dict[str, Any]:
+    item = dict(operator)
+    operator_class = str(item.get("class") or "近卫")
+    item["class"] = operator_class if operator_class in CLASSES else "近卫"
+    item["class_color"] = CLASS_COLORS.get(item["class"], CLASS_COLORS["近卫"])
+    item["role"] = str(item.get("role") or CLASS_ROLE.get(item["class"], ""))
+    item["initial"] = str(item.get("name_cn") or "")[:1]
+    item.setdefault("race", "")
+    item.setdefault("faction", "")
+    tags = item.get("tags")
+    item["tags"] = [str(tag) for tag in tags] if isinstance(tags, list) else [item["class"]]
+    return item
+
+
+def merge_operators(synced: Iterable[Mapping[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """Merge the downloaded full roster with the hand-curated entries.
+
+    Curated fields (faction, race, tags, role) win when both sides have the
+    same operator, so the bundled snapshot keeps its extra context.
+    """
+
+    bundled = {item["name_cn"]: item for item in OPERATORS}
+    merged: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for raw in synced or ():
+        if not isinstance(raw, Mapping):
+            continue
+        name = str(raw.get("name_cn") or "").strip()
+        if not name or name in seen:
+            continue
+        base = bundled.get(name)
+        entry = dict(raw)
+        if base:
+            for field in ("faction", "race", "tags", "role"):
+                if base.get(field):
+                    entry[field] = base[field]
+        entry["name_cn"] = name
+        entry["name_en"] = str(entry.get("name_en") or name)
+        entry["id"] = str(entry.get("id") or name)
+        merged.append(_decorate(entry))
+        seen.add(name)
+    for item in OPERATORS:
+        if item["name_cn"] not in seen:
+            merged.append(_decorate(item))
+            seen.add(item["name_cn"])
+    return merged
+
+
 def _matches(operator: Mapping[str, Any], query: str) -> bool:
     if not query:
         return True
@@ -164,6 +213,7 @@ def filter_operators(
     classes: Iterable[str] | None = None,
     rarities: Iterable[int] | None = None,
     max_results: int = 120,
+    operators: Iterable[Mapping[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Return codex entries matching a text query, class and rarity filters."""
 
@@ -171,7 +221,8 @@ def filter_operators(
     class_filter = {item for item in (classes or ()) if item in CLASSES}
     rarity_filter = {int(item) for item in (rarities or ()) if str(item).isdigit()}
     results: list[dict[str, Any]] = []
-    for operator in OPERATORS:
+    source = operators if operators is not None else OPERATORS
+    for operator in source:
         if class_filter and operator["class"] not in class_filter:
             continue
         if rarity_filter and operator["rarity"] not in rarity_filter:
@@ -179,18 +230,20 @@ def filter_operators(
         if not _matches(operator, text):
             continue
         results.append(dict(operator))
-        if len(results) >= max(1, min(int(max_results or 120), 200)):
+        if len(results) >= max(1, min(int(max_results or 120), 1000)):
             break
     return results
 
 
-def codex_summary() -> dict[str, Any]:
+def codex_summary(operators: Iterable[Mapping[str, Any]] | None = None) -> dict[str, Any]:
     """Counts used by the window header and the plugin snapshot."""
 
+    source = operators if operators is not None else OPERATORS
+    source = list(source)
     by_class = {name: 0 for name in CLASSES}
     by_rarity: dict[str, int] = {}
     factions: set[str] = set()
-    for operator in OPERATORS:
+    for operator in source:
         by_class[operator["class"]] += 1
         key = str(operator["rarity"])
         by_rarity[key] = by_rarity.get(key, 0) + 1
@@ -198,7 +251,7 @@ def codex_summary() -> dict[str, Any]:
     return {
         "version": CODEX_VERSION,
         "updated": CODEX_UPDATED,
-        "total": len(OPERATORS),
+        "total": len(source),
         "classes": by_class,
         "rarities": by_rarity,
         "factions": sorted(factions),
@@ -207,19 +260,43 @@ def codex_summary() -> dict[str, Any]:
     }
 
 
+def codex_operators(data_dir: Path | None = None) -> list[dict[str, Any]]:
+    """Bundled snapshot merged with any downloaded full roster."""
+
+    synced: list[dict[str, Any]] = []
+    if data_dir is not None:
+        try:
+            from .arknights_sync import read_index_operators
+        except ImportError:
+            from arknights_sync import read_index_operators  # type: ignore[no-redef]
+        try:
+            synced = read_index_operators(Path(data_dir))
+        except Exception:
+            synced = []
+    return merge_operators(synced)
+
+
 def codex_payload(
     query: str = "",
     classes: Iterable[str] | None = None,
     rarities: Iterable[int] | None = None,
     max_results: int = 120,
+    data_dir: Path | None = None,
 ) -> dict[str, Any]:
-    results = filter_operators(query, classes, rarities, max_results)
+    operators = codex_operators(data_dir)
+    results = filter_operators(query, classes, rarities, max_results, operators)
+    summary = codex_summary(operators)
+    names = {item["name_cn"] for item in operators}
+    missing_bundled = [op for op in OPERATORS if op["name_cn"] not in names]
+    summary["synced"] = max(0, len(operators) - len(missing_bundled) - (len(OPERATORS) - len(missing_bundled)))
+    summary["synced"] = max(0, len(operators) - len(OPERATORS))
+    summary["bundled"] = len(OPERATORS)
     return {
         "ok": True,
         "query": str(query or "")[:40],
         "count": len(results),
         "results": results,
-        "summary": codex_summary(),
+        "summary": summary,
         "tools": [dict(item) for item in TOOLS],
         "disclaimer": CODEX_DISCLAIMER,
         "updated": CODEX_UPDATED,
@@ -341,10 +418,10 @@ def _story_brief(operator: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def codex_detail(operator_id: str) -> dict[str, Any]:
+def codex_detail(operator_id: str, data_dir: Path | None = None) -> dict[str, Any]:
     """Return one operator with skins and a story brief."""
 
-    for operator in OPERATORS:
+    for operator in codex_operators(data_dir):
         if operator["id"] != operator_id:
             continue
         skins = [dict(item) for item in SKINS.get(operator_id, ())]
@@ -374,6 +451,7 @@ __all__ = [
     "CODEX_VERSION",
     "OPERATORS",
     "codex_detail",
+    "codex_operators",
     "codex_payload",
     "codex_summary",
     "filter_operators",

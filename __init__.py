@@ -23,7 +23,8 @@ from plugin.sdk.plugin import (
     ui,
 )
 
-from .arknights_codex import codex_detail, codex_payload, codex_summary, tools_payload
+from .arknights_codex import codex_detail, codex_operators, codex_payload, codex_summary, tools_payload
+from .arknights_sync import sync_index
 from .shell_runtime import SHELL_CHANNEL, SHELL_DISPLAY_VERSION, SHELL_NAME, AmaOsRuntime
 from .steam_account import SteamAccountService
 from .system_port import NekoHostSystemPort
@@ -134,8 +135,8 @@ CODEX_SCHEMA: dict[str, Any] = {
         "max_results": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 200,
-            "default": 120,
+            "maximum": 1000,
+            "default": 1000,
         },
     },
 }
@@ -218,7 +219,7 @@ class AmaMonsterOsPlugin(NekoPluginBase):
     async def on_startup(self, **_):
         self._load_ui_profile()
         try:
-            self._runtime.set_codex(codex_summary())
+            self._runtime.set_codex(codex_summary(codex_operators(self.data_path())))
         except Exception as exc:
             self.logger.warning("Could not build the codex summary: %s", exc)
         try:
@@ -445,19 +446,65 @@ class AmaMonsterOsPlugin(NekoPluginBase):
         try:
             limit = int(max_results)
         except (TypeError, ValueError):
-            limit = 120
+            limit = 1000
         payload = await asyncio.to_thread(
             codex_payload,
             str(query or ""),
             class_filter,
             rarity_filter,
             limit,
+            self.data_path(),
         )
         self._runtime.set_codex(payload["summary"])
         return Ok({
             **payload,
             "summary": self.i18n.t("entries.codex.summary", default="Codex matched {count} operator(s).")
             .replace("{count}", str(payload["count"])),
+        })
+
+    @ui.action(
+        id="ama_arknights_sync",
+        label=tr("actions.codex_sync.label", default="Sync full roster"),
+        icon="refresh",
+        tone="default",
+        order=28,
+        refresh_context=True,
+    )
+    @plugin_entry(
+        id="ama_arknights_sync",
+        name=tr("entries.codex_sync.name", default="Sync full Arknights roster"),
+        description=tr(
+            "entries.codex_sync.description",
+            default=(
+                "Download the public game-data operator tables, keep factual fields "
+                "only, and cache the full roster locally. No artwork is downloaded."
+            ),
+        ),
+        input_schema=CODEX_SCHEMA,
+        llm_result_fields=["summary"],
+        timeout=180,
+    )
+    async def ama_arknights_sync(self, **_):
+        try:
+            result = await asyncio.to_thread(sync_index, self.data_path())
+        except Exception as exc:
+            self.logger.warning("Arknights roster sync failed: %s", exc)
+            return Ok({
+                "ok": False,
+                "error": "sync_failed",
+                "summary": self.i18n.t(
+                    "entries.codex_sync.failed",
+                    default="Could not download the roster. Check the network and retry.",
+                ),
+            })
+        summary = codex_summary(codex_operators(self.data_path()))
+        self._runtime.set_codex(summary)
+        return Ok({
+            **result,
+            "summary": self.i18n.t(
+                "entries.codex_sync.summary",
+                default="Synced {count} operators from public game data.",
+            ).replace("{count}", str(result.get("count", 0))),
         })
 
     @ui.action(
@@ -483,7 +530,7 @@ class AmaMonsterOsPlugin(NekoPluginBase):
         timeout=10,
     )
     async def ama_arknights_detail(self, operator_id: Any = "", **_):
-        payload = await asyncio.to_thread(codex_detail, str(operator_id or ""))
+        payload = await asyncio.to_thread(codex_detail, str(operator_id or ""), self.data_path())
         if not payload.get("ok"):
             return Ok({
                 "ok": False,

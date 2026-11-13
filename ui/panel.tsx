@@ -602,6 +602,8 @@ type CodexTool = {
 
 type CodexSummary = {
   version?: string
+  synced?: number
+  bundled?: number
   updated?: string
   total?: number
   classes?: Record<string, number>
@@ -1873,6 +1875,8 @@ const STYLES = `
 }
 .ama-codex-toolbar { display: grid; gap: 9px; margin-bottom: 10px; }
 .ama-codex-toolbar .ama-web-input-wrap { max-width: 460px; }
+.ama-codex-sync { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 7px; border-top: 1px dashed var(--line); }
+.ama-codex-sync .ama-studio-note { max-width: 560px; }
 .ama-codex-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
 .ama-codex-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--card); color: var(--muted); font: inherit; font-size: 8px; font-weight: 750; cursor: pointer; }
 .ama-codex-chip small { color: var(--muted); font-size: 7px; font-weight: 500; }
@@ -2788,7 +2792,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.6.1 Beta"
+  const version = shell.version || "0.6.2 Beta"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
@@ -2798,6 +2802,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const steamFreeAction = actionById(actions || [], "ama_steam_free")
   const codexAction = actionById(actions || [], "ama_arknights_codex")
   const codexDetailAction = actionById(actions || [], "ama_arknights_detail")
+  const codexSyncAction = actionById(actions || [], "ama_arknights_sync")
   const steamLoginAction = actionById(actions || [], "ama_steam_login")
   const steamAccountAction = actionById(actions || [], "ama_steam_account")
   const steamLogoutAction = actionById(actions || [], "ama_steam_logout")
@@ -2839,6 +2844,8 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const [codexTools, setCodexTools] = useState<CodexTool[]>([])
   const [codexTab, setCodexTab] = useState<"overview" | "skins" | "story">("overview")
   const [codexDetailLoading, setCodexDetailLoading] = useState(false)
+  const [codexSyncing, setCodexSyncing] = useState(false)
+  const [codexSyncNote, setCodexSyncNote] = useState("")
   const [uiSaving, setUiSaving] = useState(false)
 
   useEffect(() => {
@@ -3304,7 +3311,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setCodexMessage("")
     try {
       const result = unwrapResult(
-        await props.api.call(codexAction.id || "ama_arknights_codex", { query: "", classes: [], rarities: [], max_results: 200 }, { timeoutMs: 15000 }),
+        await props.api.call(codexAction.id || "ama_arknights_codex", { query: "", classes: [], rarities: [], max_results: 1000 }, { timeoutMs: 15000 }),
       )
       if (result.ok === false) {
         setCodexMessage(tr("codex.error", "图鉴读取失败，可以重试。"))
@@ -3327,6 +3334,28 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     if (view !== "codex" || codexLoaded || codexLoading) return
     void loadCodex()
   }, [view])
+
+  async function syncCodexRoster() {
+    if (!codexSyncAction || codexSyncing) return
+    setCodexSyncing(true)
+    setCodexSyncNote(tr("codex.syncing", "正在下载完整干员表…"))
+    try {
+      const result = unwrapResult(
+        await props.api.call(codexSyncAction.id || "ama_arknights_sync", {}, { timeoutMs: 180000 }),
+      )
+      if (result.ok === false) {
+        setCodexSyncNote(tr("codex.syncFailed", "同步失败，请检查网络后重试。"))
+        return
+      }
+      setCodexSyncNote(tr("codex.synced", "已同步 {count} 位干员。").replace("{count}", String(result.count || 0)))
+      setCodexLoaded(false)
+      await loadCodex()
+    } catch (_error) {
+      setCodexSyncNote(tr("codex.syncFailed", "同步失败，请检查网络后重试。"))
+    } finally {
+      setCodexSyncing(false)
+    }
+  }
 
   async function selectCodexOperator(operatorId: string) {
     setCodexSelected(operatorId)
@@ -4174,7 +4203,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
             {codexSummary.updated ? ` · ${tr("codex.updated", "快照 {date}").replace("{date}", String(codexSummary.updated))}` : ""}
           </p>
         </div>
-        <span className="ama-badge is-lilac">{codexOperators.length || codexSummary.total || 0}</span>
+        <span className="ama-badge is-lilac">{codexSummary.total || codexOperators.length || 0}</span>
       </div>
 
       <section className="ama-panel ama-codex-toolbar">
@@ -4220,6 +4249,19 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
             {tr("codex.matched", "匹配 {count} 位").replace("{count}", String(codexFiltered.length))}
           </span>
         </div>
+        <div className="ama-codex-sync">
+          <button
+            type="button"
+            className="ama-btn ama-btn-primary"
+            disabled={codexSyncing}
+            onClick={() => void syncCodexRoster()}
+          >
+            {codexSyncing ? tr("codex.syncingShort", "同步中…") : tr("codex.sync", "同步完整干员表（400+）")}
+          </button>
+          <span className="ama-studio-note">
+            {codexSyncNote || tr("codex.syncHint", "本地内置 {built} 位；同步后补齐全部实装干员（仅姓名/职业/星级/阵营，不含图片）。").replace("{built}", String(codexSummary.bundled || 81))}
+          </span>
+        </div>
       </section>
 
       {codexMessage ? <div className="ama-note">{codexMessage}</div> : null}
@@ -4253,7 +4295,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                   >{operator.initial || operator.name_cn.slice(0, 1)}</span>
                   <span className="ama-codex-body">
                     <strong>{operator.name_cn}</strong>
-                    <small>{operator.name_en}</small>
+                    {operator.name_en && operator.name_en !== operator.name_cn ? <small>{operator.name_en}</small> : null}
                     <span className="ama-codex-meta">
                       <em>{operator.class}</em>
                       <i>{"★".repeat(operator.rarity)}</i>
@@ -4276,7 +4318,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                 >{codexCurrent.initial || codexCurrent.name_cn.slice(0, 1)}</span>
                 <div>
                   <h2>{codexCurrent.name_cn}</h2>
-                  <p>{codexCurrent.name_en}</p>
+                  {codexCurrent.name_en && codexCurrent.name_en !== codexCurrent.name_cn ? <p>{codexCurrent.name_en}</p> : null}
                   <span className="ama-codex-stars">{"★".repeat(codexCurrent.rarity)}</span>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 # Token 看板与价格时段说明
 
-**Ama Monster OS 0.6.1 Beta** · Token Radar
+**Ama Monster OS 0.6.2 Beta** · Token Radar
 
 Token 看板把国内外主流 AI 厂商的模型目录价、30 日价格 K 线和峰谷时段放进窗口里。它显示的是**公开目录价**，不是股票交易所的逐笔行情：厂商只在调价时改变价格，所以大多数蜡烛会保持平线，这是正常现象。
 

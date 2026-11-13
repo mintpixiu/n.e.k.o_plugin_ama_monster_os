@@ -1,10 +1,10 @@
 # Publishing Ama Monster OS
 
-**Status: 0.6.1 Beta published to GitHub Releases as a pre-release.** Standard
+**Status: 0.6.2 Beta published to GitHub Releases as a pre-release.** Standard
 GitHub Actions evidence is present. The Market Beta submission is still manual.
 
-- Release: https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os/releases/tag/v0.6.1-beta
-- Tag: `v0.6.1-beta`
+- Release: https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os/releases/tag/v0.6.2-beta
+- Tag: `v0.6.2-beta`
 - Release asset SHA-256: `f5e836947974acb415cd4de89412cd8852c5f75378a35433d444f873398f98b3`
 - Local build SHA-256: `e17f3ad77b62533d92fde435d60f113730297d53499f11fe6cc21547d61680cd`
 - Evidence: `market-evidence.json` + `market-release-check.txt`
@@ -26,7 +26,7 @@ repository named `n.e.k.o_plugin_ama_monster_os`.
 to the **stable** channel, so for Beta use the two-step flow:
 
 ```powershell
-# 1) Create and push tag v0.6.1-beta + the GitHub Release, without notifying Market
+# 1) Create and push tag v0.6.2-beta + the GitHub Release, without notifying Market
 uv run neko-plugin publish github "D:\NEKO.OS\ama_monster_os"
 
 # 2) In the N.E.K.O Plugin Market submission page, choose the Beta channel,
@@ -47,9 +47,9 @@ the GitHub repository. Follow the official flow:
 
 ## Version rules
 
-- Manifest version: `0.6.1-beta`
-- Display version: `0.6.1 Beta`
-- Tag created by the CLI: `v0.6.1-beta`
+- Manifest version: `0.6.2-beta`
+- Display version: `0.6.2 Beta`
+- Tag created by the CLI: `v0.6.2-beta`
 - A version published to Beta cannot be republished with the same number to
   Stable; use a new version for a later stable release.
 

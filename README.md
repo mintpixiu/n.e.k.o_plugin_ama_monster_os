@@ -1,6 +1,6 @@
 # N.E.K.O Ama Monster OS
 
-> **0.6.1 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
+> **0.6.2 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
 > web search, a Steam price radar, a token price radar, and a versioned system
 > bridge reserved for a future standalone build.
 
@@ -8,7 +8,7 @@
 
 This is the first window of **Ama Monster OS**, not a finished operating
 system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
-0.6.1 Beta contains.
+0.6.2 Beta contains.
 
 ## What is real in this version
 
@@ -29,10 +29,12 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
 - A **Token radar** for public model list prices from OpenAI, Anthropic, Google,
   xAI, Mistral, DeepSeek, Qwen, Kimi, GLM, and Volcengine: 20 models, 30-day
   candlesticks, 60-second refresh, and explicit peak/off-peak windows.
-- An **offline Arknights codex** in a wiki-like layout: 81 operators with
-  overview, a few sample skins, a data-only story brief, plus a curated
-  **helper-tools and download** panel. No official art, voice lines or story
-  text is bundled.
+- A **wiki-style Arknights codex**: 81 curated operators bundled, with a
+  one-click **full-roster sync** (currently 438 operators) from public game
+  data. Every operator gets a generated class-coloured avatar; overview, a few
+  sample skins, a data-only story brief, and a curated **helper-tools and
+  download** panel are included. No official art, voice lines or story text is
+  bundled.
 - **Five materials**: **glass** (Apple / Xiaomi style translucent panels with
   backdrop blur and rim light), **metal** (brushed steel with chamfered
   highlights), **cream** (cartoon cream with thick outlines and sticker
@@ -228,7 +230,7 @@ a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
-- Any Market publication. The **0.6.1 Beta** GitHub Release is live; its Market
+- Any Market publication. The **0.6.2 Beta** GitHub Release is live; its Market
   Beta submission remains manual.
 
 ## Install and open the window
@@ -335,14 +337,14 @@ python -m pytest tests
 ```
 
 See [PUBLISHING.md](PUBLISHING.md) for the Beta release and Market submission
-notes. The latest GitHub Release is `v0.6.1-beta`; Market notification remains manual.
+notes. The latest GitHub Release is `v0.6.2-beta`; Market notification remains manual.
 
 ## Versioning and release
 
-- Manifest version: `0.6.1-beta`
-- Display version: **0.6.1 Beta**
+- Manifest version: `0.6.2-beta`
+- Display version: **0.6.2 Beta**
 - Release channel: **Beta (pre-release)**
-- Published GitHub Release: **v0.6.1-beta**
+- Published GitHub Release: **v0.6.2-beta**
 - Market: **not submitted**; the Beta channel submission is manual
 
 ## Credits
