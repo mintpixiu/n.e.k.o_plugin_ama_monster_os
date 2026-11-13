@@ -34,6 +34,7 @@ try:  # package-relative imports when loaded as plugin.plugins.ama_monster_os
         CAPABILITY_ACTIVITY,
         CAPABILITY_ENVIRONMENT,
         CAPABILITY_EVENTS,
+        CAPABILITY_STEAM_ACCOUNT,
         CAPABILITY_STEAM_DEALS,
         CAPABILITY_STEAM_PRICES,
         CAPABILITY_WEB_SEARCH,
@@ -48,6 +49,7 @@ except ImportError:  # pragma: no cover - direct test import fallback
         CAPABILITY_ACTIVITY,
         CAPABILITY_ENVIRONMENT,
         CAPABILITY_EVENTS,
+        CAPABILITY_STEAM_ACCOUNT,
         CAPABILITY_STEAM_DEALS,
         CAPABILITY_STEAM_PRICES,
         CAPABILITY_WEB_SEARCH,
@@ -703,6 +705,7 @@ class NekoHostSystemPort:
         CAPABILITY_WEB_SEARCH,
         CAPABILITY_STEAM_PRICES,
         CAPABILITY_STEAM_DEALS,
+        CAPABILITY_STEAM_ACCOUNT,
     )
 
     def __init__(self, plugin: Any) -> None:

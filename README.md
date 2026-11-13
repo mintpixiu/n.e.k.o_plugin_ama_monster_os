@@ -1,6 +1,6 @@
 # N.E.K.O Ama Monster OS
 
-> **0.3.4 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
+> **0.3.5 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
 > web search, a Steam price radar, a token price radar, and a versioned system
 > bridge reserved for a future standalone build.
 
@@ -8,7 +8,7 @@
 
 This is the first window of **Ama Monster OS**, not a finished operating
 system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
-0.3.4 Beta contains.
+0.3.5 Beta contains.
 
 ## What is real in this version
 
@@ -136,11 +136,17 @@ live full catalogue.
 
 ![Ama Monster OS free-to-play shelf](docs/preview-free.png)
 
-**Steam account login is deliberately not enabled in 0.3.4 Beta.** This build
-does not ask for a Steam password and does not put Steam's login page inside an
-iframe. The account card says **Login deferred** instead of pretending to be
-connected. A future safe integration can use Steam OpenID (browser redirect,
-no password handled by the plugin) or a user-supplied Web API key.
+**Steam sign-in uses Steam OpenID, not a password form.** The window never asks
+for a Steam password and never puts Steam's login page inside the iframe:
+it opens `steamcommunity.com/openid/login` in your browser, Steam redirects
+back to a loopback port owned by the plugin, the assertion is verified with
+`check_authentication`, and only the public SteamID plus the public profile are
+stored in the plugin data folder.
+
+Because `steamcommunity.com` is frequently unreachable in mainland China, the
+card also reports whether **Steam++ (Watt Toolkit / 瓦特工具箱)** acceleration is
+present — either through the hosts-file redirect or a live reachability probe.
+If the host is unreachable the card says so instead of failing silently.
 
 The all-time low is CheapShark's cross-store record, not an official Steam
 regional low. Steam Community and the Steam Store API were unreachable from the
@@ -189,7 +195,8 @@ a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting
 
 - A general browser or arbitrary-URL reader. This is a search room, not an
   embedded Chromium.
-- Steam account login, Steam library, achievements, or wallet.
+- Steam library, achievements, wallet, friends, or inventory data. Sign-in is
+  OpenID only and exposes just the public profile.
 - A live tracker for every limited-time free-to-keep giveaway. The free shelf is
   a versioned curated snapshot, not a claim of complete coverage.
 - A CN historical-low database. The CN price is current only; Steam does not
@@ -198,7 +205,7 @@ a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
-- Any Market publication. The **0.3.4 Beta** GitHub Release is live; its Market
+- Any Market publication. The **0.3.5 Beta** GitHub Release is live; its Market
   Beta submission remains manual.
 
 ## Install and open the window
@@ -297,14 +304,14 @@ python -m pytest tests
 ```
 
 See [PUBLISHING.md](PUBLISHING.md) for the Beta release and Market submission
-notes. The latest GitHub Release is `v0.3.4-beta`; Market notification remains manual.
+notes. The latest GitHub Release is `v0.3.5-beta`; Market notification remains manual.
 
 ## Versioning and release
 
-- Manifest version: `0.3.4-beta`
-- Display version: **0.3.4 Beta**
+- Manifest version: `0.3.5-beta`
+- Display version: **0.3.5 Beta**
 - Release channel: **Beta (pre-release)**
-- Published GitHub Release: **v0.3.4-beta**
+- Published GitHub Release: **v0.3.5-beta**
 - Market: **not submitted**; the Beta channel submission is manual
 
 ## Credits

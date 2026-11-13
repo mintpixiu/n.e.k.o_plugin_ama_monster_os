@@ -172,8 +172,9 @@ Rules:
   only names a curated alias may be used. The UI shows the English `title` on
   top and the Chinese title directly underneath.
 - The all-time low is CheapShark's cross-store record. Keep that attribution.
-- Steam account linking is out of scope for this method. It is the reserved
-  `steam.account` seam and must never store a password.
+- Steam account linking is handled by `steam_account.SteamAccountService`
+  through Steam OpenID. It never stores a password and exposes the
+  `steam.account` capability.
 
 ### `fetch_steam_deals()`
 
@@ -296,6 +297,23 @@ plugin data folder, and never requires a provider API key. The UI polls it every
 accumulate local observations; the UI labels that distinction. The capability is
 advertised as `tokens.prices`.
 
+### Steam account (OpenID)
+
+`ama_steam_login`, `ama_steam_account`, and `ama_steam_logout` implement Steam
+sign-in without a password:
+
+- `ama_steam_login` opens a loopback HTTP listener on `127.0.0.1` and returns the
+  `steamcommunity.com/openid/login` URL plus the Steam++ detection result.
+- `ama_steam_account` polls the listener, verifies the assertion with
+  `check_authentication`, fetches the public profile, and persists
+  `steam_account.json` in the plugin data folder.
+- `ama_steam_logout` deletes that file.
+
+Only the public SteamID and public profile fields are stored. The snapshot
+exposes `steam.account`, `steam.accelerator`, and `steam.login`. Accelerator
+detection combines a hosts-file check with a 45-second-cached reachability
+probe of `steamcommunity.com`.
+
 ### Sale calendar
 
 The runtime adds `steam.sale` to the snapshot from
@@ -377,7 +395,7 @@ Modes:
 | `vault.storage` | reserved | User-scoped settings and secrets from the desktop vault. |
 | `voice.pipeline` | reserved | Speech input/output handoff. |
 | `web.fetch` | reserved | Read a specific page with an SSRF-safe URL policy and size limit. |
-| `steam.account` | reserved | Steam OpenID or a user-supplied API key; never store passwords. |
+| `steam.account` | implemented | Steam OpenID sign-in with a loopback callback; public profile only. |
 | `module.registry` | reserved | Additional OS modules beyond the preview. |
 
 A reserved seam is declared, not implemented. A provider must not advertise a
@@ -426,5 +444,6 @@ The shipped tests cover:
 - Steam sale calendar current/next evaluation, local countdown inputs, and TBD handling;
 - UI profile normalization, gradient/sound validation, import envelope validation, and persistence path;
 - token radar normalization, history persistence, cache fallback, and DeepSeek peak/off-peak metadata;
+- Steam OpenID URL building, assertion rejection, loopback capture, and profile persistence;
 - runtime boot, pulse, web search, Steam price lookup, shutdown, and degraded-host behaviour;
 - serializability of the complete snapshot.

@@ -44,8 +44,8 @@ except ImportError:  # pragma: no cover - direct test import fallback
     from ui_profile import DEFAULT_UI_PROFILE, normalize_ui_profile  # type: ignore[no-redef]
 
 SHELL_NAME = "Ama Monster OS"
-SHELL_VERSION = "0.3.4-beta"
-SHELL_DISPLAY_VERSION = "0.3.4 Beta"
+SHELL_VERSION = "0.3.5-beta"
+SHELL_DISPLAY_VERSION = "0.3.5 Beta"
 SHELL_CHANNEL = "Beta"
 SHELL_CODENAME = "Ama-01"
 _MAX_QUERY_CHARS = 200
@@ -168,6 +168,11 @@ class AmaOsRuntime:
             "page": 1,
             "groups": 1,
             "pool": 0,
+        }
+        self._steam_account: dict[str, Any] = {
+            "account": {},
+            "accelerator": {"available": False, "note": "", "redirected": []},
+            "login": "idle",
         }
         self._ui_profile = normalize_ui_profile(DEFAULT_UI_PROFILE)
         self._deals_offset = 0
@@ -295,6 +300,15 @@ class AmaOsRuntime:
             self._token_radar = {str(key): value for key, value in radar.items()}
         return dict(self._token_radar)
 
+    def set_steam_account(self, value: Mapping[str, Any] | None) -> dict[str, Any]:
+        if isinstance(value, Mapping):
+            self._steam_account = {str(key): value for key, value in value.items()}
+        account = self._steam_account.get("account")
+        linked = isinstance(account, Mapping) and bool(account.get("steam_id"))
+        self._steam["account_linked"] = linked
+        self._steam["account_mode"] = "openid"
+        return dict(self._steam_account)
+
     def contract(self) -> Mapping[str, Any]:
         try:
             manifest = self._port.manifest()
@@ -370,6 +384,9 @@ class AmaOsRuntime:
                 "free_to_play_updated": FREE_TO_PLAY_UPDATED,
                 "free_to_play_group": self._free_shelf[1],
                 "free_to_play_groups": self._free_shelf[2],
+                "account": dict(self._steam_account.get("account") or {}),
+                "accelerator": dict(self._steam_account.get("accelerator") or {}),
+                "login": str(self._steam_account.get("login") or "idle"),
                 "sale": evaluate_sales(),
             },
             "events": [event.as_dict() for event in self._events[-8:]],

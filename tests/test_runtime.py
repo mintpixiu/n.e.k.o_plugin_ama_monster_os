@@ -185,7 +185,7 @@ def test_snapshot_is_versioned_and_serializable() -> None:
     snapshot = asyncio.run(runtime.snapshot())
 
     assert snapshot["ok"] is True
-    assert snapshot["shell"]["version"] == "0.3.4 Beta"
+    assert snapshot["shell"]["version"] == "0.3.5 Beta"
     assert snapshot["shell"]["name"] == "Ama Monster OS"
     assert snapshot["preview"] is True
     assert snapshot["bridge"]["contract_version"] == CONTRACT_VERSION
@@ -256,6 +256,7 @@ def test_contract_validates() -> None:
     assert "steam.prices" in manifest["capabilities"]
     assert "steam.deals" in manifest["capabilities"]
     assert "tokens.prices" in manifest["capabilities"]
+    assert "steam.account" in manifest["capabilities"]
     assert "web.fetch" in {item["id"] for item in manifest["reserved"]}
 
 

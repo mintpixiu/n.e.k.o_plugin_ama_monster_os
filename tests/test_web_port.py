@@ -62,7 +62,8 @@ def test_port_manifest_advertises_web_search() -> None:
     assert "steam.prices" in manifest["capabilities"]
     assert "steam.deals" in manifest["capabilities"]
     assert "web.fetch" in {item["id"] for item in manifest["reserved"]}
-    assert "steam.account" in {item["id"] for item in manifest["reserved"]}
+    assert "steam.account" in manifest["capabilities"]
+    assert "steam.account" not in {item["id"] for item in manifest["reserved"]}
 
 
 def test_cheapshark_detail_is_normalized() -> None:

@@ -497,6 +497,26 @@ type SteamInfo = {
   free_to_play_updated?: string
   free_to_play_group?: number
   free_to_play_groups?: number
+  account?: SteamAccount
+  accelerator?: SteamAccelerator
+  login?: string
+}
+
+type SteamAccount = {
+  steam_id?: string
+  nickname?: string
+  real_name?: string
+  avatar?: string
+  online_state?: string
+  privacy?: string
+  linked_at?: string
+}
+
+type SteamAccelerator = {
+  available?: boolean
+  note?: string
+  redirected?: string[]
+  hosts_path?: string
 }
 
 type SteamDeal = SteamPrice & {
@@ -1446,6 +1466,13 @@ const STYLES = `
 .ama-steam-account-title { margin: 0; color: var(--ink-soft); font-size: 10px; font-weight: 850; }
 .ama-steam-account-note { margin: 2px 0 0; color: var(--muted); font-size: 8.5px; line-height: 1.5; }
 .ama-steam-account .ama-badge { margin-left: auto; flex: 0 0 auto; }
+.ama-steam-account.is-linked { border-color: color-mix(in srgb, var(--mint) 45%, var(--line)); }
+.ama-steam-avatar { width: 32px; height: 32px; flex: 0 0 auto; border-radius: 9px; object-fit: cover; border: 1px solid var(--line); }
+.ama-steam-account-warn { margin: 3px 0 0; color: var(--danger); font-size: 8.5px; line-height: 1.5; }
+.ama-steam-login-link { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 5px; }
+.ama-steam-login-link span { color: var(--muted); font-size: 8px; }
+.ama-steam-login-url { flex: 1 0 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 7px; user-select: all; }
+.ama-steam-account .ama-btn, .ama-steam-account .ama-web-chip { margin-left: auto; flex: 0 0 auto; }
 .ama-steam-hero { background: linear-gradient(140deg, var(--hero-1), color-mix(in srgb, var(--sky-soft) 55%, var(--hero-2))); }
 .ama-steam-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .ama-steam-card { display: flex; flex-direction: column; min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 15px; background: var(--card); transition: border-color .16s ease, transform .16s ease; }
@@ -1803,7 +1830,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.3.4 Beta"
+  const version = shell.version || "0.3.5 Beta"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
@@ -1811,6 +1838,9 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const steamSearchAction = actionById(actions || [], "ama_steam_search")
   const steamDealsAction = actionById(actions || [], "ama_steam_deals")
   const steamFreeAction = actionById(actions || [], "ama_steam_free")
+  const steamLoginAction = actionById(actions || [], "ama_steam_login")
+  const steamAccountAction = actionById(actions || [], "ama_steam_account")
+  const steamLogoutAction = actionById(actions || [], "ama_steam_logout")
   const tokenAction = actionById(actions || [], "ama_token_prices")
   const uiProfileSaveAction = actionById(actions || [], "ama_ui_profile_save")
   const initialUiProfile = normalizeUiProfile(safeState.ui_profile)
@@ -1881,6 +1911,12 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           : "idle",
   )
   const [steamMessage, setSteamMessage] = useState("")
+  const [steamAccount, setSteamAccount] = useState<SteamAccount>(steamInfo.account || {})
+  const [steamAccelerator, setSteamAccelerator] = useState<SteamAccelerator>(steamInfo.accelerator || {})
+  const [steamLoginUrl, setSteamLoginUrl] = useState("")
+  const [steamLoginBusy, setSteamLoginBusy] = useState(false)
+  const [steamLoginNote, setSteamLoginNote] = useState("")
+  const [steamLoginError, setSteamLoginError] = useState("")
   const [steamTab, setSteamTab] = useState<"prices" | "picks">("prices")
   const [dealResults, setDealResults] = useState<SteamDeal[]>(initialDeals)
   const [dealStatus, setDealStatus] = useState<WebStatus>(
@@ -2390,6 +2426,89 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       setDealStatus("error")
       setDealMessage(tr("steam.deals.error", "Could not load sale picks. Check your connection and retry."))
       setDealsLoaded(true)
+    }
+  }
+
+  async function startSteamLogin() {
+    if (!steamLoginAction || steamLoginBusy) return
+    setSteamLoginBusy(true)
+    setSteamLoginNote("")
+    setSteamLoginError("")
+    try {
+      const result = unwrapResult(
+        await props.api.call(steamLoginAction.id || "ama_steam_login", {}, { timeoutMs: 20000 }),
+      )
+      if (result.ok === false) {
+        setSteamLoginError(tr("steam.login.failed", "无法启动 Steam 登录，请稍后再试。"))
+        return
+      }
+      const url = String(result.url || "")
+      setSteamLoginUrl(url)
+      if (result.accelerator && typeof result.accelerator === "object") {
+        setSteamAccelerator(result.accelerator as SteamAccelerator)
+      }
+      setSteamLoginNote(String(result.note || ""))
+      if (url) {
+        void pollSteamLogin()
+      }
+    } catch (_error) {
+      setSteamLoginError(tr("steam.login.failed", "无法启动 Steam 登录，请稍后再试。"))
+    } finally {
+      setSteamLoginBusy(false)
+    }
+  }
+
+  async function pollSteamLogin(attempt = 0) {
+    if (!steamAccountAction) return
+    if (attempt > 90) {
+      setSteamLoginError(tr("steam.login.timeout", "登录等待超时，可以重新点击登录。"))
+      setSteamLoginUrl("")
+      return
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      const result = unwrapResult(
+        await props.api.call(steamAccountAction.id || "ama_steam_account", { finish: true }, { timeoutMs: 30000 }),
+      )
+      const account = result.account && typeof result.account === "object" ? result.account as SteamAccount : {}
+      if (result.accelerator && typeof result.accelerator === "object") {
+        setSteamAccelerator(result.accelerator as SteamAccelerator)
+      }
+      if (account.steam_id) {
+        setSteamAccount(account)
+        setSteamLoginUrl("")
+        setSteamLoginNote("")
+        try { await props.api.refresh() } catch (_error) { /* already linked */ }
+        return
+      }
+      if (result.status === "error") {
+        setSteamLoginError(
+          String(result.error || "") === "state_mismatch"
+            ? tr("steam.login.stateMismatch", "登录校验失败（状态不一致），请重新登录。")
+            : tr("steam.login.verifyFailed", "Steam 登录校验失败，请确认 Steam++ 正常后再试。"),
+        )
+        setSteamLoginUrl("")
+        return
+      }
+    } catch (_error) {
+      // keep polling
+    }
+    void pollSteamLogin(attempt + 1)
+  }
+
+  async function signOutSteam() {
+    if (!steamLogoutAction) return
+    try {
+      const result = unwrapResult(
+        await props.api.call(steamLogoutAction.id || "ama_steam_logout", {}, { timeoutMs: 10000 }),
+      )
+      if (result.ok === false) return
+      setSteamAccount({})
+      setSteamLoginUrl("")
+      setSteamLoginNote("")
+      try { await props.api.refresh() } catch (_error) { /* already cleared */ }
+    } catch (_error) {
+      // keep the current card
     }
   }
 
@@ -3269,13 +3388,48 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       </div>
       {steamTab === "prices" ? (
         <>
-      <div className="ama-steam-account">
-        <div className="ama-steam-account-icon" aria-hidden="true">S</div>
+      <div className={`ama-steam-account${steamAccount.steam_id ? " is-linked" : ""}`}>
+        {steamAccount.steam_id && isHttpUrl(steamAccount.avatar) ? (
+          <img className="ama-steam-avatar" src={String(steamAccount.avatar)} alt="" />
+        ) : (
+          <div className="ama-steam-account-icon" aria-hidden="true">S</div>
+        )}
         <div className="ama-steam-account-main">
-          <p className="ama-steam-account-title">{tr("steam.account.title", "Steam account")}</p>
-          <p className="ama-steam-account-note">{tr("steam.account.note", "This build never asks for a Steam password.")}</p>
+          <p className="ama-steam-account-title">
+            {steamAccount.steam_id
+              ? (steamAccount.nickname || tr("steam.account.linkedName", "Steam 已连接"))
+              : tr("steam.account.title", "Steam account")}
+          </p>
+          <p className="ama-steam-account-note">
+            {steamAccount.steam_id
+              ? `SteamID ${steamAccount.steam_id}${steamAccount.online_state ? ` · ${steamAccount.online_state}` : ""}`
+              : (steamAccelerator.available
+                ? tr("steam.accel.ok", "已检测到 Steam++，可以直连登录。")
+                : tr("steam.accel.missing", "未检测到 Steam++；国内网络请先开启「Steam 社区」加速。"))}
+          </p>
+          {!steamAccount.steam_id && steamLoginError ? <p className="ama-steam-account-warn">{steamLoginError}</p> : null}
+          {steamLoginUrl ? (
+            <div className="ama-steam-login-link">
+              <FileDownload href={steamLoginUrl} label={tr("steam.login.open", "打开 Steam 登录页")} className="ama-web-open" />
+              <span>{steamLoginNote || tr("steam.login.hint", "在浏览器完成登录后会自动回到这里。")}</span>
+              <code className="ama-steam-login-url">{steamLoginUrl}</code>
+            </div>
+          ) : null}
         </div>
-        <span className="ama-badge is-peach">{tr("steam.account.status", "Login deferred")}</span>
+        {steamAccount.steam_id ? (
+          <button type="button" className="ama-web-chip" onClick={() => void signOutSteam()}>
+            {tr("steam.logout", "退出")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="ama-btn ama-btn-primary"
+            disabled={steamLoginBusy}
+            onClick={() => void startSteamLogin()}
+          >
+            {steamLoginBusy ? tr("steam.login.starting", "启动中…") : tr("steam.login", "登录 Steam")}
+          </button>
+        )}
       </div>
       <section className="ama-web-hero ama-steam-hero">
         <div className="ama-web-form">
