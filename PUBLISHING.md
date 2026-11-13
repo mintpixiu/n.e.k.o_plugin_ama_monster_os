@@ -5,7 +5,7 @@ GitHub Actions evidence is present. The Market Beta submission is still manual.
 
 - Release: https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os/releases/tag/v0.5.2-beta
 - Tag: `v0.5.2-beta`
-- Package SHA-256: `c0c9dbb5ab11c4455a0800d53a65c85bec7d4654bed2f4ad86b0b81761489446`
+- Package SHA-256: `8a33bbcc7500465bb8d56ef4622adc784abea6b6806f5fc08584040abbb642d8`
 - Evidence: `market-evidence.json` + `market-release-check.txt`
 - Market: pending manual Beta-channel submission
 
