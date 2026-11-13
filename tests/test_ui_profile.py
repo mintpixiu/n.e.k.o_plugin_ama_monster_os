@@ -106,6 +106,9 @@ def test_glass_material_is_normalized() -> None:
 
     assert normalize_ui_profile({"material": "neon"})["material"] == "glass"
 
+    for material in ("metal", "cream", "ink"):
+        assert normalize_ui_profile({"material": material})["material"] == material
+
 
 def test_custom_sound_is_validated() -> None:
     wav = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="

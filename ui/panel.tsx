@@ -7,7 +7,7 @@ type ThemeMode = "light" | "dark"
 type UiWallpaper = "grid" | "dots" | "aurora" | "stars" | "plain"
 type UiWindowBg = "paper" | "mist" | "sakura" | "glass" | "gradient" | "image" | "custom"
 type UiDensity = "comfortable" | "compact"
-type UiMaterial = "glass" | "solid"
+type UiMaterial = "glass" | "solid" | "metal" | "cream" | "ink"
 type SoundMode = "steam" | "soft" | "mechanical" | "custom"
 
 type UiProfile = {
@@ -66,6 +66,17 @@ const UI_PRESETS: Array<{ id: string; labelKey: string; accent: string; wallpape
   { id: "sakura", labelKey: "studio.preset.sakura", accent: "#e88aa8", wallpaper: "dots", window_bg: "sakura", theme: "light", material: "glass", glass_blur: 22, glass_alpha: 60 },
   { id: "mint", labelKey: "studio.preset.mint", accent: "#4fc3a1", wallpaper: "aurora", window_bg: "mist", theme: "light", material: "glass", glass_blur: 24, glass_alpha: 56 },
   { id: "night", labelKey: "studio.preset.night", accent: "#8bdcff", wallpaper: "stars", window_bg: "glass", theme: "dark", material: "glass", glass_blur: 26, glass_alpha: 46 },
+  { id: "metal", labelKey: "studio.preset.metal", accent: "#8c9bb0", wallpaper: "plain", window_bg: "custom", theme: "light", material: "metal" },
+  { id: "cream", labelKey: "studio.preset.cream", accent: "#f2a3b8", wallpaper: "dots", window_bg: "custom", theme: "light", material: "cream" },
+  { id: "ink", labelKey: "studio.preset.ink", accent: "#7f7ae0", wallpaper: "aurora", window_bg: "custom", theme: "light", material: "ink" },
+]
+
+const UI_MATERIALS: Array<{ id: UiMaterial; labelKey: string; hintKey: string }> = [
+  { id: "glass", labelKey: "studio.material.glass", hintKey: "studio.material.glassHint" },
+  { id: "metal", labelKey: "studio.material.metal", hintKey: "studio.material.metalHint" },
+  { id: "cream", labelKey: "studio.material.cream", hintKey: "studio.material.creamHint" },
+  { id: "ink", labelKey: "studio.material.ink", hintKey: "studio.material.inkHint" },
+  { id: "solid", labelKey: "studio.material.solid", hintKey: "studio.material.solidHint" },
 ]
 
 const UI_WALLPAPERS: UiWallpaper[] = ["grid", "dots", "aurora", "stars", "plain"]
@@ -181,7 +192,7 @@ function normalizeUiProfile(value: any): UiProfile {
   const soundData = soundMode === "custom" && validSoundData(source.sound_data) ? String(source.sound_data) : ""
   const sound_mode: SoundMode = soundMode === "custom" && !soundData ? "steam" : soundMode
   const soundVolume = Math.max(0, Math.min(1, Number(source.sound_volume ?? DEFAULT_UI_PROFILE.sound_volume)))
-  const material: UiMaterial = source.material === "solid" ? "solid" : "glass"
+  const material: UiMaterial = (["glass", "solid", "metal", "cream", "ink"] as string[]).indexOf(source.material) >= 0 ? source.material as UiMaterial : "glass"
   const glassBlur = Math.max(6, Math.min(40, Math.round(Number(source.glass_blur) || DEFAULT_UI_PROFILE.glass_blur)))
   const glassAlpha = Math.max(28, Math.min(92, Math.round(Number(source.glass_alpha) || DEFAULT_UI_PROFILE.glass_alpha)))
   const density: UiDensity = source.density === "compact" ? "compact" : "comfortable"
@@ -259,6 +270,47 @@ function tokenHistoryChange(candles: TokenCandle[], metric: "input" | "output"):
   const end = Number(metric === "input" ? last.close : last.output_close)
   if (!Number.isFinite(start) || !Number.isFinite(end) || start <= 0) return 0
   return ((end - start) / start) * 100
+}
+
+type PeakState = { peak: boolean; minutes: number | null; next: "peak" | "offPeak" | "unknown" }
+
+function tokenPeakPolicyFor(models: TokenModel[]): TokenTimePolicy | undefined {
+  const withPeak = models.find((model) => model.time_policy?.kind === "deepseek_peak")
+  return withPeak?.time_policy
+}
+
+function tokenPeakState(policy: TokenTimePolicy | undefined, now: Date): PeakState {
+  if (!policy || policy.kind !== "deepseek_peak") return { peak: false, minutes: null, next: "unknown" }
+  const windows = Array.isArray(policy.peak_windows_utc) ? policy.peak_windows_utc : []
+  if (windows.length === 0) return { peak: false, minutes: null, next: "unknown" }
+  const nowMs = now.getTime()
+  for (let dayOffset = 0; dayOffset < 8; dayOffset += 1) {
+    const dayStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + dayOffset)
+    const weekday = new Date(dayStart).getUTCDay()
+    if (weekday === 0 || weekday === 6) continue
+    for (const window of windows) {
+      const startParts = String(window.start || "00:00").split(":")
+      const endParts = String(window.end || "00:00").split(":")
+      const start = dayStart + (Number(startParts[0]) * 60 + Number(startParts[1] || 0)) * 60000
+      const end = dayStart + (Number(endParts[0]) * 60 + Number(endParts[1] || 0)) * 60000
+      if (end <= nowMs) continue
+      if (start > nowMs) {
+        return { peak: false, minutes: Math.round((start - nowMs) / 60000), next: "peak" }
+      }
+      return { peak: true, minutes: Math.round((end - nowMs) / 60000), next: "offPeak" }
+    }
+  }
+  return { peak: false, minutes: null, next: "unknown" }
+}
+
+function tokenPeakCountdown(state: PeakState, tr: (key: string, fallback: string) => string): string {
+  if (state.minutes === null) return ""
+  const hours = Math.floor(state.minutes / 60)
+  const minutes = state.minutes % 60
+  const span = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
+  return state.next === "peak"
+    ? tr("tokens.peakIn", "距高峰 {span}").replace("{span}", span)
+    : tr("tokens.offPeakIn", "距低谷 {span}").replace("{span}", span)
 }
 
 function TokenKLine(props: { candles: TokenCandle[]; metric: "input" | "output"; label: string }) {
@@ -1692,6 +1744,28 @@ const STYLES = `
 .ama-token-window-prices span { display: block; color: var(--muted); font-size: 7px; }
 .ama-token-window-prices strong { display: block; margin-top: 1px; font-size: 8.5px; }
 .ama-token-window-prices > small { grid-column: 1 / -1; color: var(--muted); font-size: 7px; line-height: 1.45; }
+.ama-token-peak { margin-bottom: 10px; }
+.ama-token-peak .ama-panel-head { align-items: flex-start; }
+.ama-token-now-inline { margin-left: 8px; vertical-align: 2px; }
+.ama-token-peak .ama-panel-head h2 { margin: 3px 0 0; font-size: 15px; letter-spacing: -.02em; }
+.ama-token-peak .ama-panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 8.5px; }
+.ama-token-peak-body { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(210px, 0.75fr); gap: 16px; align-items: center; margin-top: 8px; }
+.ama-token-peak-clock { min-width: 0; }
+.ama-token-peak-clock .ama-token-clockbar { height: 26px; }
+.ama-token-peak-windows { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.ama-token-peak-windows span { padding: 2px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2); color: var(--ink-soft); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 7px; }
+.ama-token-peak-local { color: var(--muted) !important; }
+.ama-token-peak-meta { display: grid; gap: 6px; }
+.ama-token-peak-meta > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: baseline; padding: 7px 9px; border: 1px dashed var(--line-strong); border-radius: 9px; background: var(--panel-2); }
+.ama-token-peak-meta span { color: var(--muted); font-size: 7.5px; }
+.ama-token-peak-meta strong { color: var(--ink); font-size: 12px; font-weight: 850; text-align: right; }
+.ama-token-peak-meta small { grid-column: 1 / -1; color: var(--muted); font-size: 7px; }
+.ama-token-peak-tag { display: inline-block; margin-left: 5px; padding: 0 4px; border-radius: 4px; font-size: 6.5px; font-style: normal; font-weight: 800; vertical-align: 1px; }
+.ama-token-peak-tag.is-peak { color: #a34e5f; background: #ffe3e9; }
+.ama-token-peak-tag.is-offpeak { color: #28795c; background: #dff6ec; }
+@media (max-width: 1000px) {
+  .ama-token-peak-body { grid-template-columns: 1fr; }
+}
 .ama-token-chart-panel { margin-top: 10px; }
 .ama-token-chart-tools { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 .ama-token-chart { margin-top: 6px; }
@@ -2132,6 +2206,401 @@ const STYLES = `
   box-shadow: inset 0 1px 0 var(--glass-edge-soft);
 }
 
+
+
+/* ============================================================
+   Metal material — brushed steel, chamfered edges, specular bands
+   ============================================================ */
+.ama-root[data-material="metal"] {
+  --metal-1: #f4f7fb;
+  --metal-2: #dbe3ec;
+  --metal-3: #c3cede;
+  --metal-edge: rgb(255 255 255 / 0.85);
+  --metal-dark: rgb(84 102 124 / 0.18);
+  --card: #eef3f8;
+  --panel-2: #e6edf5;
+  --line: #c6d2e0;
+  --line-strong: #aebbcb;
+  --hover: #e2eaf3;
+  --title-1: #f7fafd;
+  --title-2: #dde5ee;
+  --side-1: #f2f6fb;
+  --side-2: #dbe4ee;
+  --hero-1: #f9fbfe;
+  --hero-2: #e4ebf4;
+}
+.ama-root[data-material="metal"].ama-theme-dark {
+  --metal-1: #2a3440;
+  --metal-2: #1d2530;
+  --metal-3: #141b24;
+  --metal-edge: rgb(255 255 255 / 0.16);
+  --metal-dark: rgb(0 0 0 / 0.5);
+  --card: #232d38;
+  --panel-2: #1b232d;
+  --line: #34414f;
+  --line-strong: #465565;
+  --hover: #2b3743;
+  --title-1: #2b3541;
+  --title-2: #1d2530;
+  --side-1: #232d38;
+  --side-2: #1a222c;
+  --hero-1: #27313d;
+  --hero-2: #1a222c;
+}
+.ama-root[data-material="metal"] .ama-window {
+  border: 1px solid var(--line-strong);
+  background:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.05) 0 1px, transparent 1px 3px),
+    linear-gradient(155deg, var(--metal-1) 0%, var(--metal-2) 42%, var(--metal-1) 62%, var(--metal-3) 100%);
+  box-shadow:
+    0 30px 70px rgb(52 68 88 / 0.28),
+    inset 0 1px 0 var(--metal-edge),
+    inset 0 -2px 4px var(--metal-dark);
+}
+.ama-root[data-material="metal"] .ama-titlebar {
+  border-bottom: 1px solid var(--line-strong);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.6), transparent 62%),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.06) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, var(--title-1), var(--title-2));
+  box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.35);
+}
+.ama-root[data-material="metal"] .ama-sidebar {
+  border-right: 1px solid var(--line-strong);
+  background:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.05) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, var(--side-1), var(--side-2));
+}
+.ama-root[data-material="metal"] .ama-panel,
+.ama-root[data-material="metal"] .ama-hero,
+.ama-root[data-material="metal"] .ama-web-hero,
+.ama-root[data-material="metal"] .ama-web-result,
+.ama-root[data-material="metal"] .ama-web-state,
+.ama-root[data-material="metal"] .ama-sale-panel,
+.ama-root[data-material="metal"] .ama-picks-section,
+.ama-root[data-material="metal"] .ama-free-section,
+.ama-root[data-material="metal"] .ama-core-card,
+.ama-root[data-material="metal"] .ama-about-card,
+.ama-root[data-material="metal"] .ama-studio-preview-card,
+.ama-root[data-material="metal"] .ama-steam-card,
+.ama-root[data-material="metal"] .ama-deal-card,
+.ama-root[data-material="metal"] .ama-free-card,
+.ama-root[data-material="metal"] .ama-profile,
+.ama-root[data-material="metal"] .ama-token-stat,
+.ama-root[data-material="metal"] .ama-token-focus,
+.ama-root[data-material="metal"] .ama-token-clock {
+  border: 1px solid var(--line-strong);
+  background:
+    linear-gradient(158deg, rgb(255 255 255 / 0.75) 0%, transparent 34%),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.04) 0 1px, transparent 1px 3px),
+    linear-gradient(160deg, var(--card), var(--panel-2));
+  box-shadow:
+    0 10px 22px rgb(52 68 88 / 0.12),
+    inset 0 1px 0 var(--metal-edge),
+    inset 0 -1px 0 var(--metal-dark);
+}
+.ama-root[data-material="metal"].ama-theme-dark .ama-panel,
+.ama-root[data-material="metal"].ama-theme-dark .ama-hero,
+.ama-root[data-material="metal"].ama-theme-dark .ama-steam-card,
+.ama-root[data-material="metal"].ama-theme-dark .ama-deal-card,
+.ama-root[data-material="metal"].ama-theme-dark .ama-free-card,
+.ama-root[data-material="metal"].ama-theme-dark .ama-profile {
+  background:
+    linear-gradient(158deg, rgb(255 255 255 / 0.1) 0%, transparent 38%),
+    linear-gradient(160deg, var(--card), var(--panel-2));
+}
+.ama-root[data-material="metal"] .ama-nav-btn.is-active {
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.35));
+  box-shadow: inset 0 1px 0 var(--metal-edge), 0 2px 6px rgb(52 68 88 / 0.14);
+}
+.ama-root[data-material="metal"] .ama-btn {
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.85), rgb(255 255 255 / 0.3));
+  box-shadow: inset 0 1px 0 var(--metal-edge), 0 2px 0 var(--metal-dark);
+}
+.ama-root[data-material="metal"] .ama-btn-primary {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sky) 84%, white), color-mix(in srgb, var(--sky) 72%, #123a56));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 3px 0 rgb(12 60 88 / 0.35), 0 8px 18px color-mix(in srgb, var(--sky) 30%, transparent);
+}
+.ama-root[data-material="metal"] .ama-web-input,
+.ama-root[data-material="metal"] .ama-studio-input,
+.ama-root[data-material="metal"] .ama-web-input-wrap {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel-2) 88%, #94a3b4), var(--card));
+  border-color: var(--line-strong);
+  box-shadow: inset 0 1px 2px rgb(52 68 88 / 0.2), inset 0 -1px 0 rgb(255 255 255 / 0.5);
+}
+.ama-root[data-material="metal"] .ama-logo {
+  background: linear-gradient(160deg, #cfd9e6, #8f9fb2 46%, #5f7086);
+  box-shadow: 0 4px 12px rgb(52 68 88 / 0.34), inset 0 1px 0 rgb(255 255 255 / 0.7);
+}
+
+/* ============================================================
+   Cream material — cartoon cream, chunky borders, sticker shadow
+   ============================================================ */
+.ama-root[data-material="cream"] {
+  --cream-bg: #fff8ef;
+  --cream-2: #ffefdd;
+  --cream-line: rgb(196 142 106 / 0.35);
+  --cream-line-strong: rgb(176 122 88 / 0.55);
+  --cream-shadow: rgb(190 132 98 / 0.22);
+  --card: #fffdf9;
+  --panel-2: #fff3e4;
+  --line: #f2ddc8;
+  --line-strong: #e6c8ad;
+  --hover: #fff0de;
+  --ink: #4a3728;
+  --ink-soft: #6b5240;
+  --muted: #a08772;
+  --title-1: #fffaf3;
+  --title-2: #ffeedb;
+  --side-1: #fffaf4;
+  --side-2: #ffeeda;
+  --hero-1: #fffdf8;
+  --hero-2: #fff0e0;
+}
+.ama-root[data-material="cream"].ama-theme-dark {
+  --cream-bg: #2a211c;
+  --cream-2: #3a2c24;
+  --cream-line: rgb(255 224 196 / 0.14);
+  --cream-line-strong: rgb(255 224 196 / 0.22);
+  --cream-shadow: rgb(0 0 0 / 0.45);
+  --card: #33261f;
+  --panel-2: #2b201a;
+  --line: #4b3a2e;
+  --line-strong: #614a3a;
+  --hover: #3c2c23;
+  --ink: #ffeedd;
+  --ink-soft: #f3d9c2;
+  --muted: #c8ab92;
+  --title-1: #362920;
+  --title-2: #2a211c;
+  --side-1: #33261f;
+  --side-2: #271d17;
+  --hero-1: #362a22;
+  --hero-2: #2a211c;
+}
+.ama-root[data-material="cream"] .ama-window {
+  border: 2px solid var(--cream-line-strong);
+  border-radius: calc(var(--ui-radius, 16px) + 10px);
+  background:
+    radial-gradient(circle at 12% 8%, rgb(255 255 255 / 0.85), transparent 42%),
+    linear-gradient(160deg, var(--cream-bg), var(--cream-2));
+  box-shadow: 0 14px 0 -2px rgb(255 255 255 / 0.4), 0 26px 60px var(--cream-shadow), 0 6px 0 var(--cream-line);
+}
+.ama-root[data-material="cream"] .ama-titlebar {
+  border-bottom: 2px dashed var(--cream-line);
+  background: linear-gradient(180deg, var(--title-1), var(--title-2));
+}
+.ama-root[data-material="cream"] .ama-sidebar {
+  border-right: 2px dashed var(--cream-line);
+  background: linear-gradient(180deg, var(--side-1), var(--side-2));
+}
+.ama-root[data-material="cream"] .ama-panel,
+.ama-root[data-material="cream"] .ama-hero,
+.ama-root[data-material="cream"] .ama-web-hero,
+.ama-root[data-material="cream"] .ama-web-result,
+.ama-root[data-material="cream"] .ama-web-state,
+.ama-root[data-material="cream"] .ama-sale-panel,
+.ama-root[data-material="cream"] .ama-picks-section,
+.ama-root[data-material="cream"] .ama-free-section,
+.ama-root[data-material="cream"] .ama-core-card,
+.ama-root[data-material="cream"] .ama-about-card,
+.ama-root[data-material="cream"] .ama-studio-preview-card,
+.ama-root[data-material="cream"] .ama-steam-card,
+.ama-root[data-material="cream"] .ama-deal-card,
+.ama-root[data-material="cream"] .ama-free-card,
+.ama-root[data-material="cream"] .ama-profile,
+.ama-root[data-material="cream"] .ama-token-stat,
+.ama-root[data-material="cream"] .ama-token-focus,
+.ama-root[data-material="cream"] .ama-token-clock {
+  border: 2px solid var(--cream-line);
+  border-radius: calc(var(--ui-radius, 16px) + 6px);
+  background: linear-gradient(170deg, var(--card), var(--panel-2));
+  box-shadow: 0 5px 0 var(--cream-line), 0 12px 24px var(--cream-shadow);
+}
+.ama-root[data-material="cream"] .ama-nav-btn {
+  border-radius: 14px;
+  font-weight: 850;
+}
+.ama-root[data-material="cream"] .ama-nav-btn.is-active {
+  border: 2px solid var(--cream-line-strong);
+  background: linear-gradient(170deg, #fffdf9, var(--panel-2));
+  box-shadow: 0 3px 0 var(--cream-line);
+  color: var(--ink);
+}
+.ama-root[data-material="cream"] .ama-btn {
+  border: 2px solid var(--cream-line-strong);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fffdf9, var(--panel-2));
+  color: var(--ink);
+  font-weight: 800;
+  box-shadow: 0 3px 0 var(--cream-line);
+}
+.ama-root[data-material="cream"] .ama-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--cream-line); }
+.ama-root[data-material="cream"] .ama-btn-primary {
+  border-color: color-mix(in srgb, var(--accent, #f2a3b8) 60%, #a9603f);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sky) 40%, #fff6ec), color-mix(in srgb, var(--sky) 62%, #ffd9c4));
+  color: #4a3728;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--sky) 45%, #b37a5c);
+}
+.ama-root[data-material="cream"] .ama-web-input,
+.ama-root[data-material="cream"] .ama-studio-input,
+.ama-root[data-material="cream"] .ama-web-input-wrap {
+  border: 2px solid var(--cream-line);
+  border-radius: 12px;
+  background: #fffdf9;
+  box-shadow: inset 0 2px 4px rgb(190 132 98 / 0.12);
+}
+.ama-root[data-material="cream"] .ama-pill,
+.ama-root[data-material="cream"] .ama-badge { border-width: 2px; border-style: solid; border-color: var(--cream-line); }
+.ama-root[data-material="cream"] .ama-logo {
+  background: linear-gradient(160deg, #ffd0a8, #f2a3b8 55%, #e08ba4);
+  box-shadow: 0 3px 0 #d08a9c, 0 8px 16px rgb(190 132 98 / 0.3);
+}
+.ama-root[data-material="cream"] .ama-footer {
+  border-top: 2px dashed var(--cream-line);
+  background: var(--title-2);
+}
+
+/* ============================================================
+   Ink material — 彩水墨 soft-cute watercolour on rice paper
+   ============================================================ */
+.ama-root[data-material="ink"] {
+  --ink-paper: #fdfbf6;
+  --ink-paper-2: #f6f1e7;
+  --ink-wash-a: color-mix(in srgb, var(--sky) 26%, transparent);
+  --ink-wash-b: color-mix(in srgb, var(--pink) 30%, transparent);
+  --ink-wash-c: color-mix(in srgb, var(--mint) 26%, transparent);
+  --ink-line: rgb(90 82 74 / 0.18);
+  --card: rgb(255 253 248 / 0.86);
+  --panel-2: rgb(250 244 234 / 0.8);
+  --line: rgb(120 108 96 / 0.2);
+  --line-strong: rgb(120 108 96 / 0.3);
+  --hover: rgb(255 250 242 / 0.9);
+  --title-1: rgb(255 252 246 / 0.92);
+  --title-2: rgb(248 240 230 / 0.8);
+  --side-1: rgb(255 252 246 / 0.9);
+  --side-2: rgb(246 238 228 / 0.78);
+  --hero-1: rgb(255 253 248 / 0.92);
+  --hero-2: rgb(247 238 228 / 0.7);
+}
+.ama-root[data-material="ink"].ama-theme-dark {
+  --ink-paper: #232026;
+  --ink-paper-2: #1c1a20;
+  --ink-line: rgb(255 246 235 / 0.12);
+  --card: rgb(45 41 49 / 0.86);
+  --panel-2: rgb(36 33 40 / 0.82);
+  --line: rgb(255 246 235 / 0.12);
+  --line-strong: rgb(255 246 235 / 0.2);
+  --hover: rgb(58 52 62 / 0.86);
+}
+.ama-root[data-material="ink"] .ama-window {
+  border: 1px solid var(--ink-line);
+  border-radius: calc(var(--ui-radius, 16px) + 12px) calc(var(--ui-radius, 16px) + 18px) calc(var(--ui-radius, 16px) + 10px) calc(var(--ui-radius, 16px) + 16px);
+  background:
+    radial-gradient(circle at 8% 12%, var(--ink-wash-a), transparent 46%),
+    radial-gradient(circle at 92% 18%, var(--ink-wash-b), transparent 44%),
+    radial-gradient(circle at 74% 92%, var(--ink-wash-c), transparent 48%),
+    repeating-linear-gradient(135deg, rgb(120 108 96 / 0.022) 0 1px, transparent 1px 4px),
+    linear-gradient(160deg, var(--ink-paper), var(--ink-paper-2));
+  box-shadow: 0 26px 64px rgb(74 62 52 / 0.2), inset 0 0 0 1px rgb(255 255 255 / 0.5);
+}
+.ama-root[data-material="ink"] .ama-titlebar {
+  border-bottom: 1px solid var(--ink-line);
+  background: linear-gradient(180deg, var(--title-1), var(--title-2));
+}
+.ama-root[data-material="ink"] .ama-sidebar {
+  border-right: 1px solid var(--ink-line);
+  background:
+    radial-gradient(circle at 20% 6%, var(--ink-wash-c), transparent 60%),
+    linear-gradient(180deg, var(--side-1), var(--side-2));
+}
+.ama-root[data-material="ink"] .ama-panel,
+.ama-root[data-material="ink"] .ama-hero,
+.ama-root[data-material="ink"] .ama-web-hero,
+.ama-root[data-material="ink"] .ama-web-result,
+.ama-root[data-material="ink"] .ama-web-state,
+.ama-root[data-material="ink"] .ama-sale-panel,
+.ama-root[data-material="ink"] .ama-picks-section,
+.ama-root[data-material="ink"] .ama-free-section,
+.ama-root[data-material="ink"] .ama-core-card,
+.ama-root[data-material="ink"] .ama-about-card,
+.ama-root[data-material="ink"] .ama-studio-preview-card,
+.ama-root[data-material="ink"] .ama-steam-card,
+.ama-root[data-material="ink"] .ama-deal-card,
+.ama-root[data-material="ink"] .ama-free-card,
+.ama-root[data-material="ink"] .ama-profile,
+.ama-root[data-material="ink"] .ama-token-stat,
+.ama-root[data-material="ink"] .ama-token-focus,
+.ama-root[data-material="ink"] .ama-token-clock {
+  border: 1px solid var(--ink-line);
+  border-radius: calc(var(--ui-radius, 16px) + 8px) calc(var(--ui-radius, 16px) + 14px) calc(var(--ui-radius, 16px) + 6px) calc(var(--ui-radius, 16px) + 12px);
+  background:
+    radial-gradient(circle at 12% 0%, var(--ink-wash-b), transparent 58%),
+    radial-gradient(circle at 92% 100%, var(--ink-wash-a), transparent 56%),
+    linear-gradient(170deg, var(--card), var(--panel-2));
+  box-shadow: 0 10px 26px rgb(74 62 52 / 0.1), inset 0 0 24px rgb(255 255 255 / 0.32);
+}
+.ama-root[data-material="ink"] .ama-nav-btn.is-active {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 30% 20%, var(--ink-wash-b), transparent 70%),
+    linear-gradient(170deg, var(--card), var(--panel-2));
+  box-shadow: 0 4px 12px rgb(74 62 52 / 0.12);
+}
+.ama-root[data-material="ink"] .ama-btn {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: linear-gradient(170deg, var(--card), var(--panel-2));
+  box-shadow: 0 3px 10px rgb(74 62 52 / 0.1);
+}
+.ama-root[data-material="ink"] .ama-btn-primary {
+  color: #fff;
+  border-color: transparent;
+  background:
+    radial-gradient(circle at 24% 18%, rgb(255 255 255 / 0.4), transparent 62%),
+    linear-gradient(160deg, color-mix(in srgb, var(--sky) 82%, white), color-mix(in srgb, var(--sky) 64%, #6d6a9c));
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--sky) 32%, transparent);
+}
+.ama-root[data-material="ink"] .ama-web-input,
+.ama-root[data-material="ink"] .ama-studio-input,
+.ama-root[data-material="ink"] .ama-web-input-wrap {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: rgb(255 253 248 / 0.9);
+  box-shadow: inset 0 1px 3px rgb(120 108 96 / 0.12);
+}
+.ama-root[data-material="ink"] .ama-logo {
+  background:
+    radial-gradient(circle at 30% 24%, rgb(255 255 255 / 0.7), transparent 60%),
+    linear-gradient(160deg, color-mix(in srgb, var(--sky) 70%, #fff), color-mix(in srgb, var(--pink) 70%, #b9a6d8));
+  border-radius: 40% 60% 55% 45% / 55% 45% 60% 40%;
+  box-shadow: 0 6px 16px rgb(74 62 52 / 0.18);
+}
+
+/* material preview swatches in the studio */
+.ama-material-preview { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.ama-material-option.is-metal {
+  background:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.08) 0 1px, transparent 1px 3px),
+    linear-gradient(160deg, #f2f6fb, #c6d2e0 55%, #e8eef6);
+}
+.ama-material-option.is-cream {
+  border: 2px solid rgb(196 142 106 / 0.35);
+  background: linear-gradient(170deg, #fffdf9, #ffeeda);
+  box-shadow: 0 3px 0 rgb(196 142 106 / 0.3);
+}
+.ama-material-option.is-ink {
+  background:
+    radial-gradient(circle at 14% 10%, rgb(68 184 242 / 0.28), transparent 60%),
+    radial-gradient(circle at 88% 90%, rgb(232 138 168 / 0.3), transparent 58%),
+    linear-gradient(170deg, #fdfbf6, #f3ecdf);
+}
+
 `
 
 export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>) {
@@ -2153,7 +2622,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.3.6 Beta"
+  const version = shell.version || "0.5.2 Beta"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
@@ -3019,6 +3488,11 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     }
   }
   const tokenIsWeekend = tokenWeekday === 0 || tokenWeekday === 6
+  const tokenPeakModels = tokenModels.filter((model) => model.time_policy?.kind === "deepseek_peak")
+  const tokenFlatCount = tokenModels.length - tokenPeakModels.length
+  const tokenPeakNowPolicy = tokenPeakPolicyFor(tokenModels)
+  const tokenPeakNow = tokenPeakState(tokenPeakNowPolicy, tokenNow)
+  const tokenPeakCountdownText = tokenPeakCountdown(tokenPeakNow, tr)
   const tokenStatusText = tokenLoading
     ? tr("tokens.updating", "更新中…")
     : tokenStatus === "stale"
@@ -3445,6 +3919,69 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
         </article>
       </div>
 
+      <section className="ama-panel ama-token-peak">
+        <div className="ama-panel-head">
+          <div>
+            <div className="ama-kicker">AI PEAK HOURS</div>
+            <h2>
+              {tr("tokens.peakTitle", "AI 高峰时段")}
+              <span className={`ama-token-now ama-token-now-inline ${tokenPeakNow.peak ? "is-peak" : "is-offpeak"}`}>
+                {tokenModels.length === 0
+                  ? tr("tokens.waiting", "等待价格")
+                  : tokenPeakNow.peak ? tr("tokens.peakNow", "当前高峰") : tr("tokens.offPeakNow", "当前低谷")}
+              </span>
+            </h2>
+            <p>{tr("tokens.peakHint", "DeepSeek 按高低峰浮动；其他厂商全天同价。")}</p>
+          </div>
+        </div>
+        <div className="ama-token-peak-body">
+          <div className="ama-token-peak-clock">
+            <div className="ama-token-clockbar">
+              {Array.from({ length: 24 }, (_, hour) => (
+                <span
+                  key={`peak-${hour}`}
+                  className={tokenPeakHours.has(hour) ? "is-peak" : "is-offpeak"}
+                  title={`${String(hour).padStart(2, "0")}:00 UTC`}
+                />
+              ))}
+              <i className="ama-token-clock-now" style={{ left: `${(tokenUtcMinutes / 1440) * 100}%` }} />
+            </div>
+            <div className="ama-token-clock-labels"><span>00</span><span>06</span><span>12</span><span>18</span><span>24 UTC</span></div>
+            <div className="ama-token-peak-windows">
+              {(tokenPeakNowPolicy?.peak_windows_utc || []).map((window) => (
+                <span key={`${window.start}-${window.end}`}>{window.start}–{window.end} UTC</span>
+              ))}
+              <span className="ama-token-peak-local">{(tokenPeakNowPolicy?.local_windows || []).map((window) => `${window.start}–${window.end}`).join(" / ")} 北京时间</span>
+            </div>
+            <p className="ama-token-clock-note">
+              {tokenPeakNow.peak
+                ? tr("tokens.peakNowNote", "现在属于高峰价，DeepSeek 约为低谷的 2 倍。")
+                : tr("tokens.offPeakNowNote", "现在是低谷价；周末与法定节假日整天按低谷计费。")}
+            </p>
+          </div>
+          <div className="ama-token-peak-meta">
+            <div>
+              <span>{tr("tokens.peakCountdown", "下一次切换")}</span>
+              <strong>
+                {tokenPeakCountdownText
+                  || (tokenModels.length === 0 ? tr("tokens.waiting", "等待价格") : tr("tokens.peakUnknown", "未公布时段"))}
+              </strong>
+              <small>{tokenPeakNow.peak ? tr("tokens.toOffPeak", "进入低谷") : tr("tokens.toPeak", "进入高峰")}</small>
+            </div>
+            <div>
+              <span>{tr("tokens.peakModels", "按时段浮动")}</span>
+              <strong>{tokenPeakModels.length}</strong>
+              <small>{tr("tokens.peakModelsHint", "DeepSeek 模型")}</small>
+            </div>
+            <div>
+              <span>{tr("tokens.flatModels", "全天同价")}</span>
+              <strong>{tokenFlatCount}</strong>
+              <small>{tr("tokens.flatModelsHint", "其余厂商")}</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {tokenMessage ? <div className="ama-note ama-token-note">{tokenMessage}</div> : null}
 
       <div className="ama-token-grid">
@@ -3487,7 +4024,14 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                     <i className="ama-token-provider-dot" style={{ background: model.provider_color }} />
                     <span className="ama-token-model">
                       <strong>{model.name}</strong>
-                      <small>{model.provider_name} · {model.provider_zh}{model.provider_region === "china" ? ` · ${tr("tokens.cn", "国内")}` : ""}</small>
+                      <small>
+                        {model.provider_name} · {model.provider_zh}{model.provider_region === "china" ? ` · ${tr("tokens.cn", "国内")}` : ""}
+                        {model.time_policy?.kind === "deepseek_peak" ? (
+                          <em className={`ama-token-peak-tag ${tokenPeakNow.peak ? "is-peak" : "is-offpeak"}`}>
+                            {tokenPeakNow.peak ? tr("tokens.peak", "高峰价") : tr("tokens.offPeak", "非高峰价")}
+                          </em>
+                        ) : null}
+                      </small>
                     </span>
                     <span className="ama-token-price-cell">
                       <strong>{formatTokenPrice(model.input)}</strong>
@@ -4260,25 +4804,20 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           <div className="ama-studio-group">
             <div className="ama-studio-label">
               {tr("studio.material", "材质")}
-              <small>{uiProfile.material === "glass" ? tr("studio.material.glass", "玻璃") : tr("studio.material.solid", "实心")}</small>
+              <small>{tr(`studio.material.${uiProfile.material}`, uiProfile.material)}</small>
             </div>
             <div className="ama-material-preview">
-              <button
-                type="button"
-                className={`ama-material-option${uiProfile.material === "glass" ? " is-active" : ""}`}
-                onClick={() => patchUiProfile({ material: "glass" })}
-              >
-                {tr("studio.material.glass", "玻璃")}
-                <small>{tr("studio.material.glassHint", "半透明、背景模糊、高光边缘")}</small>
-              </button>
-              <button
-                type="button"
-                className={`ama-material-option${uiProfile.material === "solid" ? " is-active" : ""}`}
-                onClick={() => patchUiProfile({ material: "solid" })}
-              >
-                {tr("studio.material.solid", "实心")}
-                <small>{tr("studio.material.solidHint", "不透明、最省性能")}</small>
-              </button>
+              {UI_MATERIALS.map((option) => (
+                <button
+                  type="button"
+                  key={option.id}
+                  className={`ama-material-option is-${option.id}${uiProfile.material === option.id ? " is-active" : ""}`}
+                  onClick={() => patchUiProfile({ material: option.id })}
+                >
+                  {tr(option.labelKey, option.id)}
+                  <small>{tr(option.hintKey, "")}</small>
+                </button>
+              ))}
             </div>
             {uiProfile.material === "glass" ? (
               <>

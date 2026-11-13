@@ -1,6 +1,6 @@
 # 自定义外观与导入导出教程
 
-**Ama Monster OS 0.3.6 Beta** · UI Studio · `ama.ui.profile` v1
+**Ama Monster OS 0.5.2 Beta** · UI Studio · `ama.ui.profile` v1
 
 这篇教程讲三件事：
 
@@ -66,7 +66,7 @@
 | `profile.sound_volume` | 数字 | 音量，0–1 |
 | `profile.sound_data` | 字符串 | 自定义音效的本地 data URL；不要手填远程 URL |
 | `profile.sound_name` | 字符串 | 自定义音效显示名，最长 80 字符 |
-| `profile.material` | 字符串 | 材质：`glass`（玻璃）/ `solid`（实心） |
+| `profile.material` | 字符串 | 材质：`glass` / `metal` / `cream` / `ink` / `solid` |
 | `profile.glass_blur` | 数字 | 玻璃模糊强度，6–40，默认 24 |
 | `profile.glass_alpha` | 数字 | 玻璃浓度，28–92，默认 58 |
 | `profile.radius` | 数字 | 圆角，8–28，超出会截断 |
@@ -136,10 +136,15 @@
 
 ### 第 5 步：选择材质（苹果 / 小米式玻璃）
 
-外观工坊新增 **材质**：
+外观工坊新增 **材质**，共 5 种：
 
-- **玻璃**：半透明面板 + 背景模糊 + 高光边缘 + 柔和投影
-- **实心**：不透明，最省性能
+| 材质 | 风格 |
+|---|---|
+| **玻璃** | 半透明面板 + 背景模糊 + 高光边缘 + 柔和投影（苹果 / 小米式） |
+| **金属** | 拉丝钢面、斜切高光、硬朗边框与立体投影 |
+| **奶油** | 卡通奶油底、粗描边、虚线分隔、贴纸式硬阴影 |
+| **彩水墨** | 宣纸质感、彩色晕染、软萌圆角，像水墨插画 |
+| **实心** | 不透明，最省性能 |
 
 选中玻璃后可以调：
 
@@ -151,6 +156,14 @@
 ![玻璃材质（浅色）](preview-glass.png)
 
 ![玻璃材质（暗色）](preview-glass-dark.png)
+
+![金属材质](preview-metal.png)
+
+![卡通奶油材质](preview-cream.png)
+
+![彩水墨材质](preview-ink.png)
+
+> 金属 / 奶油 / 彩水墨都是纯 CSS 实现，不加载图片，不注入任意样式。
 
 > 玻璃效果依赖浏览器的 `backdrop-filter`。老浏览器会自动退回接近不透明的背景，保证文字可读。
 

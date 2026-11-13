@@ -19,7 +19,7 @@ def test_identity_is_locked() -> None:
     assert ROOT.name == "ama_monster_os"
     assert plugin["id"] == "ama_monster_os"
     assert plugin["name"] == "N.E.K.O Ama Monster OS"
-    assert plugin["version"] == "0.3.6-beta"
+    assert plugin["version"] == "0.5.2-beta"
     assert plugin["type"] == "plugin"
     assert plugin["author"]["name"] == "呆萌貔貅"
     assert plugin["entry"] == "plugin.plugins.ama_monster_os:AmaMonsterOsPlugin"
@@ -105,4 +105,4 @@ def test_ui_entry_contract() -> None:
     imports = [line for line in text.splitlines() if line.lstrip().startswith("import ")]
     for line in imports:
         assert '"@neko/plugin-ui"' in line or line.lstrip().startswith("import type"), line
-    assert len(text.encode("utf-8")) < 240_000
+    assert len(text.encode("utf-8")) < 280_000

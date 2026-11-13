@@ -44,8 +44,8 @@ except ImportError:  # pragma: no cover - direct test import fallback
     from ui_profile import DEFAULT_UI_PROFILE, normalize_ui_profile  # type: ignore[no-redef]
 
 SHELL_NAME = "Ama Monster OS"
-SHELL_VERSION = "0.3.6-beta"
-SHELL_DISPLAY_VERSION = "0.3.6 Beta"
+SHELL_VERSION = "0.5.2-beta"
+SHELL_DISPLAY_VERSION = "0.5.2 Beta"
 SHELL_CHANNEL = "Beta"
 SHELL_CODENAME = "Ama-01"
 _MAX_QUERY_CHARS = 200

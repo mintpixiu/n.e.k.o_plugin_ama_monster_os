@@ -24,7 +24,7 @@ WINDOW_BACKGROUNDS = ("paper", "mist", "sakura", "glass", "gradient", "image", "
 SOUND_MODES = ("steam", "soft", "mechanical", "custom")
 DENSITIES = ("comfortable", "compact")
 THEMES = ("light", "dark")
-MATERIALS = ("glass", "solid")
+MATERIALS = ("glass", "solid", "metal", "cream", "ink")
 _ACCENT_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 _IMAGE_RE = re.compile(r"^data:image/(png|jpeg|jpg|webp|gif);base64,([A-Za-z0-9+/=\s]+)$")
 _AUDIO_RE = re.compile(r"^data:audio/(wav|mpeg|mp3|ogg);base64,([A-Za-z0-9+/=\s]+)$")
