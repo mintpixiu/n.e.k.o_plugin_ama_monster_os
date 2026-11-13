@@ -1,6 +1,6 @@
 # 自定义外观与导入导出教程
 
-**Ama Monster OS 0.5.2 Beta** · UI Studio · `ama.ui.profile` v1
+**Ama Monster OS 0.5.3 Beta** · UI Studio · `ama.ui.profile` v1
 
 这篇教程讲三件事：
 

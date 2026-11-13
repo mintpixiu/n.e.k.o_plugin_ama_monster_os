@@ -821,6 +821,9 @@ const STYLES = `
   --title-2: #f4fbff;
   --window-shadow: 0 30px 80px rgba(58, 146, 197, 0.22), 0 4px 18px rgba(58, 146, 197, 0.08);
   --orb: radial-gradient(circle at 32% 25%, #ffffff 0%, #d5f5ff 40%, #9ce4ff 72%, #75cef5 100%);
+  --logo-1: #7adcff;
+  --logo-2: #36b4f0;
+  --logo-3: #1f93d1;
   --grid-line: rgba(81, 165, 210, 0.09);
   --cloud: rgba(255, 255, 255, 0.78);
   --code-bg: #f3faff;
@@ -867,6 +870,9 @@ const STYLES = `
   --title-2: #14212d;
   --window-shadow: 0 34px 90px rgba(0, 0, 0, 0.45);
   --orb: radial-gradient(circle at 32% 25%, #e8fbff 0%, #a8e5fb 30%, #58bce8 65%, #2d85b5 100%);
+  --logo-1: #8fe3ff;
+  --logo-2: #3fa9dd;
+  --logo-3: #1c6d99;
   --grid-line: rgba(117, 196, 238, 0.08);
   --cloud: rgba(105, 161, 192, 0.14);
   --code-bg: #0e1822;
@@ -988,31 +994,31 @@ const STYLES = `
   background: linear-gradient(180deg, var(--title-1), var(--title-2));
 }
 .ama-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.ama-logo {
+.ama-logo, .ama-avatar, .ama-mini-icon {
   position: relative;
-  display: grid;
-  place-items: center;
-  width: 37px;
-  height: 33px;
-  flex: 0 0 auto;
-  border-radius: 11px 11px 13px 13px;
+  isolation: isolate;
+  background: linear-gradient(148deg, var(--logo-1) 0%, var(--logo-2) 54%, var(--logo-3) 100%);
   color: #ffffff;
-  font-size: 16px;
-  font-weight: 900;
-  background: linear-gradient(145deg, #6ed6ff 0%, #36b4f0 55%, #1f93d1 100%);
-  box-shadow: 0 6px 16px rgba(47, 160, 213, 0.3);
+  text-shadow: 0 1px 2px rgb(12 60 88 / 0.3);
 }
-.ama-logo::before, .ama-logo::after {
+.ama-logo, .ama-avatar, .ama-mini-icon { filter: drop-shadow(0 6px 14px rgba(47, 160, 213, 0.3)); }
+.ama-logo::before, .ama-logo::after,
+.ama-avatar::before, .ama-avatar::after,
+.ama-mini-icon::before, .ama-mini-icon::after {
   content: "";
   position: absolute;
-  top: -5px;
-  width: 15px;
-  height: 15px;
-  background: #59c8f8;
+  top: -18%;
+  width: 40%;
+  height: 50%;
+  z-index: -1;
+  background: inherit;
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
-.ama-logo::before { left: 2px; transform: rotate(-16deg); }
-.ama-logo::after { right: 2px; transform: rotate(16deg); }
+.ama-logo::before, .ama-avatar::before, .ama-mini-icon::before { left: 2%; transform: rotate(-12deg); }
+.ama-logo::after, .ama-avatar::after, .ama-mini-icon::after { right: 2%; transform: rotate(12deg); }
+.ama-logo { display: grid; place-items: center; width: 37px; height: 33px; flex: 0 0 auto; border-radius: 11px 11px 13px 13px; font-size: 16px; font-weight: 900; }
+.ama-avatar { display: grid; place-items: center; width: 36px; height: 33px; flex: 0 0 auto; border-radius: 11px; font-size: 13px; font-weight: 900; }
+.ama-mini-icon { display: grid; place-items: center; width: 31px; height: 29px; border-radius: 9px; font-size: 13px; }
 .ama-brand-title { min-width: 0; }
 .ama-brand-name { margin: 0; font-size: 14px; font-weight: 850; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ama-brand-sub { margin: 1px 0 0; font-size: 9px; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
@@ -1072,31 +1078,7 @@ const STYLES = `
   border-radius: 14px;
   background: var(--card);
 }
-.ama-avatar {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 33px;
-  flex: 0 0 auto;
-  border-radius: 11px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 900;
-  background: linear-gradient(145deg, #7adcff, #35b2ea);
-  box-shadow: 0 5px 12px rgba(47, 160, 213, 0.22);
-}
-.ama-avatar::before, .ama-avatar::after {
-  content: "";
-  position: absolute;
-  top: -4px;
-  width: 12px;
-  height: 12px;
-  background: #60caf8;
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
-}
-.ama-avatar::before { left: 2px; transform: rotate(-15deg); }
-.ama-avatar::after { right: 2px; transform: rotate(15deg); }
+
 .ama-profile-name { margin: 0; font-size: 12px; font-weight: 850; }
 .ama-profile-role { margin: 1px 0 0; font-size: 9.5px; color: var(--muted); }
 .ama-profile-status { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 8.5px; color: var(--success); font-weight: 750; }
@@ -1605,7 +1587,7 @@ const STYLES = `
   box-shadow: var(--window-shadow);
   animation: ama-window-in .3s ease both;
 }
-.ama-mini-icon { display: grid; place-items: center; width: 31px; height: 29px; border-radius: 9px; background: linear-gradient(145deg, #7adcff, #35b2ea); color: #fff; font-size: 13px; }
+
 .ama-mini-copy { min-width: 0; }
 .ama-mini-copy strong { display: block; font-size: 10px; color: var(--ink-soft); }
 .ama-mini-copy span { display: block; font-size: 8px; color: var(--muted); }
@@ -2332,9 +2314,10 @@ const STYLES = `
   border-color: var(--line-strong);
   box-shadow: inset 0 1px 2px rgb(52 68 88 / 0.2), inset 0 -1px 0 rgb(255 255 255 / 0.5);
 }
-.ama-root[data-material="metal"] .ama-logo {
-  background: linear-gradient(160deg, #cfd9e6, #8f9fb2 46%, #5f7086);
-  box-shadow: 0 4px 12px rgb(52 68 88 / 0.34), inset 0 1px 0 rgb(255 255 255 / 0.7);
+.ama-root[data-material="metal"] {
+  --logo-1: #e8eef6;
+  --logo-2: #9aa9bd;
+  --logo-3: #5d6f86;
 }
 
 /* ============================================================
@@ -2431,6 +2414,9 @@ const STYLES = `
   box-shadow: 0 3px 0 var(--cream-line);
   color: var(--ink);
 }
+.ama-root[data-material="cream"] .ama-logo,
+.ama-root[data-material="cream"] .ama-avatar,
+.ama-root[data-material="cream"] .ama-mini-icon { filter: drop-shadow(0 3px 0 rgb(208 138 156 / 0.55)) drop-shadow(0 8px 16px rgb(190 132 98 / 0.26)); }
 .ama-root[data-material="cream"] .ama-btn {
   border: 2px solid var(--cream-line-strong);
   border-radius: 12px;
@@ -2456,9 +2442,10 @@ const STYLES = `
 }
 .ama-root[data-material="cream"] .ama-pill,
 .ama-root[data-material="cream"] .ama-badge { border-width: 2px; border-style: solid; border-color: var(--cream-line); }
-.ama-root[data-material="cream"] .ama-logo {
-  background: linear-gradient(160deg, #ffd0a8, #f2a3b8 55%, #e08ba4);
-  box-shadow: 0 3px 0 #d08a9c, 0 8px 16px rgb(190 132 98 / 0.3);
+.ama-root[data-material="cream"] {
+  --logo-1: #ffd7b0;
+  --logo-2: #f6a9bd;
+  --logo-3: #e08ba4;
 }
 .ama-root[data-material="cream"] .ama-footer {
   border-top: 2px dashed var(--cream-line);
@@ -2574,12 +2561,10 @@ const STYLES = `
   background: rgb(255 253 248 / 0.9);
   box-shadow: inset 0 1px 3px rgb(120 108 96 / 0.12);
 }
-.ama-root[data-material="ink"] .ama-logo {
-  background:
-    radial-gradient(circle at 30% 24%, rgb(255 255 255 / 0.7), transparent 60%),
-    linear-gradient(160deg, color-mix(in srgb, var(--sky) 70%, #fff), color-mix(in srgb, var(--pink) 70%, #b9a6d8));
-  border-radius: 40% 60% 55% 45% / 55% 45% 60% 40%;
-  box-shadow: 0 6px 16px rgb(74 62 52 / 0.18);
+.ama-root[data-material="ink"] {
+  --logo-1: color-mix(in srgb, var(--sky) 62%, #ffffff);
+  --logo-2: color-mix(in srgb, var(--sky) 58%, var(--lilac));
+  --logo-3: color-mix(in srgb, var(--pink) 66%, #9b8ec8);
 }
 
 /* material preview swatches in the studio */
@@ -2622,7 +2607,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.5.2 Beta"
+  const version = shell.version || "0.5.3 Beta"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")

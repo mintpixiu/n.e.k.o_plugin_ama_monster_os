@@ -185,7 +185,7 @@ def test_snapshot_is_versioned_and_serializable() -> None:
     snapshot = asyncio.run(runtime.snapshot())
 
     assert snapshot["ok"] is True
-    assert snapshot["shell"]["version"] == "0.5.2 Beta"
+    assert snapshot["shell"]["version"] == "0.5.3 Beta"
     assert snapshot["shell"]["name"] == "Ama Monster OS"
     assert snapshot["preview"] is True
     assert snapshot["bridge"]["contract_version"] == CONTRACT_VERSION

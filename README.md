@@ -1,6 +1,6 @@
 # N.E.K.O Ama Monster OS
 
-> **0.5.2 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
+> **0.5.3 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
 > web search, a Steam price radar, a token price radar, and a versioned system
 > bridge reserved for a future standalone build.
 
@@ -8,7 +8,7 @@
 
 This is the first window of **Ama Monster OS**, not a finished operating
 system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
-0.5.2 Beta contains.
+0.5.3 Beta contains.
 
 ## What is real in this version
 
@@ -222,7 +222,7 @@ a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
-- Any Market publication. The **0.5.2 Beta** GitHub Release is live; its Market
+- Any Market publication. The **0.5.3 Beta** GitHub Release is live; its Market
   Beta submission remains manual.
 
 ## Install and open the window
@@ -327,14 +327,14 @@ python -m pytest tests
 ```
 
 See [PUBLISHING.md](PUBLISHING.md) for the Beta release and Market submission
-notes. The latest GitHub Release is `v0.5.2-beta`; Market notification remains manual.
+notes. The latest GitHub Release is `v0.5.3-beta`; Market notification remains manual.
 
 ## Versioning and release
 
-- Manifest version: `0.5.2-beta`
-- Display version: **0.5.2 Beta**
+- Manifest version: `0.5.3-beta`
+- Display version: **0.5.3 Beta**
 - Release channel: **Beta (pre-release)**
-- Published GitHub Release: **v0.5.2-beta**
+- Published GitHub Release: **v0.5.3-beta**
 - Market: **not submitted**; the Beta channel submission is manual
 
 ## Credits
