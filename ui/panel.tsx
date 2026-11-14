@@ -1097,31 +1097,37 @@ const STYLES = `
   background: linear-gradient(180deg, var(--title-1), var(--title-2));
 }
 .ama-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ama-cat-mask-src { display: none; }
 .ama-logo, .ama-avatar, .ama-mini-icon {
   position: relative;
   isolation: isolate;
-  background: linear-gradient(148deg, var(--logo-1) 0%, var(--logo-2) 54%, var(--logo-3) 100%);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: transparent;
   color: #ffffff;
-  text-shadow: 0 1px 2px rgb(12 60 88 / 0.3);
+  font-weight: 900;
+  text-shadow: 0 1px 3px rgb(12 60 88 / 0.28);
+  filter: drop-shadow(0 5px 12px rgb(47 160 213 / 0.26));
 }
-.ama-logo, .ama-avatar, .ama-mini-icon { filter: drop-shadow(0 6px 14px rgba(47, 160, 213, 0.3)); }
-.ama-logo::before, .ama-logo::after,
-.ama-avatar::before, .ama-avatar::after,
-.ama-mini-icon::before, .ama-mini-icon::after {
+.ama-logo::before, .ama-avatar::before, .ama-mini-icon::before {
   content: "";
   position: absolute;
-  top: -18%;
-  width: 40%;
-  height: 50%;
+  inset: 0;
   z-index: -1;
-  background: inherit;
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  background: linear-gradient(155deg, var(--logo-1) 0%, var(--logo-2) 58%, var(--logo-3) 100%);
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 36'><path d='M4.8 15.6 C4.8 11.2 6.3 8.6 8.2 6.3 C9.1 4.5 10.4 2.3 12.2 2.3 C14.3 2.3 15.5 4.9 16.6 7.5 C17.5 9.8 18.6 10.8 20 10.8 C21.4 10.8 22.5 9.8 23.4 7.5 C24.5 4.9 25.7 2.3 27.8 2.3 C29.6 2.3 30.9 4.5 31.8 6.3 C33.7 8.6 35.2 11.2 35.2 15.6 L35.2 24.6 C35.2 30.8 28.6 34 20 34 C11.4 34 4.8 30.8 4.8 24.6 Z'/></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 36'><path d='M4.8 15.6 C4.8 11.2 6.3 8.6 8.2 6.3 C9.1 4.5 10.4 2.3 12.2 2.3 C14.3 2.3 15.5 4.9 16.6 7.5 C17.5 9.8 18.6 10.8 20 10.8 C21.4 10.8 22.5 9.8 23.4 7.5 C24.5 4.9 25.7 2.3 27.8 2.3 C29.6 2.3 30.9 4.5 31.8 6.3 C33.7 8.6 35.2 11.2 35.2 15.6 L35.2 24.6 C35.2 30.8 28.6 34 20 34 C11.4 34 4.8 30.8 4.8 24.6 Z'/></svg>");
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
-.ama-logo::before, .ama-avatar::before, .ama-mini-icon::before { left: 2%; transform: rotate(-12deg); }
-.ama-logo::after, .ama-avatar::after, .ama-mini-icon::after { right: 2%; transform: rotate(12deg); }
-.ama-logo { display: grid; place-items: center; width: 37px; height: 33px; flex: 0 0 auto; border-radius: 11px 11px 13px 13px; font-size: 16px; font-weight: 900; }
-.ama-avatar { display: grid; place-items: center; width: 36px; height: 33px; flex: 0 0 auto; border-radius: 11px; font-size: 13px; font-weight: 900; }
-.ama-mini-icon { display: grid; place-items: center; width: 31px; height: 29px; border-radius: 9px; font-size: 13px; }
+.ama-logo { width: 37px; height: 35px; font-size: 16px; padding-top: 4%; }
+.ama-avatar { width: 36px; height: 34px; font-size: 13px; padding-top: 4%; }
+.ama-mini-icon { width: 31px; height: 29px; font-size: 12px; padding-top: 4%; }
 .ama-brand-title { min-width: 0; }
 .ama-brand-name { margin: 0; font-size: 14px; font-weight: 850; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ama-brand-sub { margin: 1px 0 0; font-size: 9px; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
@@ -2792,7 +2798,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.6.2 Beta"
+  const version = shell.version || "0.6.3 Beta"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")

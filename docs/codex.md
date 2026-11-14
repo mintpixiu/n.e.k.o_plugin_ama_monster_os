@@ -1,6 +1,6 @@
 # 明日方舟干员图鉴
 
-**Ama Monster OS 0.6.2 Beta** · Operator Codex
+**Ama Monster OS 0.6.3 Beta** · Operator Codex
 
 窗口左侧新增 **档案** 页面：一份 Wiki 风格的明日方舟干员档案，可以按姓名、职业、星级、阵营检索，并查看皮肤示例、故事速览与辅助工具。
 
