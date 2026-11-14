@@ -1,7 +1,7 @@
 [plugin]
 id = "ama_monster_os"
 name = "N.E.K.O Ama Monster OS"
-description = "《N.E.K.O Ama Monster OS》0.6.3 Beta：给 N.E.K.O 的猫娘风格系统壳窗口，带实时状态、联网搜索、Steam 价格与历史最低价、Steam 国区当前价（CNY）、Steam 促销精选（按批次轮换）、免费即玩（按组轮换）、促销日历、Steam OpenID 登录（支持 Steam++ 加速检测）、Token 看板（国内外主流模型公开目录价、30 日 K 线、峰谷时段）、用户自定义 UI 外观（玻璃 / 金属 / 卡通奶油 / 彩水墨 / 实心五种材质）与导入导出、最多 30 色渐变、Steam 风格选取音效与自定义音效、明日方舟干员图鉴（离线档案）、系统桥契约，以及为未来独立软件预留的内置系统接口。搜索优先调用 N.E.K.O 的 web_search 插件，并在其未运行时使用固定 Bing RSS 回退；Steam 全球价格与促销日程来自 CheapShark 与 Steamworks 官方快照（USD），国区当前价来自 Steam 官方商店 API（CNY）；Token 目录价来自 models.dev 公开目录（USD/1M tokens），DeepSeek 峰谷规则来自官方文档。只发送查询文字，不自动抓取网页；不收集 Steam 密码。当前版本是可运行的窗口预览，不冒充完整操作系统。"
+description = "《N.E.K.O Ama Monster OS》0.6.4 Beta：给 N.E.K.O 的猫娘风格系统壳窗口，带实时状态、联网搜索、Steam 价格与历史最低价、Steam 国区当前价（CNY）、Steam 促销精选（按批次轮换）、免费即玩（按组轮换）、促销日历、Steam OpenID 登录（支持 Steam++ 加速检测）、Token 看板（国内外主流模型公开目录价、30 日 K 线、峰谷时段）、用户自定义 UI 外观（玻璃 / 金属 / 卡通奶油 / 彩水墨 / 实心五种材质）与导入导出、最多 30 色渐变、Steam 风格选取音效与自定义音效、明日方舟干员图鉴（离线档案）、系统桥契约，以及为未来独立软件预留的内置系统接口。搜索优先调用 N.E.K.O 的 web_search 插件，并在其未运行时使用固定 Bing RSS 回退；Steam 全球价格与促销日程来自 CheapShark 与 Steamworks 官方快照（USD），国区当前价来自 Steam 官方商店 API（CNY）；Token 目录价来自 models.dev 公开目录（USD/1M tokens），DeepSeek 峰谷规则来自官方文档。只发送查询文字，不自动抓取网页；不收集 Steam 密码。当前版本是可运行的窗口预览，不冒充完整操作系统。"
 short_description = "A NEKO-styled OS shell with live status, web search, Steam prices and sale calendar, a token price radar with 30-day candles and peak/off-peak windows, a customizable UI studio, and a versioned system-bridge seam."
 keywords = [
     "ama monster os",
@@ -63,7 +63,7 @@ keywords = [
     "shell preview",
     "system bridge",
 ]
-version = "0.6.3-beta"
+version = "0.6.4-beta"
 type = "plugin"
 entry = "plugin.plugins.ama_monster_os:AmaMonsterOsPlugin"
 

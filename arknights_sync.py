@@ -32,7 +32,7 @@ MAX_TABLE_BYTES = 32 * 1024 * 1024
 CACHE_FILE = "arknights_index.json"
 CACHE_VERSION = 1
 _HTTP_TIMEOUT = 45.0
-_USER_AGENT = "AmaMonsterOS/0.6.3 (+https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os)"
+_USER_AGENT = "AmaMonsterOS/0.6.4 (+https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os)"
 
 PROFESSION_ZH: dict[str, str] = {
     "PIONEER": "先锋",

@@ -458,6 +458,9 @@ class AmaMonsterOsPlugin(NekoPluginBase):
         self._runtime.set_codex(payload["summary"])
         return Ok({
             **payload,
+            # `summary` must stay a string for the LLM/tool result contract, so the
+            # structured counts travel under their own key.
+            "codex_summary": payload.get("summary") or {},
             "summary": self.i18n.t("entries.codex.summary", default="Codex matched {count} operator(s).")
             .replace("{count}", str(payload["count"])),
         })

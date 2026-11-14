@@ -2798,7 +2798,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.6.3 Beta"
+  const version = shell.version || "0.6.4 Beta"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
@@ -3326,7 +3326,10 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       const results = Array.isArray(result.results) ? result.results as CodexOperator[] : []
       setCodexOperators(results)
       if (Array.isArray(result.tools)) setCodexTools(result.tools as CodexTool[])
-      if (result.summary && typeof result.summary === "object") setCodexSummary(result.summary as CodexSummary)
+      const nextSummary = result.codex_summary && typeof result.codex_summary === "object"
+        ? result.codex_summary as CodexSummary
+        : (result.summary && typeof result.summary === "object" ? result.summary as CodexSummary : null)
+      if (nextSummary) setCodexSummary(nextSummary)
       setCodexLoaded(true)
       setCodexMessage(results.length === 0 ? tr("codex.empty", "图鉴里还没有数据。") : "")
     } catch (_error) {
