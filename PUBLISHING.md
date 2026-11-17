@@ -5,8 +5,8 @@ GitHub Actions evidence is present. The Market Beta submission is still manual.
 
 - Release: https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os/releases/tag/v0.6.5-beta
 - Tag: `v0.6.5-beta`
-- Release asset SHA-256: `28c5b3d4cce704987be0cc8e510b421f135b2e62f3d7fd75a6d18e3b0d5ffb71`
-- Local build SHA-256: `fea82fc8c1595905f45a9b192e740ac8972ab9fd29b8201e36c6ae4b0c9af02f`
+- Release asset SHA-256: `6232c72ceb40741d399f3fb3c04d517fcef882de672392b0b989b7e6fabb0919`
+- Local build SHA-256: `eee815428314f0ce5c1b93f102040cb0333c3b9bebf4d79d7e63d40ca0e18717`
 - Evidence: `market-evidence.json` + `market-release-check.txt`
 - Market: pending manual Beta-channel submission
 
@@ -22,7 +22,7 @@ repository named `n.e.k.o_plugin_ama_monster_os`.
 
 ## Beta publication
 
-0.2.3 is a **Beta** release. The default `neko-plugin publish` command publishes
+0.6.5 is a **Beta** release. The default `neko-plugin publish` command publishes
 to the **stable** channel, so for Beta use the two-step flow:
 
 ```powershell
