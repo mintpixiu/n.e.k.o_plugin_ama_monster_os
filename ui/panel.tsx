@@ -2777,6 +2777,59 @@ const STYLES = `
     linear-gradient(170deg, #fdfbf6, #f3ecdf);
 }
 
+/* Continuous-curvature corners (G2).
+   A plain border-radius joins a straight edge to a circular arc, so curvature
+   jumps from 0 to 1/r at the seam -- the outline is tangent-continuous (G1) but
+   not curvature-continuous. corner-shape keeps border-radius as the corner
+   *size* and draws a superellipse inside that corner box instead, so curvature
+   starts at 0 and grows continuously (G2), the iOS / Figma "smooth corner".
+   It is native box geometry, so borders, box-shadows, backdrop-filter and
+   overflow clipping all follow the very same curve.
+   Rounding is a system rule, not a UI Studio option: --ui-radius still sets the
+   size of every corner, --ui-corner-curve only sets the curve family.
+   Hosts without corner-shape (Firefox, Chromium < 139, Safari < 26) ignore this
+   whole block and keep the previous circular arcs as a graceful fallback. */
+@supports (corner-shape: squircle) {
+  .ama-root {
+    /* squircle == superellipse(2); round == superellipse(1).
+       1.5-1.8 is a softer corner, 3-4 is a flatter (more square) corner. */
+    --ui-corner-curve: squircle;
+  }
+  .ama-root,
+  .ama-root *,
+  .ama-root *::before,
+  .ama-root *::after {
+    corner-shape: var(--ui-corner-curve);
+  }
+  /* Invariant: circles and pills must stay round. They are closed curves
+     already, so a superellipse would square them off instead of smoothing
+     them. tests/test_corners.py fails if a new border-radius: 50% or pill rule
+     in STYLES is missing from this reset list. */
+  .ama-root :where(
+    [class*="-dot"],
+    .ama-cloud,
+    .ama-orb, .ama-orb::before, .ama-orb::after,
+    .ama-hero::after, .ama-web-hero::after,
+    .ama-cat-face, .ama-cat-eye, .ama-cat-eye::after, .ama-cat-blush,
+    .ama-pill, .ama-badge, .ama-hoard, .ama-steam-low,
+    .ama-token-live, .ama-token-live i, .ama-token-filter i,
+    .ama-token-now, .ama-codex-tags span, .ama-studio-preview-lines span,
+    .ama-swatch, .ama-swatch span, .ama-web-spinner, .ama-moon,
+    .ama-sleep::before
+  ) {
+    corner-shape: round;
+  }
+  .ama-root [class*="-dot"]::before,
+  .ama-root [class*="-dot"]::after,
+  .ama-root[data-material="glass"] .ama-window::after,
+  .ama-root[data-material="ink"] :where(
+    .ama-btn, .ama-nav-btn.is-active, .ama-web-input,
+    .ama-studio-input, .ama-web-input-wrap
+  ) {
+    corner-shape: round;
+  }
+}
+
 `
 
 export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>) {
@@ -2798,7 +2851,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.6.4 Beta"
+  const version = shell.version || "0.6.5 Beta"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")

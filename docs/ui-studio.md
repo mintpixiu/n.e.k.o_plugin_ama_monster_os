@@ -1,6 +1,6 @@
 # 自定义外观与导入导出教程
 
-**Ama Monster OS 0.6.4 Beta** · UI Studio · `ama.ui.profile` v1
+**Ama Monster OS 0.6.5 Beta** · UI Studio · `ama.ui.profile` v1
 
 这篇教程讲三件事：
 
@@ -119,7 +119,8 @@
 - **主题**：日光 / 月光
 - **窗口背景**：纸白 / 雾蓝 / 樱粉 / 玻璃 / 渐变 / 图片 / 自定义颜色
 - **桌面背景**：网格 / 点阵 / 极光 / 星夜 / 纯净
-- **圆角**：拖动 8–28px
+- **圆角**：拖动 8–28px。只改变圆角**大小**；曲线固定为连续曲率（G2 超椭圆），
+  不是圆弧。详见 [README 的 Corners 一节](../README.md#corners-continuous-curvature-g2)。
 - **密度**：舒适 / 紧凑
 - **窗口标识**：修改标题和图标
 - **选取音效**：Steam 轻点 / 柔和 / 机械 / 自定义

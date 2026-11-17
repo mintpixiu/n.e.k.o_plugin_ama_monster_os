@@ -1,6 +1,6 @@
 # N.E.K.O Ama Monster OS
 
-> **0.6.4 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
+> **0.6.5 Beta** · a NEKO-styled shell window for Project N.E.K.O, with live
 > web search, a Steam price radar, a token price radar, and a versioned system
 > bridge reserved for a future standalone build.
 
@@ -8,7 +8,7 @@
 
 This is the first window of **Ama Monster OS**, not a finished operating
 system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
-0.6.4 Beta contains.
+0.6.5 Beta contains.
 
 ## What is real in this version
 
@@ -40,6 +40,13 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
   highlights), **cream** (cartoon cream with thick outlines and sticker
   shadows), **ink** (rice-paper watercolour with soft corners), and **solid**
   for low-end machines. Blur and density stay adjustable for glass.
+- **Continuous-curvature corners**: every rounded rectangle — window, cards,
+  buttons, inputs, chips — is a superellipse (`corner-shape: squircle`), so the
+  straight edges flow into the corners with continuous curvature (G2) instead of
+  a circular arc butt-joined at the seam (G1). It is native box geometry, so
+  borders, shadows, backdrop blur and clipping all follow the same curve.
+  Circles and pills stay perfectly round, and the Studio radius slider still
+  controls corner *size*, not curvature.
 - A **UI Studio** for custom accent (swatches, picker, hex input, recent colours), light/dark theme, **window background**
   (including an imported local image), desktop backdrop, corner radius, compact
   density, window title, and glyph. It also includes a **2–30 colour gradient
@@ -190,6 +197,28 @@ validator before it is written to disk.
 **Step-by-step tutorial:** [docs/ui-studio.md](docs/ui-studio.md) — covers making
 a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting.
 
+## Corners: continuous curvature (G2)
+
+`border-radius` alone joins a straight edge to a circular arc, so the curvature
+jumps from 0 to `1/r` at that seam — the outline is tangent-continuous (G1) but
+not curvature-continuous. The window therefore draws every corner box as a
+superellipse with `corner-shape: squircle` (`superellipse(2)`, the iOS icon and
+Figma "smooth corners" construction): curvature starts at zero and grows
+continuously into the straight edge (G2).
+
+- `border-radius` still controls the corner **size**; the Studio radius slider
+  stays 8–28 px. Curvature is a fixed design rule, not a profile field.
+- `--ui-corner-curve` in `ui/panel.tsx` is the single curve knob.
+  `corner-shape: round` keeps circles, pills, dots and decorative blobs round —
+  a superellipse there would square them off. `tests/test_corners.py` fails if a
+  new circular rule is added without that reset.
+- Hosts without `corner-shape` (Firefox, Chromium < 139, Safari < 26) ignore the
+  guarded block and render the previous circular arcs, so the panel still works
+  outside N.E.K.O. The N.E.K.O desktop host in this release is Electron 41 /
+  Chromium 146, so the hosted window gets the smooth corners natively.
+
+![Continuous-curvature window corners](docs/preview-corners.png)
+
 ![Glass material in daylight](docs/preview-glass.png)
 
 ![Metal material](docs/preview-metal.png)
@@ -230,7 +259,7 @@ a profile, hand-writing JSON, exporting, importing, backups, and troubleshooting
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
-- Any Market publication. The **0.6.4 Beta** GitHub Release is live; its Market
+- Any Market publication. The **0.6.5 Beta** GitHub Release is live; its Market
   Beta submission remains manual.
 
 ## Install and open the window
@@ -293,6 +322,7 @@ ama_monster_os/
 ├── docs/preview-picks.png       sale picks preview
 ├── docs/preview-free.png        free-to-play shelf preview
 ├── docs/preview-glass.png       glass material preview
+├── docs/preview-corners.png     continuous-curvature (G2) corner preview
 ├── docs/preview-codex.png       operator codex preview
 ├── docs/preview-metal.png       metal material preview
 ├── docs/preview-cream.png       cream material preview
@@ -337,14 +367,14 @@ python -m pytest tests
 ```
 
 See [PUBLISHING.md](PUBLISHING.md) for the Beta release and Market submission
-notes. The latest GitHub Release is `v0.6.4-beta`; Market notification remains manual.
+notes. The latest GitHub Release is `v0.6.5-beta`; Market notification remains manual.
 
 ## Versioning and release
 
-- Manifest version: `0.6.4-beta`
-- Display version: **0.6.4 Beta**
+- Manifest version: `0.6.5-beta`
+- Display version: **0.6.5 Beta**
 - Release channel: **Beta (pre-release)**
-- Published GitHub Release: **v0.6.4-beta**
+- Published GitHub Release: **v0.6.5-beta**
 - Market: **not submitted**; the Beta channel submission is manual
 
 ## Credits

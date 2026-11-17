@@ -6,7 +6,7 @@
 - name: `N.E.K.O Ama Monster OS`
 - entry: `plugin.plugins.ama_monster_os:AmaMonsterOsPlugin`
 - main class: `AmaMonsterOsPlugin`
-- version: `0.6.4-beta` (displayed as **0.6.4 Beta**)
+- version: `0.6.5-beta` (displayed as **0.6.5 Beta**)
 
 ## Purpose
 
@@ -40,10 +40,40 @@ from the first version.
 - A versioned system contract (`ama.system.bridge` v1.0.0) and documented `SystemPort` seam for the future built-in app.
 - Eight locale files: `en`, `es`, `ja`, `ko`, `pt`, `ru`, `zh-CN`, `zh-TW`.
 
+## Visual Rules
+
+- **Corners use continuous curvature (G2).** A plain `border-radius` joins a
+  straight edge to a circular arc, so curvature jumps from 0 to `1/r` at the
+  seam (tangent-continuous only, G1). Every rounded rectangle in the window —
+  window, cards, panels, buttons, inputs, chips — is drawn as a superellipse
+  instead: `corner-shape: squircle` keeps `border-radius` as the corner *size*
+  and fills the same corner box with `superellipse(2)`, so curvature starts at
+  zero and grows continuously into the edge. This is native box geometry, so
+  borders, box-shadows, `backdrop-filter` and `overflow` clipping all follow the
+  same curve. Implemented once in `ui/panel.tsx`; `--ui-corner-curve` is the
+  single curve knob (`squircle` = `superellipse(2)`, `round` = `superellipse(1)`,
+  `superellipse(1.5–1.8)` is softer, `superellipse(3–4)` flatter).
+- **Continuous curvature is a system rule, not a UI Studio option.** The Studio
+  radius slider (8–28 px) controls size only, so the `ama.ui.profile` schema,
+  validation and locale files are unchanged.
+- **Circles and pills stay round.** `50%`/pill `border-radius` shapes (dots,
+  swatches, orbs, decorative glows, badges, spinners) are closed curves already;
+  a superellipse would square them off instead of smoothing them, so they are
+  explicitly reset to `corner-shape: round`. `tests/test_corners.py` parses
+  `STYLES` and fails when a new circular or pill rule has no reset, and it also
+  fails if any `corner-shape` declaration escapes the `@supports` block.
+- **Graceful degradation.** Hosts without `corner-shape` (Firefox, Chromium <
+  139, Safari < 26) ignore the whole guarded block and keep the previous
+  circular arcs, so only the curve family changes, never the layout. The N.E.K.O
+  host shipped with this release is Electron 41 / Chromium 146, so the hosted
+  window gets the smooth corners natively. A pixel-identical G1 fallback would
+  need JS-measured SVG paths and would break native borders, shadows,
+  `backdrop-filter` and clipping, so it is deliberately not attempted.
+
 ## Out of Scope
 
 - A general browser or arbitrary-URL reader; only search is implemented.
-- Steam library, achievements, wallet, friends, or inventory in 0.6.4 Beta. Sign-in is limited to the public OpenID profile.
+- Steam library, achievements, wallet, friends, or inventory in 0.6.5 Beta. Sign-in is limited to the public OpenID profile.
 - Native desktop windows, process control, filesystem browsing, voice pipeline, real chat/memory/tool/style modules.
 - Any claim that the preview is a complete operating system.
 - Publishing to the N.E.K.O Market. The repository owner publishes manually.
@@ -60,7 +90,7 @@ from the first version.
 - sale calendar: versioned `steam_sales.py` snapshot from Steamworks; dates shown in local time; Valve can change them
 - UI profile: `ui_profile.py` schema, persisted to `data/ui_profile.json`, exported as `ama.ui.profile` JSON
 - UI surfaces: one `panel` (`ui/panel.tsx`), one Markdown guide, one Markdown docs page
-- state/config: read-only snapshot plus in-memory last search and price lookup; no persistent config in 0.6.4 Beta
+- state/config: read-only snapshot plus in-memory last search and price lookup; no persistent config in 0.6.5 Beta
 - lifecycle/background work: startup/shutdown only; no timers or background tasks
 - external integrations: N.E.K.O web search plugin, Bing RSS fallback, CheapShark price API
 
@@ -106,5 +136,5 @@ plugins such as `lifekit` and `mcp_adapter`.
   update date and an official Steamworks link so users can verify changed dates.
 - Window chrome controls are presentation state inside one hosted panel; they
   do not control the N.E.K.O application window.
-- Version `0.6.4-beta` is a pre-release; the user publishes manually with their
+- Version `0.6.5-beta` is a pre-release; the user publishes manually with their
   own tag and Market confirmation.
