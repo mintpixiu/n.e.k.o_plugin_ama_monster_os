@@ -1147,8 +1147,8 @@ const STYLES = `
   text-transform: uppercase;
   white-space: nowrap;
 }
-.ama-pill.is-beta { color: #a65d82; border-color: #f3d5e4; background: #fff5fa; }
-.ama-pill.is-beta .ama-pill-dot { background: #f49fc2; }
+.ama-pill.is-stable { color: #a65d82; border-color: #f3d5e4; background: #fff5fa; }
+.ama-pill.is-stable .ama-pill-dot { background: #f49fc2; }
 .ama-pill-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--sky); }
 .ama-window-actions { display: flex; align-items: center; gap: 3px; margin-left: 4px; }
 .ama-win-btn {
@@ -2851,7 +2851,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.6.5 Beta"
+  const version = shell.version || "0.6.12"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
@@ -3892,7 +3892,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
         </div>
       </div>
       <div className="ama-title-pills">
-        <span className="ama-pill is-beta"><span className="ama-pill-dot" />{shell.channel || "Beta"}</span>
+        <span className="ama-pill is-stable"><span className="ama-pill-dot" />{shell.channel || "Stable"}</span>
         <span className="ama-pill is-hosted"><span className="ama-pill-dot" />{tr("footer.local", "Local only")}</span>
       </div>
       <div className="ama-window-actions">
@@ -5303,7 +5303,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           <p className="ama-about-credit">{tr("about.credits", "Built for Project N.E.K.O · Plugin SDK 0.1")}</p>
           <div className="ama-note">{tr("about.outOfScope", "Not yet: native window, real modules, process control, or voice pipeline.")}</div>
           <div className="ama-chips">
-            <span className="ama-chip">{shell.channel || "Beta"}</span>
+            <span className="ama-chip">{shell.channel || "Stable"}</span>
             <span className="ama-chip">{tr("bridge.contract", "Contract")} v{contractVersion}</span>
             <span className="ama-chip">{bridge.provider || "neko-plugin-host"}</span>
             <span className="ama-chip">{tr("footer.local", "Local only")}</span>

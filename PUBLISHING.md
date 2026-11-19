@@ -1,14 +1,13 @@
 # Publishing Ama Monster OS
 
-**Status: 0.6.5 Beta published to GitHub Releases as a pre-release.** Standard
-GitHub Actions evidence is present. The Market Beta submission is still manual.
+**Status: 0.6.12 Stable is prepared. No GitHub Release or Market version has
+been created for 0.6.12 yet.** The release steps below are manual.
 
-- Release: https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os/releases/tag/v0.6.5-beta
-- Tag: `v0.6.5-beta`
-- Release asset SHA-256: `6232c72ceb40741d399f3fb3c04d517fcef882de672392b0b989b7e6fabb0919`
-- Local build SHA-256: `eee815428314f0ce5c1b93f102040cb0333c3b9bebf4d79d7e63d40ca0e18717`
-- Evidence: `market-evidence.json` + `market-release-check.txt`
-- Market: pending manual Beta-channel submission
+- Version: `0.6.12` (displayed as **0.6.12**)
+- Channel: **stable**
+- Tag used by the CLI: `v0.6.12`
+- Local build: `D:\NEKO.OS\dist\ama_monster_os.neko-plugin`
+- Market: **not submitted**; the Stable channel submission is manual
 
 ## Before publishing
 
@@ -17,24 +16,39 @@ GitHub Actions evidence is present. The Market Beta submission is still manual.
 uv run neko-plugin check -r "D:\NEKO.OS\ama_monster_os" --target-dir "D:\NEKO.OS\dist"
 ```
 
-Also confirm that the repository is clean and points to the public GitHub
-repository named `n.e.k.o_plugin_ama_monster_os`.
+The release check runs the tests, builds `ama_monster_os.neko-plugin`, verifies
+its payload hash, and prints the package SHA-256. Also confirm that the plugin
+repository is clean and points to the public GitHub repository named
+`n.e.k.o_plugin_ama_monster_os`.
 
-## Beta publication
+## Stable publication
 
-0.6.5 is a **Beta** release. The default `neko-plugin publish` command publishes
-to the **stable** channel, so for Beta use the two-step flow:
+0.6.12 is a **stable** release, so the full `neko-plugin publish` command targets
+the **stable** channel. From the N.E.K.O source checkout:
 
 ```powershell
-# 1) Create and push tag v0.6.5-beta + the GitHub Release, without notifying Market
-uv run neko-plugin publish github "D:\NEKO.OS\ama_monster_os"
-
-# 2) In the N.E.K.O Plugin Market submission page, choose the Beta channel,
-#    attach the GitHub Release, add release notes, and confirm.
+uv run neko-plugin publish "D:\NEKO.OS\ama_monster_os"
 ```
 
-Do not run the full `neko-plugin publish` command for this Beta unless you
-intend to publish to `stable`.
+The command:
+
+1. Confirms the plugin repository is clean and its commit is pushed to `origin`.
+2. Runs the release checks, tests, package build, and package verification.
+3. Creates and pushes tag `v0.6.12` from the `0.6.12` version in `plugin.toml`.
+4. Waits for GitHub Actions to create the GitHub Release and upload
+   `ama_monster_os.neko-plugin`, `ama_monster_os.market-release-check.txt`, and
+   `market-evidence.json`.
+5. Tells the Market to publish that Release to the **stable** channel.
+
+If the first Market review has not passed yet, or you only want the GitHub
+Release, create the Release without the Market step:
+
+```powershell
+uv run neko-plugin publish github "D:\NEKO.OS\ama_monster_os"
+```
+
+Then attach the Release to the Market submission page and choose the stable
+channel manually.
 
 ## First review
 
@@ -43,16 +57,17 @@ the GitHub repository. Follow the official flow:
 
 1. Submit the repository for review.
 2. Wait for approval.
-3. Create the Release and choose the Beta channel.
+3. Create the Release and publish the stable version.
 
 ## Version rules
 
-- Manifest version: `0.6.5-beta`
-- Display version: `0.6.5 Beta`
-- Tag created by the CLI: `v0.6.5-beta`
-- A version published to Beta cannot be republished with the same number to
-  Stable; use a new version for a later stable release.
-
-This repository has no automation that publishes to Market. The GitHub release
-workflow builds and uploads the `.neko-plugin` asset and release evidence; the
-Market Beta submission still needs the manual submission page.
+- Manifest version: `0.6.12`
+- Display version: `0.6.12`
+- Tag created by the CLI: `v0.6.12`
+- Stable versions cannot be republished with the same number. Bump the version
+  in `plugin.toml` for every later stable release.
+- The `0.6.5-beta` line stays beta history; never publish `0.6.5-beta` to the
+  stable channel.
+- The GitHub Release workflow builds and uploads the `.neko-plugin` asset and
+  release evidence; the Market notification still needs the matching publish
+  step.
