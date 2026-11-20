@@ -259,8 +259,8 @@ continuously into the straight edge (G2).
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
-- Any Market publication. The **0.6.12** GitHub Release and the Market Stable
-  submission remain manual.
+- Any Market publication. The **0.6.12** GitHub Release is live; the Market
+  Stable submission remains manual.
 
 ## Install and open the window
 
@@ -374,7 +374,7 @@ notes. The latest GitHub Release is `v0.6.12`; Market notification remains manua
 - Manifest version: `0.6.12`
 - Display version: **0.6.12**
 - Release channel: **Stable**
-- GitHub Release: **v0.6.12** (created by the repository owner)
+- Published GitHub Release: **v0.6.12**
 - Market: **not submitted**; the Stable channel submission is manual
 
 ## Credits

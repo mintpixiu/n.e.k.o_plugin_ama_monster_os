@@ -1,54 +1,46 @@
 # Publishing Ama Monster OS
 
-**Status: 0.6.12 Stable is prepared. No GitHub Release or Market version has
-been created for 0.6.12 yet.** The release steps below are manual.
+**Status: 0.6.12 Stable is published to GitHub Releases.** The Market submission
+is still manual and has not been created yet.
 
+- Release: https://github.com/mintpixiu/n.e.k.o_plugin_ama_monster_os/releases/tag/v0.6.12
 - Version: `0.6.12` (displayed as **0.6.12**)
 - Channel: **stable**
-- Tag used by the CLI: `v0.6.12`
-- Local build: `D:\NEKO.OS\dist\ama_monster_os.neko-plugin`
-- Market: **not submitted**; the Stable channel submission is manual
+- Tag: `v0.6.12` → source commit `eeedcb1`
+- Release asset: `ama_monster_os.neko-plugin`, sha256
+  `3ed2a9bdbb7ee3ae228bdacf7788b7a6e826807c1b1a4c40313424052b5793fd`
+- Evidence: `ama_monster_os.market-release-check.txt` + `market-evidence.json`
+- Local build: `D:\NEKO.OS\dist\ama_monster_os.neko-plugin` (Windows build; the
+  CI asset is built on Linux, so the two packages are not byte-identical)
+- Market: **pending** — submit the GitHub Release to the stable channel
+  manually
 
-## Before publishing
+The release workflow ran `neko-plugin check --release`: tests passed, the
+package built, and the payload hash was verified. The evidence files record
+`source_commit = eeedcb1`, `version = 0.6.12`, and `ref_name = v0.6.12`.
 
-```powershell
-# From the N.E.K.O source checkout
-uv run neko-plugin check -r "D:\NEKO.OS\ama_monster_os" --target-dir "D:\NEKO.OS\dist"
-```
+## Publishing the next version
 
-The release check runs the tests, builds `ama_monster_os.neko-plugin`, verifies
-its payload hash, and prints the package SHA-256. Also confirm that the plugin
-repository is clean and points to the public GitHub repository named
-`n.e.k.o_plugin_ama_monster_os`.
+1. Bump `[plugin].version` in `plugin.toml` to a number that has never been
+   published, and update the version strings listed in this repository's README,
+   DESIGN, docs headers, i18n and tests.
+2. Run the release checks from the N.E.K.O source checkout:
 
-## Stable publication
+   ```powershell
+   uv run neko-plugin check -r "D:\NEKO.OS\ama_monster_os" --target-dir "D:\NEKO.OS\dist"
+   ```
 
-0.6.12 is a **stable** release, so the full `neko-plugin publish` command targets
-the **stable** channel. From the N.E.K.O source checkout:
+3. Commit and push the plugin repository.
+4. Create the GitHub Release (and, when the Market submission is ready, notify
+   the Market):
 
-```powershell
-uv run neko-plugin publish "D:\NEKO.OS\ama_monster_os"
-```
+   ```powershell
+   # GitHub Release only
+   uv run neko-plugin publish github "D:\NEKO.OS\ama_monster_os"
 
-The command:
-
-1. Confirms the plugin repository is clean and its commit is pushed to `origin`.
-2. Runs the release checks, tests, package build, and package verification.
-3. Creates and pushes tag `v0.6.12` from the `0.6.12` version in `plugin.toml`.
-4. Waits for GitHub Actions to create the GitHub Release and upload
-   `ama_monster_os.neko-plugin`, `ama_monster_os.market-release-check.txt`, and
-   `market-evidence.json`.
-5. Tells the Market to publish that Release to the **stable** channel.
-
-If the first Market review has not passed yet, or you only want the GitHub
-Release, create the Release without the Market step:
-
-```powershell
-uv run neko-plugin publish github "D:\NEKO.OS\ama_monster_os"
-```
-
-Then attach the Release to the Market submission page and choose the stable
-channel manually.
+   # GitHub Release + Market stable notification (requires a passed review)
+   uv run neko-plugin publish "D:\NEKO.OS\ama_monster_os"
+   ```
 
 ## First review
 
@@ -69,5 +61,5 @@ the GitHub repository. Follow the official flow:
 - The `0.6.5-beta` line stays beta history; never publish `0.6.5-beta` to the
   stable channel.
 - The GitHub Release workflow builds and uploads the `.neko-plugin` asset and
-  release evidence; the Market notification still needs the matching publish
-  step.
+  release evidence; the Market publication still needs the matching publish
+  step or a manual submission from the Release page.
