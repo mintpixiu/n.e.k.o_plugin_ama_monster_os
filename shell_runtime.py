@@ -16,7 +16,7 @@ from typing import Any, Mapping
 
 try:  # package-relative import used by the N.E.K.O plugin
     from .food_manual import (
-        DISCLAIMER as FOOD_DISCLAIMER,
+        DISCLAIMER,
         FOOD_MANUAL_NAME,
         FOOD_MANUAL_UPDATED,
         draw_meal,
@@ -36,7 +36,7 @@ try:  # package-relative import used by the N.E.K.O plugin
     from .ui_profile import DEFAULT_UI_PROFILE, normalize_ui_profile
 except ImportError:  # pragma: no cover - direct test import fallback
     from food_manual import (  # type: ignore[no-redef]
-        DISCLAIMER as FOOD_DISCLAIMER,
+        DISCLAIMER,
         FOOD_MANUAL_NAME,
         FOOD_MANUAL_UPDATED,
         draw_meal,
@@ -193,7 +193,7 @@ class AmaOsRuntime:
             "name": FOOD_MANUAL_NAME,
             "version": "",
             "updated": FOOD_MANUAL_UPDATED,
-            "disclaimer": FOOD_DISCLAIMER,
+            "disclaimer": DISCLAIMER,
             "categories": [],
             "platforms": [],
             "brands": [],

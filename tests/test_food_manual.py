@@ -6,8 +6,8 @@ import random
 
 from food_manual import (
     BRANDS,
-    DISHES,
     DISH_CATEGORIES,
+    DISHES,
     PLATFORMS,
     draw_meal,
     food_manual_payload,
