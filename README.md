@@ -35,12 +35,14 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
   sample skins, a data-only story brief, and a curated **helper-tools and
   download** panel are included. No official art, voice lines or story text is
   bundled.
-- An **offline food manual** room (隔离食用手册): coupon-acquisition tips for
-  美团, 饿了么, 京东外卖, 淘宝闪购 and 抖音, nationwide chain-brand delivery
-  picks with platform, coupon and delivery/pickup notes, and a random
-  **今天吃什么** draw that attaches a platform, coupon, price hint and arrival
-  note. It is a bundled editorial snapshot: no platform scraping, no live
-  prices, no real store addresses, no sign-in and no ordering.
+- An **offline food manual** room (食用手册): coupon-acquisition tips and
+  public coupon codes for 美团, 饿了么, 京东外卖, 淘宝闪购 and 抖音 with
+  official platform entry links, nationwide chain-brand delivery picks with
+  platform, coupon and delivery/pickup notes, a random **今天吃什么** draw
+  (49 dishes, recent draws excluded) that attaches a platform, coupon, price
+  hint and arrival note, and a usage guide for the original 隔离食用手册
+  recipe site. It is a bundled editorial snapshot: no platform scraping, no
+  live prices, no real store addresses, no sign-in and no ordering.
 - **Five materials**: **glass** (Apple / Xiaomi style translucent panels with
   backdrop blur and rim light), **metal** (brushed steel with chamfered
   highlights), **cream** (cartoon cream with thick outlines and sticker
@@ -180,17 +182,22 @@ test network, so they are not used.
 
 The **食** room is an offline food manual, not a delivery integration:
 
-- **今天吃什么** draws one dish from 24 bundled choices and attaches a delivery
+- **今天吃什么** draws one dish from 49 bundled choices and attaches a delivery
   platform, the coupon to claim first, a price hint, and a delivery/pickup note.
-  Drawing again never repeats the previous dish.
-- **优惠券获取方式** documents claim paths and stacking cautions for 美团,
-  饿了么, 京东外卖, 淘宝闪购 and 抖音.
+  The last eight drawn dishes are excluded, so repeated draws keep rotating.
+- **优惠券获取方式** documents claim paths, stacking cautions and public
+  coupon-code / search-word examples for 美团, 饿了么, 京东外卖, 淘宝闪购 and
+  抖音, with official platform entry links.
 - **外卖推荐** lists 16 nationwide chain brands with their usual platforms,
   coupon tips, delivery/pickup notes and a price range.
-- Data boundary: the manual is a 2026-11-21 editorial snapshot. It is not live
-  pricing, stock or promotions, it contains no real store addresses, and it
-  never scrapes a platform, signs in to a delivery account or places an order.
-  Use a map app for the nearest store; the checkout page is authoritative.
+- **原版《隔离食用手册》怎么用** explains the original recipe site by 云游君
+  ([cook.yunyoujun.cn](https://cook.yunyoujun.cn/)): pick ingredients and
+  cookware, choose a match mode, and browse generated recipes with video
+  tutorials.
+- Data boundary: the manual is a 2026-11-22 editorial snapshot. It is not live
+  pricing, stock or promotions, coupon codes expire, it contains no real store
+  addresses, and it never scrapes a platform, signs in to a delivery account or
+  places an order. The checkout page is authoritative.
 
 Step-by-step guide: [docs/food-manual.md](docs/food-manual.md).
 

@@ -478,7 +478,7 @@
   "window.wake": "Despertar a Ama",
   "nav.food": "Comida",
   "food.kicker": "COMIDA",
-  "food.title": "Manual de comida aislada",
+  "food.title": "Manual de comida",
   "food.subtitle": "Consejos de cupones, recomendaciones de reparto y un sorteo de «qué comer hoy».",
   "food.badge.offline": "Instantánea sin conexión",
   "food.draw.title": "¿Qué comemos hoy?",
@@ -514,10 +514,17 @@
   "food.drawError": "No se pudo sortear un plato. Inténtalo de nuevo.",
   "actions.food_manual.label": "Manual de comida",
   "actions.food_draw.label": "¿Qué comemos hoy?",
-  "entries.food_manual.name": "Manual de comida aislada",
+  "entries.food_manual.name": "Manual de comida",
   "entries.food_manual.description": "Lee el manual sin conexión: consejos para conseguir cupones en las principales plataformas de reparto, marcas recomendadas y notas de reparto o recogida. No es un flujo de precios ni promociones en vivo.",
   "entries.food_manual.summary": "Manual cargado: {platforms} plataformas, {brands} marcas y {dishes} platos.",
   "entries.food_draw.name": "¿Qué comemos hoy?",
   "entries.food_draw.description": "Saca un plato al azar con plataforma de reparto, consejo de cupón, precio orientativo y notas de reparto o recogida.",
-  "entries.food_draw.summary": "Hoy: {dish} en {platform}. Reclama un cupón antes de pedir."
+  "entries.food_draw.summary": "Hoy: {dish} en {platform}. Reclama un cupón antes de pedir.",
+  "food.coupons.codes": "Códigos / palabras de búsqueda",
+  "food.coupons.codeHint": "Cambia con las campañas; la app es la referencia.",
+  "food.coupons.open": "Abrir plataforma",
+  "food.original.title": "Cómo usar el 隔离食用手册 original",
+  "food.original.hint": "El sitio original recomienda recetas según los ingredientes y utensilios que tengas.",
+  "food.original.open": "Abrir el sitio original",
+  "food.original.docs": "Notas del autor"
 }

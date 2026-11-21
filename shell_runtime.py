@@ -200,6 +200,7 @@ class AmaOsRuntime:
             "dishes": [],
             "summary": {"platforms": 0, "brands": 0, "dishes": 0},
         }
+        self._recent_food: list[str] = []
         self._deals_offset = 0
         self._free_shelf_offset = 0
         self._free_shelf: tuple[list[dict[str, Any]], int, int] = ([], 1, 1)
@@ -336,10 +337,20 @@ class AmaOsRuntime:
         return dict(self._food)
 
     def draw_food(self, avoid: str = "", category: str = "") -> dict[str, Any]:
-        """Draw one meal choice and record it in the shell journal."""
+        """Draw one meal choice and record it in the shell journal.
 
-        result = draw_meal(avoid=avoid, category=category)
+        The runtime remembers the last eight dish ids and passes them to the
+        picker, so repeated draws keep rotating instead of returning the same
+        few dish names.
+        """
+
+        excluded = [str(avoid).strip()] if str(avoid or "").strip() else []
+        excluded.extend(self._recent_food)
+        result = draw_meal(avoid=excluded, category=category)
         dish = result.get("dish") if isinstance(result.get("dish"), Mapping) else {}
+        dish_id = str(dish.get("id") or "")
+        if dish_id:
+            self._recent_food = ([*self._recent_food, dish_id])[-8:]
         platform = result.get("platform") if isinstance(result.get("platform"), Mapping) else {}
         detail = f"{dish.get('name', '')} / {platform.get('name', '')}".strip(" /")[:200]
         self._record("food.draw", detail)

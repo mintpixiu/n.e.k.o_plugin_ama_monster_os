@@ -478,7 +478,7 @@
   "window.wake": "Acordar Ama",
   "nav.food": "Comida",
   "food.kicker": "COMIDA",
-  "food.title": "Manual de alimentação isolada",
+  "food.title": "Manual de alimentação",
   "food.subtitle": "Dicas de cupons, recomendações de delivery e um sorteio de «o que comer hoje».",
   "food.badge.offline": "Instantâneo offline",
   "food.draw.title": "O que comer hoje?",
@@ -514,10 +514,17 @@
   "food.drawError": "Não foi possível sortear um prato. Tente novamente.",
   "actions.food_manual.label": "Manual de comida",
   "actions.food_draw.label": "O que comer hoje?",
-  "entries.food_manual.name": "Manual de alimentação isolada",
+  "entries.food_manual.name": "Manual de alimentação",
   "entries.food_manual.description": "Leia o manual offline: dicas para conseguir cupons nas principais plataformas de delivery, marcas recomendadas e notas de entrega ou retirada. Não é um feed ao vivo de preços ou promoções.",
   "entries.food_manual.summary": "Manual carregado: {platforms} plataformas, {brands} marcas, {dishes} pratos.",
   "entries.food_draw.name": "O que comer hoje?",
   "entries.food_draw.description": "Sorteie um prato com plataforma de delivery, dica de cupom, faixa de preço e notas de entrega ou retirada.",
-  "entries.food_draw.summary": "Hoje: {dish} pela {platform}. Resgate um cupom antes de pedir."
+  "entries.food_draw.summary": "Hoje: {dish} pela {platform}. Resgate um cupom antes de pedir.",
+  "food.coupons.codes": "Códigos / palavras de busca",
+  "food.coupons.codeHint": "Muda com as campanhas; o app é a referência.",
+  "food.coupons.open": "Abrir plataforma",
+  "food.original.title": "Como usar o 隔离食用手册 original",
+  "food.original.hint": "O site original sugere receitas com os ingredientes e utensílios que você tem.",
+  "food.original.open": "Abrir o site original",
+  "food.original.docs": "Notas do autor"
 }

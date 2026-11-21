@@ -33,7 +33,7 @@ from the first version.
 - An **offline Arknights operator codex** (81 entries) with class, rarity, faction, race and tags. Data is bundled text only: no official artwork, voice lines, story text or wiki copy, and no runtime fetching.
 - **Five materials** — glass, metal, cream, ink, solid — controlled by `material`, `glass_blur` and `glass_alpha` in the UI profile. All are pure CSS (no remote assets, no injected styles).
 - A **Token radar** for 10 providers and 20 models, using the public models.dev list-price catalog; it polls every 60 seconds, persists daily OHLC candles, and explicitly distinguishes DeepSeek peak/off-peak pricing from flat providers.
-- An **offline food manual** room (隔离食用手册): coupon-acquisition tips for 美团/饿了么/京东外卖/淘宝闪购/抖音, nationwide chain-brand delivery picks with platform, coupon and delivery/pickup notes, and a random "今天吃什么" draw that attaches a platform, coupon, price hint and arrival note. Data is a bundled editorial snapshot: no platform scraping, no live prices, no real store addresses, no ordering.
+- An **offline food manual** room (食用手册): coupon-acquisition tips and public coupon codes for 美团/饿了么/京东外卖/淘宝闪购/抖音 with official platform entry links, nationwide chain-brand delivery picks with platform, coupon and delivery/pickup notes, a random "今天吃什么" draw (49 dishes, recent draws excluded) that attaches a platform, coupon, price hint and arrival note, and a usage guide for the original 隔离食用手册 recipe site. Data is a bundled editorial snapshot: no platform scraping, no live prices, no real store addresses, no ordering.
 - A versioned Steam sale calendar snapshot sourced from Steamworks, with current/next event, next seasonal sale, local countdowns, and an official schedule link.
 - A two-provider search chain: N.E.K.O `web_search` first, fixed Bing RSS fallback second.
 - Steam sign-in through Steam OpenID with a loopback callback; the UI states the flow and never asks for a password. Steam++ (Watt Toolkit) acceleration is detected and surfaced.
@@ -140,7 +140,10 @@ plugins such as `lifekit` and `mcp_adapter`.
 - The food manual is an editorial offline snapshot: platform coupon rules and
   brand campaigns change often, and no real store addresses or live prices are
   included. It never scrapes a delivery platform, never signs in, and never
-  claims a coupon will apply; the checkout page stays authoritative.
+  claims a coupon will apply; the checkout page stays authoritative. Coupon
+  codes expire, platform entry links are plain https links opened by the user,
+  and the original 隔离食用手册 recipe site is a third-party service with no
+  affiliation to this plugin (only its usage is documented).
 - Window chrome controls are presentation state inside one hosted panel; they
   do not control the N.E.K.O application window.
 - Version `0.7.0` is a Stable release; the user publishes manually with their

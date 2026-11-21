@@ -478,7 +478,7 @@
   "window.wake": "Wake Ama",
   "nav.food": "Food",
   "food.kicker": "FOOD",
-  "food.title": "Isolation Food Manual",
+  "food.title": "Food Manual",
   "food.subtitle": "Coupon tips, delivery picks, and a random \"what to eat today\" draw.",
   "food.badge.offline": "Offline snapshot",
   "food.draw.title": "What to eat today",
@@ -514,10 +514,17 @@
   "food.drawError": "Could not draw a meal. Try again.",
   "actions.food_manual.label": "Food manual",
   "actions.food_draw.label": "What to eat today",
-  "entries.food_manual.name": "Isolation Food Manual",
+  "entries.food_manual.name": "Food Manual",
   "entries.food_manual.description": "Read the offline food manual: coupon-acquisition tips for the main delivery platforms, recommended nationwide brands, and delivery or pickup notes. Not a live price or promotion feed.",
   "entries.food_manual.summary": "Food manual loaded: {platforms} platforms, {brands} brands, {dishes} dishes.",
   "entries.food_draw.name": "What to eat today",
   "entries.food_draw.description": "Draw one random meal choice and attach a delivery platform, a coupon tip, a price hint, and delivery or pickup notes.",
-  "entries.food_draw.summary": "Today: {dish} via {platform}. Claim a coupon before ordering."
+  "entries.food_draw.summary": "Today: {dish} via {platform}. Claim a coupon before ordering.",
+  "food.coupons.codes": "Coupon codes / search words",
+  "food.coupons.codeHint": "Changes with campaigns; the app is authoritative.",
+  "food.coupons.open": "Open platform",
+  "food.original.title": "How to use the original 隔离食用手册",
+  "food.original.hint": "The original site suggests recipes from the ingredients and cookware you have.",
+  "food.original.open": "Open the original site",
+  "food.original.docs": "Author's notes"
 }

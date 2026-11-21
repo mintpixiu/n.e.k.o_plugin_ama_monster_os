@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import random
+import re
 
 from food_manual import (
     BRANDS,
@@ -16,6 +17,15 @@ from shell_runtime import AmaOsRuntime
 from system_contract import ENTRYPOINTS, build_manifest, validate_manifest
 
 PLATFORM_IDS = {"meituan", "eleme", "jd", "taobao", "douyin"}
+ALLOWED_URL_PREFIXES = (
+    "https://www.meituan.com/",
+    "https://www.ele.me/",
+    "https://www.jd.com/",
+    "https://www.taobao.com/",
+    "https://www.douyin.com/",
+    "https://cook.yunyoujun.cn/",
+    "https://docs.yunyoujun.cn/",
+)
 
 
 class FakePort:
@@ -49,11 +59,17 @@ def test_platforms_cover_the_configured_marketplaces() -> None:
         assert platform["name"]
         assert platform["entry"]
         assert platform["caution"]
+        assert platform["url"].startswith("https://")
         coupons = platform["coupons"]
         assert len(coupons) >= 4
         for coupon in coupons:
             assert coupon["title"] and coupon["how"]
             assert isinstance(coupon.get("note", ""), str)
+        codes = platform["codes"]
+        assert len(codes) >= 2
+        for code in codes:
+            assert code["code"] and code["how"]
+            assert isinstance(code.get("note", ""), str)
 
 
 def test_brands_and_dishes_reference_known_platforms() -> None:
@@ -70,9 +86,10 @@ def test_brands_and_dishes_reference_known_platforms() -> None:
 def test_payload_is_offline_and_serializable() -> None:
     payload = food_manual_payload()
     assert payload["ok"] is True
-    assert payload["name"] == "隔离食用手册"
-    assert payload["version"] and payload["updated"] == "2026-11-21"
+    assert payload["name"] == "食用手册"
+    assert payload["version"] and payload["updated"] == "2026-11-22"
     assert payload["disclaimer"]
+    assert payload["coupon_code_note"]
     assert payload["summary"] == {
         "platforms": len(PLATFORMS),
         "brands": len(BRANDS),
@@ -81,10 +98,25 @@ def test_payload_is_offline_and_serializable() -> None:
     assert len(payload["platforms"]) == len(PLATFORMS)
     assert len(payload["brands"]) == len(BRANDS)
     assert len(payload["dishes"]) == len(DISHES)
-    # No network endpoints, no real store addresses: the manual is data only.
+    # Only the documented platform entries and the original manual links are
+    # allowed; the manual never embeds arbitrary URLs or real store addresses.
     text = json.dumps(payload, ensure_ascii=False)
-    assert "http://" not in text and "https://" not in text
+    urls = set(re.findall(r"https?://[^\s\"'<>]+", text))
+    assert urls
+    for url in urls:
+        assert any(url.startswith(prefix) for prefix in ALLOWED_URL_PREFIXES), url
     json.dumps(payload)
+
+
+def test_original_manual_usage_is_documented() -> None:
+    original = food_manual_payload()["original"]
+    assert original["name"] == "隔离食用手册"
+    assert "云游君" in original["author"]
+    assert original["url"] == "https://cook.yunyoujun.cn/"
+    assert original["docs_url"].startswith("https://docs.yunyoujun.cn/")
+    assert original["summary"] and original["note"]
+    assert len(original["steps"]) >= 3
+    assert all(step for step in original["steps"])
 
 
 def test_draw_returns_consistent_choice() -> None:
@@ -114,6 +146,11 @@ def test_draw_respects_category_and_avoid() -> None:
     assert second["dish"]["id"] != first["dish"]["id"]
     assert second["dish"]["id"] in dish_ids
 
+    # A recent-history list is honoured as well, so the picker keeps rotating.
+    excluded = random.Random(11).sample(dish_ids, 10)
+    third = draw_meal(avoid=excluded, rng=random.Random(5))
+    assert third["dish"]["id"] not in excluded
+
     unknown = draw_meal(category="不存在的分类", rng=random.Random(3))
     assert unknown["dish"]["id"] in dish_ids
 
@@ -125,13 +162,20 @@ def test_runtime_snapshot_and_draw_food() -> None:
 
     snapshot = asyncio.run(runtime.snapshot())
 
-    assert snapshot["food"]["name"] == "隔离食用手册"
+    assert snapshot["food"]["name"] == "食用手册"
     assert snapshot["food"]["summary"]["platforms"] == len(PLATFORMS)
     assert len(snapshot["food"]["platforms"]) == len(PLATFORMS)
 
     result = runtime.draw_food()
     assert result["ok"] is True
     assert any(name == "food.draw" for name, _detail in port.events)
+
+    # The runtime remembers the previous eight dishes, so eight consecutive
+    # draws cannot repeat a name even with a fresh random source.
+    drawn = [result["dish"]["id"]]
+    for _ in range(7):
+        drawn.append(runtime.draw_food()["dish"]["id"])
+    assert len(drawn) == len(set(drawn)) == 8
 
 
 def test_contract_lists_food_entrypoints() -> None:

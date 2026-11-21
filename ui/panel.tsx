@@ -755,13 +755,29 @@ type FoodEntry = {
   arrival?: string
 }
 
+type FoodCode = { code?: string; how?: string; note?: string }
+
 type FoodPlatform = {
   id?: string
   name?: string
   short?: string
   entry?: string
   caution?: string
+  url?: string
   coupons?: FoodCoupon[]
+  codes?: FoodCode[]
+}
+
+type FoodOriginal = {
+  id?: string
+  name?: string
+  author?: string
+  url?: string
+  docs_url?: string
+  summary?: string
+  steps?: string[]
+  tips?: string[]
+  note?: string
 }
 
 type FoodManual = {
@@ -770,6 +786,8 @@ type FoodManual = {
   version?: string
   updated?: string
   disclaimer?: string
+  coupon_code_note?: string
+  original?: FoodOriginal
   categories?: string[]
   platforms?: FoodPlatform[]
   brands?: FoodEntry[]
@@ -2822,7 +2840,7 @@ const STYLES = `
     linear-gradient(170deg, #fdfbf6, #f3ecdf);
 }
 
-/* Food room: 隔离食用手册. Layout and typography only; panels inherit the
+/* Food room: 食用手册. Layout and typography only; panels inherit the
    material, theme and corner rules from the shared .ama-panel / .ama-chip
    classes, and .ama-web-chip.is-active is the only state added here. */
 .ama-food-hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 12px; align-items: start; }
@@ -2846,10 +2864,23 @@ const STYLES = `
 .ama-food-coupon { padding: 8px 0; border-bottom: 1px dashed var(--line); }
 .ama-food-coupon:last-child { border-bottom: 0; }
 .ama-food-coupon-title { font-size: 10px; font-weight: 800; }
+.ama-food-link { display: inline-flex; margin-top: 10px; padding: 5px 10px; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--sky-deep); font-size: 9.5px; font-weight: 750; text-decoration: none; }
+.ama-food-link:hover { background: var(--sky-soft); }
+.ama-food-codes { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.ama-food-codes-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ama-food-codes-list { display: grid; gap: 6px; margin-top: 8px; }
+.ama-food-code { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 8px; align-items: start; padding: 7px 9px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); }
+.ama-food-code-value { padding: 2px 6px; border-radius: 6px; background: var(--sky-soft); color: var(--sky-deep); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 9px; font-weight: 800; white-space: nowrap; }
+.ama-food-original { margin-top: 12px; }
+.ama-food-steps { display: grid; gap: 7px; }
+.ama-food-step { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; align-items: start; }
+.ama-food-step-index { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 7px; background: var(--sky-soft); color: var(--sky-deep); font-size: 9px; font-weight: 850; }
+.ama-food-step .ama-food-text { margin: 2px 0 0; }
 @media (max-width: 760px) {
   .ama-food-hero,
   .ama-food-split,
   .ama-food-draw-grid { grid-template-columns: minmax(0, 1fr); }
+  .ama-food-code { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Continuous-curvature corners (G2).
@@ -2991,6 +3022,8 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const [foodSummary, setFoodSummary] = useState<{ platforms?: number; brands?: number; dishes?: number }>(
     initialFood.summary || {},
   )
+  const [foodOriginal, setFoodOriginal] = useState<FoodOriginal | null>(initialFood.original || null)
+  const [foodCouponNote, setFoodCouponNote] = useState(String(initialFood.coupon_code_note || ""))
   const [foodUpdated, setFoodUpdated] = useState(String(initialFood.updated || ""))
   const [foodDisclaimer, setFoodDisclaimer] = useState(String(initialFood.disclaimer || ""))
   const [foodPlatform, setFoodPlatform] = props.useLocalState<string>("ama.food.platform", String(initialFoodPlatforms[0]?.id || ""))
@@ -3558,6 +3591,8 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       setFoodSummary(manual.summary && typeof manual.summary === "object" ? manual.summary : {})
       setFoodUpdated(String(manual.updated || ""))
       setFoodDisclaimer(String(manual.disclaimer || ""))
+      setFoodOriginal(manual.original && typeof manual.original === "object" ? manual.original : null)
+      setFoodCouponNote(String(manual.coupon_code_note || ""))
       if (platforms.length > 0 && !platforms.some((item) => item.id === foodPlatform)) {
         setFoodPlatform(String(platforms[0].id || ""))
       }
@@ -5353,7 +5388,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       <div className="ama-view-head">
         <div>
           <div className="ama-kicker"><span className="ama-kicker-line" />{tr("food.kicker", "FOOD")}</div>
-          <h1 className="ama-view-title">{tr("food.title", "隔离食用手册")}</h1>
+          <h1 className="ama-view-title">{tr("food.title", "食用手册")}</h1>
           <p className="ama-view-sub">{tr("food.subtitle", "优惠券攻略、外卖推荐，还有今天吃什么的随机抽签。")}</p>
         </div>
         <span className="ama-badge is-mint">{tr("food.badge.offline", "离线快照")}{foodUpdated ? ` · ${foodUpdated}` : ""}</span>
@@ -5459,6 +5494,31 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
               </div>
               {foodPlatformData.entry ? <div className="ama-note">{tr("food.coupons.entry", "入口")}: {foodPlatformData.entry}</div> : null}
               {foodPlatformData.caution ? <p className="ama-food-meta">{foodPlatformData.caution}</p> : null}
+              {(foodPlatformData.codes || []).length > 0 ? (
+                <div className="ama-food-codes">
+                  <div className="ama-food-codes-head">
+                    <span className="ama-food-label">{tr("food.coupons.codes", "口令码 / 搜索词")}</span>
+                    <span className="ama-food-meta">{tr("food.coupons.codeHint", "会随活动变化，以 App 内为准")}</span>
+                  </div>
+                  <div className="ama-food-codes-list">
+                    {(foodPlatformData.codes || []).map((item) => (
+                      <div className="ama-food-code" key={item.code || item.how}>
+                        <code className="ama-food-code-value">{item.code}</code>
+                        <div>
+                          <p className="ama-food-text">{item.how}</p>
+                          {item.note ? <p className="ama-food-meta">{item.note}</p> : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {foodCouponNote ? <p className="ama-food-meta">{foodCouponNote}</p> : null}
+                </div>
+              ) : null}
+              {foodPlatformData.url ? (
+                <a className="ama-food-link" href={foodPlatformData.url} target="_blank" rel="noreferrer">
+                  {tr("food.coupons.open", "打开平台")} ↗
+                </a>
+              ) : null}
             </>
           ) : <div className="ama-empty">{tr("food.coupons.empty", "还没有优惠券数据。")}</div>}
         </section>
@@ -5507,6 +5567,39 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           </div>
         </section>
       </div>
+
+      <section className="ama-panel ama-food-original">
+        <div className="ama-panel-head">
+          <div>
+            <h2 className="ama-panel-title">{tr("food.original.title", "原版《隔离食用手册》怎么用")}</h2>
+            <p className="ama-panel-hint">{foodOriginal?.summary || tr("food.original.hint", "原版是一个按现有食材和厨具找菜谱的网站。")}</p>
+          </div>
+          {foodOriginal?.url ? (
+            <a className="ama-btn ama-btn-ghost" href={foodOriginal.url} target="_blank" rel="noreferrer">
+              {tr("food.original.open", "打开原版网站")} ↗
+            </a>
+          ) : null}
+        </div>
+        <div className="ama-food-steps">
+          {(foodOriginal?.steps || []).map((step, index) => (
+            <div className="ama-food-step" key={step}>
+              <span className="ama-food-step-index">{index + 1}</span>
+              <span className="ama-food-text">{step}</span>
+            </div>
+          ))}
+        </div>
+        {(foodOriginal?.tips || []).length > 0 ? (
+          <div className="ama-chips">
+            {(foodOriginal?.tips || []).map((tip) => <span className="ama-chip" key={tip}>{tip}</span>)}
+          </div>
+        ) : null}
+        <div className="ama-note">
+          {foodOriginal?.note || ""}
+          {foodOriginal?.docs_url ? (
+            <> <a href={foodOriginal.docs_url} target="_blank" rel="noreferrer">{tr("food.original.docs", "作者说明")} ↗</a></>
+          ) : null}
+        </div>
+      </section>
 
       <div className="ama-note">{foodDisclaimer || tr("food.disclaimer", "离线快照，不是实时价格或活动；具体以下单页为准。")}</div>
     </>

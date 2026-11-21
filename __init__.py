@@ -775,7 +775,7 @@ class AmaMonsterOsPlugin(NekoPluginBase):
 
     @ui.action(
         id="ama_food_manual",
-        label=tr("actions.food_manual.label", default="隔离食用手册"),
+        label=tr("actions.food_manual.label", default="食用手册"),
         icon="search",
         tone="default",
         order=42,
@@ -783,7 +783,7 @@ class AmaMonsterOsPlugin(NekoPluginBase):
     )
     @plugin_entry(
         id="ama_food_manual",
-        name=tr("entries.food_manual.name", default="隔离食用手册"),
+        name=tr("entries.food_manual.name", default="食用手册"),
         description=tr(
             "entries.food_manual.description",
             default=(

@@ -9,11 +9,40 @@ the manual never contains real store addresses or scraped platform data.
 from __future__ import annotations
 
 import random
-from typing import Any
+from typing import Any, Iterable
 
-FOOD_MANUAL_NAME = "隔离食用手册"
-FOOD_MANUAL_VERSION = "1.0"
-FOOD_MANUAL_UPDATED = "2026-11-21"
+FOOD_MANUAL_NAME = "食用手册"
+FOOD_MANUAL_VERSION = "1.1"
+FOOD_MANUAL_UPDATED = "2026-11-22"
+
+COUPON_CODE_NOTE = (
+    "口令码来自公开活动整理（2026-11 快照），会随活动变化甚至失效；"
+    "仅作领取方式示例，不保证有效。以各平台 App 内活动页为准，"
+    "不要向任何页面提供账号密码或支付信息。"
+)
+
+ORIGINAL_MANUAL: dict[str, Any] = {
+    "id": "isolation_food_manual",
+    "name": "隔离食用手册",
+    "author": "云游君（YunYouJun）",
+    "url": "https://cook.yunyoujun.cn/",
+    "docs_url": "https://docs.yunyoujun.cn/projects/cook/",
+    "summary": "2022 年走红的菜谱检索网站：勾选现有食材和厨具，生成能做的菜并附视频教程。站点现在名为「食用手册」，原名「隔离食用手册」。",
+    "steps": (
+        "打开原版网站 cook.yunyoujun.cn，页面按「菜 / 肉 / 主食」列出手头可能有的食材。",
+        "勾选你现在有的食材，可以多选；不确定就先随便点几样。",
+        "再选可用的厨具，例如电饭煲、炒锅、微波炉、空气炸锅。",
+        "选择匹配模式：模糊 / 严格 / 生存。食材越少越适合生存模式；想多看几种做法用模糊模式。",
+        "下方会生成能做的菜谱列表，点开看步骤；部分菜谱可以直接跳到 B 站视频教程。",
+        "换个食材组合就能重新生成一批菜谱，适合清冰箱或不知道吃什么的时候。",
+    ),
+    "tips": (
+        "先勾食材再选厨具，结果更准。",
+        "生存模式适合只剩几样食材的时候。",
+        "原版是第三方网站，菜谱以原站为准。",
+    ),
+    "note": "原版由云游君开发，与本插件无隶属关系；插件只介绍用法，不会自动打开原站或抓取内容。",
+}
 
 DISCLAIMER = (
     "离线整理的优惠券与外卖参考快照，不是实时价格、库存、配送范围或活动；"
@@ -29,6 +58,24 @@ PLATFORMS: tuple[dict[str, Any], ...] = (
         "short": "美团外卖",
         "entry": "App 首页 → 外卖 → 领券中心 / 神券节",
         "caution": "券有门槛和有效期；膨胀券、会员红包、店铺满减能否叠加因店而异，下单前在结算页确认。",
+        "url": "https://www.meituan.com/",
+        "codes": (
+            {
+                "code": "12345",
+                "how": "美团 App 首页搜索框输入，进入领券活动页。",
+                "note": "美团联盟常用领券口令，活动期有效。",
+            },
+            {
+                "code": "666666",
+                "how": "周三外卖节前后搜索，进入加码会场。",
+                "note": "活动期有加码券，过期失效。",
+            },
+            {
+                "code": "88993",
+                "how": "搜索后进入大额红包活动页。",
+                "note": "面向新客或沉睡老号，资格以页面为准。",
+            },
+        ),
         "coupons": (
             {
                 "title": "神券 / 膨胀券",
@@ -63,6 +110,24 @@ PLATFORMS: tuple[dict[str, Any], ...] = (
         "short": "饿了么外卖",
         "entry": "App 首页 → 领红包 / 超级吃货卡",
         "caution": "平台红包通常有使用门槛和时段限制；会员卡券按月发放，过期不补。",
+        "url": "https://www.ele.me/",
+        "codes": (
+            {
+                "code": "本地宝",
+                "how": "饿了么 App 首页搜索，进入联名红包活动页。",
+                "note": "联名活动，限时有效。",
+            },
+            {
+                "code": "13300",
+                "how": "搜索后领取红包或券包。",
+                "note": "活动期口令，以页面为准。",
+            },
+            {
+                "code": "超星计划",
+                "how": "搜索进入合作活动页领券。",
+                "note": "合作活动，名额有限。",
+            },
+        ),
         "coupons": (
             {
                 "title": "超级吃货卡 / 吃货豆",
@@ -97,6 +162,19 @@ PLATFORMS: tuple[dict[str, Any], ...] = (
         "short": "京东秒送",
         "entry": "京东 App → 秒送 / 外卖",
         "caution": "外卖覆盖城市和商家范围以 App 内实际展示为准；不同城市活动差异较大。",
+        "url": "https://www.jd.com/",
+        "codes": (
+            {
+                "code": "京东秒送",
+                "how": "京东 App 搜索进入外卖 / 秒送频道。",
+                "note": "搜索词入口，不是一次性口令。",
+            },
+            {
+                "code": "外卖券",
+                "how": "搜索后找领券活动入口。",
+                "note": "活动与城市相关。",
+            },
+        ),
         "coupons": (
             {
                 "title": "PLUS 会员券包",
@@ -131,6 +209,19 @@ PLATFORMS: tuple[dict[str, Any], ...] = (
         "short": "淘宝小时达",
         "entry": "淘宝 App → 闪购 / 小时达",
         "caution": "小时达的时效和库存依赖附近门店，能否配送以 App 内实际展示为准。",
+        "url": "https://www.taobao.com/",
+        "codes": (
+            {
+                "code": "闪购",
+                "how": "淘宝 App 搜索进入闪购 / 小时达频道。",
+                "note": "搜索词入口。",
+            },
+            {
+                "code": "88VIP",
+                "how": "搜索后进入会员中心领权益。",
+                "note": "需要 88VIP 身份。",
+            },
+        ),
         "coupons": (
             {
                 "title": "88VIP 权益",
@@ -165,6 +256,24 @@ PLATFORMS: tuple[dict[str, Any], ...] = (
         "short": "抖音团购 / 外卖",
         "entry": "抖音 App → 团购 / 外卖",
         "caution": "团购券通常到店核销，外卖覆盖城市有限；退款和过期规则看券面说明。",
+        "url": "https://www.douyin.com/",
+        "codes": (
+            {
+                "code": "团购",
+                "how": "抖音 App 搜索进入团购频道。",
+                "note": "以到店套餐为主。",
+            },
+            {
+                "code": "抖音外卖",
+                "how": "搜索后确认当前城市是否开通外卖。",
+                "note": "覆盖城市有限。",
+            },
+            {
+                "code": "直播间口令",
+                "how": "品牌直播间主播口播的口令，在直播间内使用。",
+                "note": "每次直播不同，无法固化。",
+            },
+        ),
         "coupons": (
             {
                 "title": "团购套餐",
@@ -568,6 +677,231 @@ DISHES: tuple[dict[str, Any], ...] = (
         "coupon": "单人套餐券 + 平台红包；避开高峰期口感更好。",
         "arrival": "外卖配送；自取路线用地图 App 查询。",
     },
+    {
+        "id": "luruofan",
+        "name": "卤肉饭",
+        "category": "中式热食",
+        "price": "¥18–30",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "套餐券 + 店铺满减；加卤蛋前先看套餐内容。",
+        "arrival": "外卖配送；到店自取路线用地图 App 查询。",
+    },
+    {
+        "id": "malaban",
+        "name": "麻辣拌",
+        "category": "中式热食",
+        "price": "¥18–35",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "按份套餐比自选好凑满减；先领午餐神券。",
+        "arrival": "外卖配送；到店自取用地图 App 导航。",
+    },
+    {
+        "id": "gongbaojiding",
+        "name": "宫保鸡丁饭",
+        "category": "中式热食",
+        "price": "¥20–35",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "单人套餐券 + 平台红包；先领券再下单。",
+        "arrival": "外卖配送；自取路线用地图 App 查询。",
+    },
+    {
+        "id": "yuxiangrousi",
+        "name": "鱼香肉丝饭",
+        "category": "中式热食",
+        "price": "¥20–35",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "店铺满减 + 会员红包；套餐通常比单点便宜。",
+        "arrival": "外卖配送；到店自取用地图 App 导航。",
+    },
+    {
+        "id": "fanqieniunan",
+        "name": "番茄牛腩饭",
+        "category": "中式热食",
+        "price": "¥25–40",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "套餐券 + 满减；汤饭类注意配送时间。",
+        "arrival": "外卖配送；自取路线用地图 App 查询。",
+    },
+    {
+        "id": "taishijipai",
+        "name": "台式鸡排饭",
+        "category": "中式热食",
+        "price": "¥20–35",
+        "platforms": ("meituan", "eleme", "douyin"),
+        "coupon": "抖音团购套餐 + 店铺满减；先领券再看起送价。",
+        "arrival": "外卖配送；到店自取用地图 App 导航。",
+    },
+    {
+        "id": "yangroutang",
+        "name": "羊肉汤",
+        "category": "中式热食",
+        "price": "¥25–45",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "套餐券 + 平台红包；冬天活动更多。",
+        "arrival": "外卖配送；到店自取路线用地图 App 查询。",
+    },
+    {
+        "id": "suanlafen",
+        "name": "酸辣粉",
+        "category": "面食粉类",
+        "price": "¥12–25",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "先领红包再点；加料和小食看套餐。",
+        "arrival": "外卖配送；到店自取用地图 App 导航。",
+    },
+    {
+        "id": "zhajiangmian",
+        "name": "炸酱面",
+        "category": "面食粉类",
+        "price": "¥15–28",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "店铺满减 + 平台红包；面食宜选近一点的门店。",
+        "arrival": "外卖配送；到店自取路线用地图 App 查询。",
+    },
+    {
+        "id": "reganmian",
+        "name": "热干面",
+        "category": "面食粉类",
+        "price": "¥10–22",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "早餐时段券 + 满减；早点下单口感更好。",
+        "arrival": "外卖配送；到店自取用地图 App 导航。",
+    },
+    {
+        "id": "chongqingxiaomian",
+        "name": "重庆小面",
+        "category": "面食粉类",
+        "price": "¥12–25",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "单人套餐券 + 平台红包；辣度备注别忘写。",
+        "arrival": "外卖配送；自取路线用地图 App 查询。",
+    },
+    {
+        "id": "yuenanfen",
+        "name": "越南粉",
+        "category": "面食粉类",
+        "price": "¥25–45",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "套餐券 + 店铺满减；汤粉注意配送时效。",
+        "arrival": "外卖配送；到店自取用地图 App 导航。",
+    },
+    {
+        "id": "changfen",
+        "name": "肠粉",
+        "category": "早餐点心",
+        "price": "¥10–22",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "早餐券 + 店铺满减；早高峰前下单。",
+        "arrival": "外卖配送；到店自取路线用地图 App 查询。",
+    },
+    {
+        "id": "roujiamo",
+        "name": "肉夹馍",
+        "category": "早餐点心",
+        "price": "¥10–20",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "套餐券更划算；先领店铺券。",
+        "arrival": "外卖配送；到店自取用地图 App 导航。",
+    },
+    {
+        "id": "shouzhuanbing",
+        "name": "手抓饼",
+        "category": "早餐点心",
+        "price": "¥8–18",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "早餐组合券 + 满减；加料前看套餐内容。",
+        "arrival": "外卖配送；自取路线用地图 App 查询。",
+    },
+    {
+        "id": "kaolengmian",
+        "name": "烤冷面",
+        "category": "早餐点心",
+        "price": "¥8–18",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "小吃套餐券；凑配送费时一起点。",
+        "arrival": "外卖配送；到店自取用地图 App 导航。",
+    },
+    {
+        "id": "beiguo",
+        "name": "贝果",
+        "category": "早餐点心",
+        "price": "¥15–30",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "咖啡 + 贝果套餐券；会员券可叠加。",
+        "arrival": "外卖配送；到店自取路线用地图 App 查询。",
+    },
+    {
+        "id": "hanshizhaji",
+        "name": "韩式炸鸡",
+        "category": "汉堡披萨",
+        "price": "¥30–60",
+        "platforms": ("meituan", "eleme", "douyin"),
+        "coupon": "双人套餐券 + 平台红包；半份更便宜。",
+        "arrival": "外卖配送；到店自取用地图 App 导航。",
+    },
+    {
+        "id": "jiroujuang",
+        "name": "鸡肉卷",
+        "category": "汉堡披萨",
+        "price": "¥15–30",
+        "platforms": ("meituan", "eleme", "douyin"),
+        "coupon": "套餐券 + 店铺满减；饮料另点更灵活。",
+        "arrival": "外卖配送；自取路线用地图 App 查询。",
+    },
+    {
+        "id": "sanmingzhi",
+        "name": "三明治",
+        "category": "轻食料理",
+        "price": "¥18–35",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "轻食套餐券 + 会员红包；加蛋加肉看价格。",
+        "arrival": "外卖配送；到店自取用地图 App 导航。",
+    },
+    {
+        "id": "yimian",
+        "name": "意面",
+        "category": "轻食料理",
+        "price": "¥25–50",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "单人套餐券 + 店铺满减；注意配送时间。",
+        "arrival": "外卖配送；自取路线用地图 App 查询。",
+    },
+    {
+        "id": "jvfan",
+        "name": "焗饭",
+        "category": "轻食料理",
+        "price": "¥25–45",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "套餐券 + 平台红包；芝士类趁热吃。",
+        "arrival": "外卖配送；到店自取用地图 App 导航。",
+    },
+    {
+        "id": "guandongzhu",
+        "name": "关东煮",
+        "category": "夜宵烧烤",
+        "price": "¥15–30",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "夜宵券 + 店铺满减；按串点更好控制预算。",
+        "arrival": "外卖配送；到店自取路线用地图 App 查询。",
+    },
+    {
+        "id": "zhachuan",
+        "name": "炸串",
+        "category": "夜宵烧烤",
+        "price": "¥20–45",
+        "platforms": ("meituan", "eleme"),
+        "coupon": "夜宵时段券 + 店铺满减；先领券再凑单。",
+        "arrival": "外卖配送；到店自取用地图 App 导航。",
+    },
+    {
+        "id": "kaoyu",
+        "name": "烤鱼",
+        "category": "夜宵烧烤",
+        "price": "¥50–100",
+        "platforms": ("meituan", "eleme", "douyin"),
+        "coupon": "双人套餐券更划算；团购券注意可用门店。",
+        "arrival": "外卖配送；到店自取路线用地图 App 查询。",
+    },
 )
 
 _PLATFORM_BY_ID = {platform["id"]: platform for platform in PLATFORMS}
@@ -582,6 +916,8 @@ def food_manual_payload() -> dict[str, Any]:
         "version": FOOD_MANUAL_VERSION,
         "updated": FOOD_MANUAL_UPDATED,
         "disclaimer": DISCLAIMER,
+        "coupon_code_note": COUPON_CODE_NOTE,
+        "original": ORIGINAL_MANUAL,
         "categories": list(DISH_CATEGORIES),
         "platforms": [
             {
@@ -608,14 +944,15 @@ def food_manual_payload() -> dict[str, Any]:
 
 def draw_meal(
     *,
-    avoid: str = "",
+    avoid: str | Iterable[str] = "",
     category: str = "",
     rng: random.Random | None = None,
 ) -> dict[str, Any]:
     """Pick one dish and attach a platform, coupon tip, price and arrival note.
 
-    ``avoid`` excludes the last drawn dish when another choice exists, so the
-    "再抽一次" button never repeats immediately.  ``category`` filters to one of
+    ``avoid`` accepts one dish id or an iterable of recent dish ids, so repeated
+    draws do not keep landing on the same few dishes.  When everything would be
+    excluded the full pool is used again.  ``category`` filters to one of
     ``DISH_CATEGORIES``; unknown categories fall back to the full pool.
     """
 
@@ -624,9 +961,10 @@ def draw_meal(
     pool = [dish for dish in DISHES if not wanted or dish["category"] == wanted]
     if not pool:
         pool = list(DISHES)
-    previous = str(avoid or "").strip()
-    if previous and len(pool) > 1:
-        reduced = [dish for dish in pool if dish["id"] != previous]
+    raw_avoid = [avoid] if isinstance(avoid, str) else avoid
+    avoided = {str(item).strip() for item in raw_avoid if str(item).strip()}
+    if avoided and len(pool) > 1:
+        reduced = [dish for dish in pool if dish["id"] not in avoided]
         if reduced:
             pool = reduced
     dish = picker.choice(pool)

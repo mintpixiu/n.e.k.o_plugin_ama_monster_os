@@ -348,11 +348,14 @@ network dependency.
 The runtime adds `food` to the snapshot from `food_manual.food_manual_payload()`.
 It is a bundled, versioned editorial snapshot (five delivery platforms,
 nationwide chain brands, and dish choices) containing coupon-acquisition tips,
-price hints, platform names, and delivery/pickup notes. It contains no live
-prices, promotions, or real store addresses, and it never scrapes a delivery
-platform. `runtime.draw_food(avoid, category)` returns one random dish with a
-platform, coupon tip, price hint, and arrival note; it performs no network I/O.
-A future desktop build can reuse `food_manual.py` directly.
+coupon-code examples, official platform entry links, price hints, and
+delivery/pickup notes, plus a usage guide for the original 隔离食用手册 recipe
+site. It contains no live prices, promotions, or real store addresses, and it
+never scrapes a delivery platform. `runtime.draw_food(avoid, category)` returns
+one random dish with a platform, coupon tip, price hint, and arrival note, and
+the runtime remembers the previous eight dish ids so consecutive draws rotate;
+it performs no network I/O. A future desktop build can reuse `food_manual.py`
+directly.
 
 ### `record_event()`
 

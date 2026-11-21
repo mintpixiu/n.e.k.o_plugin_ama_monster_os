@@ -478,7 +478,7 @@
   "window.wake": "Ama を起こす",
   "nav.food": "フード",
   "food.kicker": "フード",
-  "food.title": "隔離食用マニュアル",
+  "food.title": "食用マニュアル",
   "food.subtitle": "クーポンの取り方、デリバリーのおすすめ、そして「今日何食べる？」の抽選。",
   "food.badge.offline": "オフラインスナップショット",
   "food.draw.title": "今日何食べる？",
@@ -514,10 +514,17 @@
   "food.drawError": "抽選に失敗しました。もう一度お試しください。",
   "actions.food_manual.label": "食用マニュアル",
   "actions.food_draw.label": "今日何食べる？",
-  "entries.food_manual.name": "隔離食用マニュアル",
+  "entries.food_manual.name": "食用マニュアル",
   "entries.food_manual.description": "オフラインの食用マニュアル：主要デリバリープラットフォームのクーポン入手方法、全国チェーンのおすすめ、配達や受け取りの説明。リアルタイムの価格やキャンペーンではありません。",
   "entries.food_manual.summary": "食用マニュアルを読み込みました：{platforms} プラットフォーム、{brands} ブランド、{dishes} 料理。",
   "entries.food_draw.name": "今日何食べる？",
   "entries.food_draw.description": "料理をランダムに1つ選び、注文プラットフォーム、クーポンのコツ、価格の目安、受け取り方を添えます。",
-  "entries.food_draw.summary": "今日は {dish}、{platform} で注文。先にクーポンを取りましょう。"
+  "entries.food_draw.summary": "今日は {dish}、{platform} で注文。先にクーポンを取りましょう。",
+  "food.coupons.codes": "クーポンコード / 検索ワード",
+  "food.coupons.codeHint": "キャンペーンで変わるため、アプリ内が優先です。",
+  "food.coupons.open": "プラットフォームを開く",
+  "food.original.title": "オリジナル『隔离食用手册』の使い方",
+  "food.original.hint": "オリジナルは手持ちの食材と調理器具からレシピを探すサイトです。",
+  "food.original.open": "オリジナルサイトを開く",
+  "food.original.docs": "作者の説明"
 }

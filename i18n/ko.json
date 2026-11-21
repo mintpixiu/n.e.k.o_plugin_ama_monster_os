@@ -478,7 +478,7 @@
   "window.wake": "Ama 깨우기",
   "nav.food": "음식",
   "food.kicker": "음식",
-  "food.title": "격리 식용 매뉴얼",
+  "food.title": "식용 매뉴얼",
   "food.subtitle": "쿠폰 팁, 배달 추천, 그리고 '오늘 뭐 먹지?' 랜덤 뽑기.",
   "food.badge.offline": "오프라인 스냅샷",
   "food.draw.title": "오늘 뭐 먹지?",
@@ -514,10 +514,17 @@
   "food.drawError": "뽑기에 실패했습니다. 다시 시도해 주세요.",
   "actions.food_manual.label": "식용 매뉴얼",
   "actions.food_draw.label": "오늘 뭐 먹지?",
-  "entries.food_manual.name": "격리 식용 매뉴얼",
+  "entries.food_manual.name": "식용 매뉴얼",
   "entries.food_manual.description": "오프라인 식용 매뉴얼: 주요 배달 플랫폼의 쿠폰 받는 방법, 전국 체인 추천, 배달/픽업 안내. 실시간 가격이나 프로모션이 아닙니다.",
   "entries.food_manual.summary": "식용 매뉴얼 로드 완료: 플랫폼 {platforms}개, 브랜드 {brands}개, 요리 {dishes}개.",
   "entries.food_draw.name": "오늘 뭐 먹지?",
   "entries.food_draw.description": "오늘 먹을 요리 하나를 무작위로 뽑고 주문 플랫폼, 쿠폰 팁, 가격대, 받는 방법을 함께 알려줍니다.",
-  "entries.food_draw.summary": "오늘은 {dish}, {platform}에서 주문하세요. 주문 전에 쿠폰을 받으세요."
+  "entries.food_draw.summary": "오늘은 {dish}, {platform}에서 주문하세요. 주문 전에 쿠폰을 받으세요.",
+  "food.coupons.codes": "쿠폰 코드 / 검색어",
+  "food.coupons.codeHint": "이벤트에 따라 바뀌며 앱 내 안내가 우선입니다.",
+  "food.coupons.open": "플랫폼 열기",
+  "food.original.title": "원본 『隔离食用手册』 사용법",
+  "food.original.hint": "원본은 현재 있는 재료와 조리도구로 레시피를 찾는 사이트입니다.",
+  "food.original.open": "원본 사이트 열기",
+  "food.original.docs": "작성자 설명"
 }
