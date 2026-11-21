@@ -7,7 +7,7 @@ type ThemeMode = "light" | "dark"
 type UiWallpaper = "grid" | "dots" | "aurora" | "stars" | "plain"
 type UiWindowBg = "paper" | "mist" | "sakura" | "glass" | "gradient" | "image" | "custom"
 type UiDensity = "comfortable" | "compact"
-type UiMaterial = "glass" | "solid" | "metal" | "cream" | "ink"
+type UiMaterial = "glass" | "solid" | "metal" | "cream" | "ink" | "elation"
 type SoundMode = "steam" | "soft" | "mechanical" | "custom"
 
 type UiProfile = {
@@ -69,6 +69,7 @@ const UI_PRESETS: Array<{ id: string; labelKey: string; accent: string; wallpape
   { id: "metal", labelKey: "studio.preset.metal", accent: "#8c9bb0", wallpaper: "plain", window_bg: "custom", theme: "light", material: "metal" },
   { id: "cream", labelKey: "studio.preset.cream", accent: "#f2a3b8", wallpaper: "dots", window_bg: "custom", theme: "light", material: "cream" },
   { id: "ink", labelKey: "studio.preset.ink", accent: "#7f7ae0", wallpaper: "aurora", window_bg: "custom", theme: "light", material: "ink" },
+  { id: "elation", labelKey: "studio.preset.elation", accent: "#ff3ea5", wallpaper: "stars", window_bg: "gradient", theme: "dark", material: "elation" },
 ]
 
 const UI_MATERIALS: Array<{ id: UiMaterial; labelKey: string; hintKey: string }> = [
@@ -76,6 +77,7 @@ const UI_MATERIALS: Array<{ id: UiMaterial; labelKey: string; hintKey: string }>
   { id: "metal", labelKey: "studio.material.metal", hintKey: "studio.material.metalHint" },
   { id: "cream", labelKey: "studio.material.cream", hintKey: "studio.material.creamHint" },
   { id: "ink", labelKey: "studio.material.ink", hintKey: "studio.material.inkHint" },
+  { id: "elation", labelKey: "studio.material.elation", hintKey: "studio.material.elationHint" },
   { id: "solid", labelKey: "studio.material.solid", hintKey: "studio.material.solidHint" },
 ]
 
@@ -424,9 +426,20 @@ function parseUiProfileText(text: string): { profile?: UiProfile; error?: string
     return { error: "invalid_json" }
   }
   if (!parsed || typeof parsed !== "object") return { error: "invalid_profile" }
-  if (parsed.format && parsed.format !== "ama.ui.profile") return { error: "unsupported_format" }
-  const candidate = parsed.profile && typeof parsed.profile === "object" ? parsed.profile : parsed
+  const format = parsed.format ? String(parsed.format) : ""
+  if (format && format !== "ama.ui.profile" && format !== "ama.ui.theme") return { error: "unsupported_format" }
+  const envelope = parsed.theme && typeof parsed.theme === "object" ? parsed.theme : parsed.profile
+  const candidate = envelope && typeof envelope === "object" ? envelope : parsed
   return { profile: normalizeUiProfile(candidate) }
+}
+
+function uiThemeEnvelope(value: any): any {
+  return {
+    format: "ama.ui.theme",
+    version: 1,
+    exported_at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+    theme: value,
+  }
 }
 
 type ModuleInfo = {
@@ -768,6 +781,35 @@ type FoodPlatform = {
   codes?: FoodCode[]
 }
 
+type CookFood = { name?: string; emoji?: string; more?: boolean }
+
+type CookRecipe = {
+  id?: number
+  name?: string
+  stuff?: string[]
+  tools?: string[]
+  difficulty?: string
+  tags?: string[]
+  methods?: string[]
+  url?: string
+  video?: boolean
+  matched?: string[]
+  missing?: string[]
+  optional?: string[]
+  catch_all?: boolean
+}
+
+type CookPayload = {
+  recipe_count?: number
+  source?: string
+  source_name?: string
+  author?: string
+  updated?: string
+  modes?: Array<{ id?: string; label?: string }>
+  foods?: { vegetable?: CookFood[]; meat?: CookFood[]; staple?: CookFood[] }
+  tools?: string[]
+}
+
 type FoodOriginal = {
   id?: string
   name?: string
@@ -788,6 +830,7 @@ type FoodManual = {
   disclaimer?: string
   coupon_code_note?: string
   original?: FoodOriginal
+  cook?: CookPayload
   categories?: string[]
   platforms?: FoodPlatform[]
   brands?: FoodEntry[]
@@ -2840,6 +2883,127 @@ const STYLES = `
     linear-gradient(170deg, #fdfbf6, #f3ecdf);
 }
 
+/* ============================================================
+   Elation material — 欢愉·啊哈 (Honkai: Star Rail inspired)
+   Deep violet base, magenta / cyan neon, harlequin diamonds.
+   ============================================================ */
+.ama-root[data-material="elation"] {
+  --elation-void: #120a1e;
+  --elation-void-2: #1b0f2d;
+  --elation-magenta: #ff3ea5;
+  --elation-cyan: #4ce6ff;
+  --elation-gold: #ffd166;
+  --ink: #f6e9ff;
+  --ink-soft: #dcc6f2;
+  --muted: #a98ac6;
+  --sky: var(--elation-magenta);
+  --sky-deep: #ff8ecb;
+  --sky-soft: rgb(255 62 165 / 0.16);
+  --pink: #ff9ad5;
+  --peach: #ffc780;
+  --mint: #7ef2d5;
+  --lilac: #c9a6ff;
+  --mint-ink: #b9ffe8;
+  --peach-ink: #ffe1b8;
+  --lilac-ink: #e7d6ff;
+  --paper: #1a0f2e;
+  --paper-2: #120a1e;
+  --card: rgb(32 18 52 / 0.86);
+  --panel-2: rgb(42 22 68 / 0.72);
+  --line: rgb(255 62 165 / 0.24);
+  --line-strong: rgb(76 230 255 / 0.36);
+  --hover: rgb(255 62 165 / 0.14);
+  --desktop-1: #0d0718;
+  --desktop-2: #140b24;
+  --desktop-3: #1c0f32;
+  --hero-1: #221240;
+  --hero-2: #150c26;
+  --side-1: #1a0f2e;
+  --side-2: #120a1e;
+  --title-1: #24143f;
+  --title-2: #150c26;
+  --code-bg: #1b0f2f;
+  --window-shadow: 0 30px 80px rgb(255 62 165 / 0.22), 0 6px 24px rgb(0 0 0 / 0.6);
+  --orb: radial-gradient(circle at 32% 25%, #fff5fb 0%, #ffb3e0 34%, #ff3ea5 68%, #7a1e5f 100%);
+  --logo-1: #ff9ad5;
+  --logo-2: #ff3ea5;
+  --logo-3: #4ce6ff;
+  --grid-line: rgb(255 62 165 / 0.12);
+  --cloud: rgb(255 255 255 / 0.12);
+  --error: #ff6b8a;
+  --success: #6ff2c3;
+  color-scheme: dark;
+}
+.ama-root[data-material="elation"].ama-theme-dark {
+  --card: rgb(24 13 41 / 0.92);
+  --panel-2: rgb(32 17 54 / 0.84);
+  --hover: rgb(255 62 165 / 0.2);
+}
+.ama-root[data-material="elation"] .ama-desktop {
+  background:
+    radial-gradient(circle at 16% 12%, rgb(255 62 165 / 0.28), transparent 42%),
+    radial-gradient(circle at 84% 8%, rgb(76 230 255 / 0.22), transparent 40%),
+    radial-gradient(circle at 50% 100%, rgb(255 209 102 / 0.16), transparent 46%),
+    repeating-linear-gradient(45deg, rgb(255 62 165 / 0.06) 0 2px, transparent 2px 26px),
+    repeating-linear-gradient(-45deg, rgb(76 230 255 / 0.05) 0 2px, transparent 2px 26px),
+    linear-gradient(160deg, var(--desktop-1), var(--desktop-3));
+}
+.ama-root[data-material="elation"] .ama-window {
+  border: 1px solid rgb(255 62 165 / 0.5);
+  background:
+    radial-gradient(circle at 12% 0%, rgb(255 62 165 / 0.2), transparent 42%),
+    radial-gradient(circle at 90% 6%, rgb(76 230 255 / 0.16), transparent 38%),
+    repeating-conic-gradient(from 45deg at 88% 82%, rgb(255 62 165 / 0.08) 0 8deg, transparent 8deg 16deg),
+    linear-gradient(165deg, var(--elation-void-2), var(--elation-void));
+  box-shadow: var(--window-shadow), inset 0 0 0 1px rgb(76 230 255 / 0.11);
+}
+.ama-root[data-material="elation"] .ama-titlebar {
+  border-bottom: 1px solid rgb(255 62 165 / 0.34);
+  background: linear-gradient(180deg, rgb(255 62 165 / 0.16), rgb(18 10 30 / 0.36));
+}
+.ama-root[data-material="elation"] .ama-sidebar {
+  border-right: 1px solid rgb(255 62 165 / 0.24);
+  background:
+    repeating-linear-gradient(135deg, rgb(255 62 165 / 0.06) 0 1px, transparent 1px 18px),
+    linear-gradient(180deg, var(--side-1), var(--side-2));
+}
+.ama-root[data-material="elation"] .ama-panel,
+.ama-root[data-material="elation"] .ama-hero,
+.ama-root[data-material="elation"] .ama-web-hero,
+.ama-root[data-material="elation"] .ama-web-result,
+.ama-root[data-material="elation"] .ama-web-state,
+.ama-root[data-material="elation"] .ama-core-card,
+.ama-root[data-material="elation"] .ama-about-card,
+.ama-root[data-material="elation"] .ama-studio-preview-card,
+.ama-root[data-material="elation"] .ama-steam-card,
+.ama-root[data-material="elation"] .ama-deal-card,
+.ama-root[data-material="elation"] .ama-free-card,
+.ama-root[data-material="elation"] .ama-profile {
+  border-color: rgb(255 62 165 / 0.24);
+  background: linear-gradient(150deg, rgb(42 22 68 / 0.82), rgb(22 12 38 / 0.9));
+}
+.ama-root[data-material="elation"] .ama-nav-btn.is-active {
+  border: 1px solid rgb(255 62 165 / 0.5);
+  background: linear-gradient(135deg, rgb(255 62 165 / 0.28), rgb(76 230 255 / 0.12));
+  box-shadow: 0 0 18px rgb(255 62 165 / 0.25);
+  color: #ffe9f8;
+}
+.ama-root[data-material="elation"] .ama-btn-primary {
+  background: linear-gradient(135deg, #ff3ea5 0%, #b52cf0 52%, #4ce6ff 130%);
+  box-shadow: 0 8px 22px rgb(255 62 165 / 0.32);
+  color: #1b0a2e;
+}
+.ama-root[data-material="elation"] .ama-btn-ghost {
+  border-color: rgb(76 230 255 / 0.32);
+  background: rgb(32 18 52 / 0.72);
+  color: #bfefff;
+}
+.ama-root[data-material="elation"] .ama-badge.is-mint { color: #b9ffe8; background: rgb(76 230 255 / 0.16); }
+.ama-root[data-material="elation"] .ama-badge.is-peach { color: #ffe1b8; background: rgb(255 209 102 / 0.16); }
+.ama-root[data-material="elation"] .ama-chip { border-color: rgb(76 230 255 / 0.22); background: rgb(255 62 165 / 0.1); color: #e6c9f7; }
+.ama-root[data-material="elation"] .ama-nav-glyph { background: rgb(255 255 255 / 0.1); }
+.ama-root[data-material="elation"] .ama-footer { border-top: 1px dashed rgb(255 62 165 / 0.28); }
+
 /* Food room: 食用手册. Layout and typography only; panels inherit the
    material, theme and corner rules from the shared .ama-panel / .ama-chip
    classes, and .ama-web-chip.is-active is the only state added here. */
@@ -2876,10 +3040,33 @@ const STYLES = `
 .ama-food-step { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; align-items: start; }
 .ama-food-step-index { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 7px; background: var(--sky-soft); color: var(--sky-deep); font-size: 9px; font-weight: 850; }
 .ama-food-step .ama-food-text { margin: 2px 0 0; }
+.ama-food-cook-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ama-food-cook-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 12px; margin-top: 12px; align-items: start; }
+.ama-food-cook-section { margin-top: 12px; }
+.ama-food-cook-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.ama-food-cook-chip { display: inline-flex; align-items: center; gap: 3px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); color: var(--ink-soft); font: inherit; font-size: 9px; font-weight: 650; cursor: pointer; }
+.ama-food-cook-chip:hover { border-color: var(--sky); color: var(--sky-deep); }
+.ama-food-cook-chip.is-active { border-color: color-mix(in srgb, var(--sky) 62%, var(--line)); background: var(--sky-soft); color: var(--sky-deep); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sky) 32%, transparent); }
+.ama-food-cook-emoji { font-size: 12px; line-height: 1; }
+.ama-food-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.ama-food-mode { display: grid; gap: 2px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); color: var(--ink-soft); font: inherit; text-align: left; cursor: pointer; }
+.ama-food-mode:hover { border-color: var(--line-strong); }
+.ama-food-mode.is-active { border-color: color-mix(in srgb, var(--sky) 62%, var(--line)); background: var(--sky-soft); color: var(--sky-deep); }
+.ama-food-mode-label { font-size: 11px; font-weight: 850; }
+.ama-food-cook-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.ama-food-random { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.ama-food-recipes { display: grid; gap: 8px; }
+.ama-food-recipe { padding: 9px 11px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel-2); }
+.ama-food-recipe-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.ama-food-own, .ama-food-need { display: inline-block; margin: 0 4px 2px 0; padding: 1px 5px; border-radius: 6px; font-size: 9px; }
+.ama-food-own { background: color-mix(in srgb, var(--mint) 32%, transparent); color: var(--mint-ink); }
+.ama-food-need { background: color-mix(in srgb, var(--peach) 42%, transparent); color: var(--peach-ink); }
 @media (max-width: 760px) {
   .ama-food-hero,
   .ama-food-split,
-  .ama-food-draw-grid { grid-template-columns: minmax(0, 1fr); }
+  .ama-food-draw-grid,
+  .ama-food-cook-grid,
+  .ama-food-modes { grid-template-columns: minmax(0, 1fr); }
   .ama-food-code { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -3024,6 +3211,16 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   )
   const [foodOriginal, setFoodOriginal] = useState<FoodOriginal | null>(initialFood.original || null)
   const [foodCouponNote, setFoodCouponNote] = useState(String(initialFood.coupon_code_note || ""))
+  const [cookCatalog, setCookCatalog] = useState<CookPayload | null>(initialFood.cook || null)
+  const [foodTab, setFoodTab] = props.useLocalState<string>("ama.food.tab", "manual")
+  const [cookFoods, setCookFoods] = props.useLocalState<string[]>("ama.food.cook.foods", [])
+  const [cookTool, setCookTool] = props.useLocalState<string>("ama.food.cook.tool", "")
+  const [cookMode, setCookMode] = props.useLocalState<string>("ama.food.cook.mode", "loose")
+  const [cookResults, setCookResults] = useState<CookRecipe[]>([])
+  const [cookCount, setCookCount] = useState(0)
+  const [cookLoading, setCookLoading] = useState(false)
+  const [cookMessage, setCookMessage] = useState("")
+  const [cookRandom, setCookRandom] = useState<CookRecipe | null>(null)
   const [foodUpdated, setFoodUpdated] = useState(String(initialFood.updated || ""))
   const [foodDisclaimer, setFoodDisclaimer] = useState(String(initialFood.disclaimer || ""))
   const [foodPlatform, setFoodPlatform] = props.useLocalState<string>("ama.food.platform", String(initialFoodPlatforms[0]?.id || ""))
@@ -3593,6 +3790,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       setFoodDisclaimer(String(manual.disclaimer || ""))
       setFoodOriginal(manual.original && typeof manual.original === "object" ? manual.original : null)
       setFoodCouponNote(String(manual.coupon_code_note || ""))
+      setCookCatalog(manual.cook && typeof manual.cook === "object" ? manual.cook : null)
       if (platforms.length > 0 && !platforms.some((item) => item.id === foodPlatform)) {
         setFoodPlatform(String(platforms[0].id || ""))
       }
@@ -3623,6 +3821,64 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     } finally {
       setFoodBusy(false)
     }
+  }
+
+  async function runCookSearch() {
+    const action = actionById(actions || [], "ama_cook_search")
+    if (!action || cookLoading) return
+    if (cookFoods.length === 0) {
+      setCookMessage(tr("food.cook.emptyHint", "先选几样食材，再点找菜谱。"))
+      return
+    }
+    setCookLoading(true)
+    setCookMessage("")
+    try {
+      const result = unwrapResult(await props.api.call(action.id || "ama_cook_search", {
+        foods: cookFoods,
+        tool: cookTool,
+        mode: cookMode,
+        limit: 160,
+      }, { timeoutMs: 20000 }))
+      const results = Array.isArray(result.results) ? result.results as CookRecipe[] : []
+      setCookResults(results)
+      setCookCount(Number(result.count) || results.length)
+      if (results.length === 0) {
+        setCookMessage(tr("food.cook.noResults", "这个组合没有匹配的菜谱，换几样食材或放宽模式试试。"))
+      }
+    } catch (_error) {
+      setCookMessage(tr("food.cook.loadError", "菜谱匹配失败，再试一次。"))
+    } finally {
+      setCookLoading(false)
+    }
+  }
+
+  async function runCookRandom() {
+    const action = actionById(actions || [], "ama_cook_random")
+    if (!action || cookLoading) return
+    setCookLoading(true)
+    setCookMessage("")
+    try {
+      const result = unwrapResult(await props.api.call(action.id || "ama_cook_random", {}, { timeoutMs: 15000 }))
+      const recipe = result.recipe && typeof result.recipe === "object" ? result.recipe as CookRecipe : null
+      if (recipe) {
+        setCookRandom(recipe)
+      } else {
+        setCookMessage(tr("food.cook.loadError", "菜谱匹配失败，再试一次。"))
+      }
+    } catch (_error) {
+      setCookMessage(tr("food.cook.loadError", "菜谱匹配失败，再试一次。"))
+    } finally {
+      setCookLoading(false)
+    }
+  }
+
+  function toggleCookFood(name: string) {
+    if (!name) return
+    setCookFoods((current) => (current.includes(name) ? current.filter((item) => item !== name) : [...current, name]))
+  }
+
+  function toggleCookTool(name: string) {
+    setCookTool((current) => (current === name ? "" : name))
   }
 
   async function runPulse() {
@@ -5383,6 +5639,166 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const foodDrawCoupon = foodDraw?.coupon || {}
   const foodDrawPrice = foodDraw?.price || foodDrawDish.price || ""
 
+  const cookFoodSections = cookCatalog?.foods || {}
+  const cookToolList = cookCatalog?.tools || []
+  const cookModes = cookCatalog?.modes && cookCatalog.modes.length > 0
+    ? cookCatalog.modes
+    : [{ id: "loose", label: "模糊" }, { id: "strict", label: "严格" }, { id: "survival", label: "生存" }]
+
+  const cookRecipeCard = (recipe: CookRecipe, keyPrefix: string) => (
+    <article className="ama-food-recipe" key={`${keyPrefix}-${recipe.id || recipe.name}`}>
+      <div className="ama-food-brand-head">
+        <span className="ama-food-brand-name">{recipe.name}</span>
+        <div className="ama-chips">
+          {recipe.difficulty ? <span className="ama-chip">{recipe.difficulty}</span> : null}
+          {(recipe.methods || []).map((method) => <span className="ama-chip" key={method}>{method}</span>)}
+        </div>
+      </div>
+      <p className="ama-food-text">
+        {(recipe.matched || []).map((item) => <span className="ama-food-own" key={`own-${item}`}>{item}</span>)}
+        {(recipe.missing || []).map((item) => <span className="ama-food-need" key={`need-${item}`}>{item}</span>)}
+      </p>
+      <div className="ama-food-recipe-foot">
+        <span className="ama-food-meta">
+          {[...(recipe.tools || []), ...(recipe.tags || [])].join(" · ")}
+        </span>
+        {recipe.url ? (
+          <a className="ama-food-link" href={recipe.url} target="_blank" rel="noreferrer">
+            {recipe.video ? tr("food.cook.video", "B 站视频") : tr("food.cook.link", "查看来源")} ↗
+          </a>
+        ) : <span className="ama-food-meta">{tr("food.cook.noLink", "暂无视频")}</span>}
+      </div>
+    </article>
+  )
+
+  const cookView = (
+    <>
+      <div className="ama-panel ama-food-cook-hero">
+        <div>
+          <div className="ama-kicker"><span className="ama-kicker-line" />{tr("food.cook.kicker", "COOK")}</div>
+          <h2 className="ama-panel-title">{tr("food.cook.title", "根据家里的食材和厨具找菜谱")}</h2>
+          <p className="ama-panel-hint">{tr("food.cook.subtitle", "勾选现在有的食材，再选一个厨具和匹配模式；数据来自原版食用手册的离线快照。")}</p>
+        </div>
+        <span className="ama-badge is-mint">{cookCatalog?.recipe_count || 0} {tr("food.cook.recipes", "道菜谱")}</span>
+      </div>
+
+      <div className="ama-food-cook-grid">
+        <section className="ama-panel">
+          <div className="ama-panel-head">
+            <div>
+              <h2 className="ama-panel-title">{tr("food.cook.foods", "食材")}</h2>
+              <p className="ama-panel-hint">{tr("food.cook.foodsHint", "有就勾上，可以多选。")}</p>
+            </div>
+            <span className="ama-badge is-muted">{cookFoods.length}</span>
+          </div>
+          {(["vegetable", "meat", "staple"] as const).map((section) => (
+            <div className="ama-food-cook-section" key={section}>
+              <span className="ama-food-label">{tr(`food.cook.section.${section}`, section === "vegetable" ? "菜" : section === "meat" ? "肉" : "主食")}</span>
+              <div className="ama-food-cook-chips">
+                {(cookFoodSections[section] || []).map((food) => {
+                  const name = String(food.name || "")
+                  return (
+                    <button
+                      type="button"
+                      key={name}
+                      className={`ama-food-cook-chip${cookFoods.includes(name) ? " is-active" : ""}`}
+                      title={name}
+                      onClick={() => toggleCookFood(name)}
+                    >
+                      <span className="ama-food-cook-emoji">{food.emoji || ""}</span>{name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+          <div className="ama-food-cook-section">
+            <span className="ama-food-label">{tr("food.cook.tools", "厨具")}</span>
+            <div className="ama-food-cook-chips">
+              {cookToolList.map((tool) => (
+                <button
+                  type="button"
+                  key={tool}
+                  className={`ama-food-cook-chip${cookTool === tool ? " is-active" : ""}`}
+                  onClick={() => toggleCookTool(tool)}
+                >{tool}</button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="ama-panel">
+          <div className="ama-panel-head">
+            <div>
+              <h2 className="ama-panel-title">{tr("food.cook.mode", "匹配模式")}</h2>
+              <p className="ama-panel-hint">{tr("food.cook.modeHint", "模糊允许缺 2 样；严格要求包含所有已选；生存只能用已选。")}</p>
+            </div>
+          </div>
+          <div className="ama-food-modes">
+            {cookModes.map((mode) => {
+              const modeId = String(mode.id || "loose")
+              return (
+                <button
+                  type="button"
+                  key={modeId}
+                  className={`ama-food-mode${cookMode === modeId ? " is-active" : ""}`}
+                  onClick={() => setCookMode(modeId)}
+                >
+                  <span className="ama-food-mode-label">{mode.label || modeId}</span>
+                  <span className="ama-food-meta">{tr(`food.cook.mode.${modeId}`, modeId)}</span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="ama-food-cook-actions">
+            <button type="button" className="ama-btn ama-btn-primary" disabled={cookLoading} onClick={() => { void runCookSearch() }}>
+              {cookLoading ? tr("food.cook.searching", "匹配中...") : tr("food.cook.search", "找菜谱")}
+            </button>
+            <button type="button" className="ama-btn ama-btn-ghost" disabled={cookLoading} onClick={() => { void runCookRandom() }}>
+              {tr("food.cook.random", "随机一道")}
+            </button>
+            {cookFoods.length > 0 ? (
+              <button type="button" className="ama-btn ama-btn-quiet" onClick={() => { setCookFoods([]); setCookMessage("") }}>
+                {tr("food.cook.clear", "清空已选")}
+              </button>
+            ) : null}
+          </div>
+          {cookRandom ? (
+            <div className="ama-food-random">
+              <span className="ama-food-label">{tr("food.cook.randomTitle", "随机一道")}</span>
+              {cookRecipeCard(cookRandom, "random")}
+            </div>
+          ) : null}
+          {cookMessage ? <div className="ama-note">{cookMessage}</div> : null}
+        </section>
+      </div>
+
+      <section className="ama-panel" style={{ marginTop: "12px" } as any}>
+        <div className="ama-panel-head">
+          <div>
+            <h2 className="ama-panel-title">{tr("food.cook.results", "菜谱结果")}</h2>
+            <p className="ama-panel-hint">
+              {cookCount > 0
+                ? tr("food.cook.resultCount", "共 {count} 道可做").replace("{count}", String(cookCount))
+                : tr("food.cook.resultHint", "选好食材后点「找菜谱」。")}
+            </p>
+          </div>
+          <span className="ama-badge is-muted">{cookResults.length}</span>
+        </div>
+        <div className="ama-food-recipes">
+          {cookResults.map((recipe) => cookRecipeCard(recipe, "result"))}
+          {cookResults.length === 0 ? <div className="ama-empty">{tr("food.cook.emptyHint", "先选几样食材，再点找菜谱。")}</div> : null}
+        </div>
+        {cookCatalog?.source ? (
+          <div className="ama-note">
+            {tr("food.cook.source", "数据来源")}: {cookCatalog.source_name || "食用手册"} · {cookCatalog.updated || ""} ·{" "}
+            <a href={String(cookCatalog.source || "")} target="_blank" rel="noreferrer">{tr("food.cook.sourceLink", "原版数据仓库")} ↗</a>
+          </div>
+        ) : null}
+      </section>
+    </>
+  )
+
   const foodView = (
     <>
       <div className="ama-view-head">
@@ -5394,6 +5810,21 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
         <span className="ama-badge is-mint">{tr("food.badge.offline", "离线快照")}{foodUpdated ? ` · ${foodUpdated}` : ""}</span>
       </div>
 
+      <div className="ama-steam-tabs">
+        <button
+          type="button"
+          className={`ama-steam-tab${foodTab === "manual" ? " is-active" : ""}`}
+          onClick={() => setFoodTab("manual")}
+        >{tr("food.tabs.manual", "今天吃什么")}</button>
+        <button
+          type="button"
+          className={`ama-steam-tab${foodTab === "cook" ? " is-active" : ""}`}
+          onClick={() => setFoodTab("cook")}
+        >{tr("food.tabs.cook", "找菜谱")}</button>
+      </div>
+
+      {foodTab === "cook" ? cookView : (
+      <>
       <div className="ama-food-hero">
         <section className="ama-panel ama-food-draw-panel">
           <div className="ama-food-draw-head">
@@ -5602,6 +6033,8 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       </section>
 
       <div className="ama-note">{foodDisclaimer || tr("food.disclaimer", "离线快照，不是实时价格或活动；具体以下单页为准。")}</div>
+      </>
+      )}
     </>
   )
 
@@ -5743,6 +6176,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     version: 1,
     profile: uiProfile,
   })
+  const uiThemeUrl = uiProfileDownloadUrl(uiThemeEnvelope(uiProfile))
 
   async function copyUiProfile() {
     try {
@@ -6172,6 +6606,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           <div>
             <h2 className="ama-panel-title">{tr("studio.io", "Import / export")}</h2>
             <p className="ama-panel-hint">{tr("studio.ioHint", "Paste a profile to apply it, or copy the current JSON.")}</p>
+            <p className="ama-panel-hint">{tr("studio.themePackHint", "主题包 = 材质 + 配色 + 音效，导出后可分享给别人导入。")}</p>
           </div>
           <span className="ama-badge is-muted">JSON</span>
         </div>
@@ -6182,6 +6617,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
             <div className="ama-studio-io-actions">
               <button type="button" className="ama-web-chip" onClick={() => void copyUiProfile()}>{tr("studio.copy", "Copy")}</button>
               <FileDownload href={uiDownloadUrl} label={tr("studio.download", "Download JSON")} filename="ama-ui-profile.json" className="ama-web-open" />
+              <FileDownload href={uiThemeUrl} label={tr("studio.exportTheme", "下载主题包")} filename="ama-ui-theme.json" className="ama-web-open" />
             </div>
           </div>
           <div>
@@ -6197,6 +6633,15 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
               <button type="button" className="ama-web-chip" onClick={importUiProfile}>{tr("studio.applyImport", "Import and apply")}</button>
               <label className="ama-file-button">
                 {tr("studio.importJsonFile", "Import JSON file")}
+                <input
+                  className="ama-file-input"
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={importProfileFile}
+                />
+              </label>
+              <label className="ama-file-button">
+                {tr("studio.importTheme", "导入主题包")}
                 <input
                   className="ama-file-input"
                   type="file"

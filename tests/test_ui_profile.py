@@ -5,6 +5,7 @@ import json
 from ui_profile import (
     DEFAULT_UI_PROFILE,
     export_ui_profile,
+    export_ui_theme,
     normalize_ui_profile,
     parse_ui_profile_payload,
 )
@@ -106,7 +107,7 @@ def test_glass_material_is_normalized() -> None:
 
     assert normalize_ui_profile({"material": "neon"})["material"] == "glass"
 
-    for material in ("metal", "cream", "ink"):
+    for material in ("metal", "cream", "ink", "elation"):
         assert normalize_ui_profile({"material": material})["material"] == material
 
 
@@ -144,6 +145,29 @@ def test_export_round_trip() -> None:
     })
     exported = export_ui_profile(profile)
     parsed, error = parse_ui_profile_payload(json.dumps(exported))
+    assert error == ""
+    assert parsed == profile
+
+
+def test_elation_material_and_theme_pack_round_trip() -> None:
+    profile = normalize_ui_profile({
+        "name": "Aha",
+        "glyph": "✦",
+        "material": "elation",
+        "accent": "#ff3ea5",
+        "theme": "dark",
+        "sound_enabled": True,
+        "sound_mode": "soft",
+    })
+    assert profile["material"] == "elation"
+
+    theme = export_ui_theme(profile)
+    assert theme["format"] == "ama.ui.theme"
+    assert theme["version"] == 1
+    assert "exported_at" in theme
+    assert theme["theme"]["material"] == "elation"
+
+    parsed, error = parse_ui_profile_payload(json.dumps(theme))
     assert error == ""
     assert parsed == profile
 

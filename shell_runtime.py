@@ -15,6 +15,7 @@ from datetime import datetime
 from typing import Any, Mapping
 
 try:  # package-relative import used by the N.E.K.O plugin
+    from . import cook_catalog
     from .food_manual import (
         DISCLAIMER,
         FOOD_MANUAL_NAME,
@@ -35,6 +36,7 @@ try:  # package-relative import used by the N.E.K.O plugin
     )
     from .ui_profile import DEFAULT_UI_PROFILE, normalize_ui_profile
 except ImportError:  # pragma: no cover - direct test import fallback
+    import cook_catalog  # type: ignore[no-redef]
     from food_manual import (  # type: ignore[no-redef]
         DISCLAIMER,
         FOOD_MANUAL_NAME,
@@ -356,6 +358,37 @@ class AmaOsRuntime:
         self._record("food.draw", detail)
         try:
             self._port.record_event("food.draw", detail)
+        except Exception:
+            self._degraded = True
+        return result
+
+    def search_recipes(
+        self,
+        foods: Any = None,
+        tool: str = "",
+        mode: str = "loose",
+        limit: int = 160,
+    ) -> dict[str, Any]:
+        """Match bundled cook recipes against selected ingredients and a tool."""
+
+        result = cook_catalog.search_recipes(foods, tool, mode, limit)
+        count = int(result.get("count") or 0)
+        self._record("cook.search", f"{count} recipe(s)")
+        try:
+            self._port.record_event("cook.search", str(count))
+        except Exception:
+            self._degraded = True
+        return result
+
+    def random_recipe(self) -> dict[str, Any]:
+        """Return one random cook recipe and record the event."""
+
+        result = cook_catalog.random_recipe()
+        recipe = result.get("recipe") if isinstance(result.get("recipe"), Mapping) else {}
+        name = str(recipe.get("name") or "")[:200]
+        self._record("cook.random", name)
+        try:
+            self._port.record_event("cook.random", name)
         except Exception:
             self._degraded = True
         return result

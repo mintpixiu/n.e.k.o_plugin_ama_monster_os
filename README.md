@@ -40,14 +40,17 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
   official platform entry links, nationwide chain-brand delivery picks with
   platform, coupon and delivery/pickup notes, a random **今天吃什么** draw
   (49 dishes, recent draws excluded) that attaches a platform, coupon, price
-  hint and arrival note, and a usage guide for the original 隔离食用手册
-  recipe site. It is a bundled editorial snapshot: no platform scraping, no
+  hint and arrival note, a usage guide for the original 隔离食用手册 recipe
+  site, and a **找菜谱** tab that matches the original 887-recipe catalog by
+  ingredients and cookware in loose / strict / survival mode, with Bilibili or
+  source links. It is a bundled editorial snapshot: no platform scraping, no
   live prices, no real store addresses, no sign-in and no ordering.
-- **Five materials**: **glass** (Apple / Xiaomi style translucent panels with
+- **Six materials**: **glass** (Apple / Xiaomi style translucent panels with
   backdrop blur and rim light), **metal** (brushed steel with chamfered
   highlights), **cream** (cartoon cream with thick outlines and sticker
-  shadows), **ink** (rice-paper watercolour with soft corners), and **solid**
-  for low-end machines. Blur and density stay adjustable for glass.
+  shadows), **ink** (rice-paper watercolour with soft corners), **elation**
+  (Aha-style deep violet, magenta / cyan neon and harlequin diamonds), and
+  **solid** for low-end machines. Blur and density stay adjustable for glass.
 - **Continuous-curvature corners**: every rounded rectangle — window, cards,
   buttons, inputs, chips — is a superellipse (`corner-shape: squircle`), so the
   straight edges flow into the corners with continuous curvature (G2) instead of
@@ -59,7 +62,9 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
   (including an imported local image), desktop backdrop, corner radius, compact
   density, window title, and glyph. It also includes a **2–30 colour gradient
   builder** and **Steam-style selection sounds**, with custom sound import.
-  Profiles are saved in the plugin data folder and can be exported/imported as JSON.
+  Profiles are saved in the plugin data folder and can be exported/imported as JSON,
+  and the current look can be exported as a shareable **theme pack**
+  (`ama.ui.theme` JSON: material + colours + sound) and imported back.
 - A **Pulse check** action that calls the Python plugin and refreshes the
   context through the real Hosted UI bridge.
 - A stable, versioned contract (`ama.system.bridge` v1.0.0) and a `SystemPort`
@@ -194,10 +199,17 @@ The **食** room is an offline food manual, not a delivery integration:
   ([cook.yunyoujun.cn](https://cook.yunyoujun.cn/)): pick ingredients and
   cookware, choose a match mode, and browse generated recipes with video
   tutorials.
+- **找菜谱** is the working replica of that main flow: 887 bundled recipes from
+  the open-source 食用手册 data, ingredient sections (菜 / 肉 / 主食), cookware,
+  and loose / strict / survival matching. Each card shows matched vs missing
+  ingredients, tools, difficulty, methods and a Bilibili or source link;
+  随机一道 picks one recipe from the whole catalog. The full recipe rows stay
+  out of the snapshot; the panel calls the plugin when it searches.
 - Data boundary: the manual is a 2026-11-22 editorial snapshot. It is not live
   pricing, stock or promotions, coupon codes expire, it contains no real store
   addresses, and it never scrapes a platform, signs in to a delivery account or
-  places an order. The checkout page is authoritative.
+  places an order. External recipe and video links are third-party and may
+  expire. The checkout page is authoritative.
 
 Step-by-step guide: [docs/food-manual.md](docs/food-manual.md).
 
@@ -341,6 +353,8 @@ ama_monster_os/
 ├── shell_runtime.py            host-free shell runtime
 ├── arknights_codex.py          offline operator codex data
 ├── food_manual.py              offline food manual + meal draw
+├── cook_catalog.py             bundled 887-recipe cook catalog + matching
+├── cook_recipes.json           offline recipe data from YunYouJun/cook
 ├── steam_catalog.py            versioned free-to-play shelf
 ├── steam_sales.py              versioned Steam sale calendar
 ├── ui_profile.py               validated UI profile + import/export

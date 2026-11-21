@@ -11,6 +11,11 @@ from __future__ import annotations
 import random
 from typing import Any, Iterable
 
+try:  # package-relative import when loaded as plugin.plugins.ama_monster_os
+    from .cook_catalog import cook_payload
+except ImportError:  # pragma: no cover - direct test import fallback
+    from cook_catalog import cook_payload  # type: ignore[no-redef]
+
 FOOD_MANUAL_NAME = "食用手册"
 FOOD_MANUAL_VERSION = "1.1"
 FOOD_MANUAL_UPDATED = "2026-11-22"
@@ -918,6 +923,7 @@ def food_manual_payload() -> dict[str, Any]:
         "disclaimer": DISCLAIMER,
         "coupon_code_note": COUPON_CODE_NOTE,
         "original": ORIGINAL_MANUAL,
+        "cook": cook_payload(),
         "categories": list(DISH_CATEGORIES),
         "platforms": [
             {

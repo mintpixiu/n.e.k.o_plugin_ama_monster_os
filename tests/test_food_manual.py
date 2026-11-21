@@ -25,6 +25,8 @@ ALLOWED_URL_PREFIXES = (
     "https://www.douyin.com/",
     "https://cook.yunyoujun.cn/",
     "https://docs.yunyoujun.cn/",
+    "https://github.com/YunYouJun/cook",
+    "https://www.bilibili.com/",
 )
 
 
@@ -98,6 +100,10 @@ def test_payload_is_offline_and_serializable() -> None:
     assert len(payload["platforms"]) == len(PLATFORMS)
     assert len(payload["brands"]) == len(BRANDS)
     assert len(payload["dishes"]) == len(DISHES)
+    cook = payload["cook"]
+    assert cook["recipe_count"] >= 800
+    assert cook["foods"]["vegetable"]
+    assert cook["tools"]
     # Only the documented platform entries and the original manual links are
     # allowed; the manual never embeds arbitrary URLs or real store addresses.
     text = json.dumps(payload, ensure_ascii=False)

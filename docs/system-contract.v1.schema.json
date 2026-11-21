@@ -53,6 +53,8 @@
         "steam_deals": { "type": "string", "minLength": 1 },
         "food_manual": { "type": "string", "minLength": 1 },
         "food_draw": { "type": "string", "minLength": 1 },
+        "cook_search": { "type": "string", "minLength": 1 },
+        "cook_random": { "type": "string", "minLength": 1 },
         "ui_profile": { "type": "string", "minLength": 1 },
         "contract": { "type": "string", "minLength": 1 }
       }

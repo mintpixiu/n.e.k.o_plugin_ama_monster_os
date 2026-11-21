@@ -29,11 +29,11 @@ from the first version.
 - A curated Chinese-title map for older Steam games whose official `l=schinese` name remains English.
 - A curated, versioned free-to-play shelf (18 titles in 3 rotating groups) with fixed Steam store links.
 - Rotating sale-pick batches: a 60-deal candidate pool is filtered to ~50 titles and split into 10 groups, so refresh returns different games.
-- A **UI Studio** with presets, accent colour, light/dark theme, **window background**, desktop backdrop pattern, radius, density, window title/glyph, a **2–30 colour gradient builder**, **Steam-style selection sounds with custom sound import**, live preview, persistent profile, and JSON import/export.
+- A **UI Studio** with presets, accent colour, light/dark theme, **window background**, desktop backdrop pattern, radius, density, window title/glyph, a **2–30 colour gradient builder**, **Steam-style selection sounds with custom sound import**, live preview, persistent profile, JSON import/export, and shareable **theme packs** (`ama.ui.theme`: material + colours + sound) with import/export.
 - An **offline Arknights operator codex** (81 entries) with class, rarity, faction, race and tags. Data is bundled text only: no official artwork, voice lines, story text or wiki copy, and no runtime fetching.
-- **Five materials** — glass, metal, cream, ink, solid — controlled by `material`, `glass_blur` and `glass_alpha` in the UI profile. All are pure CSS (no remote assets, no injected styles).
+- **Six materials** — glass, metal, cream, ink, elation (欢愉·啊哈: deep violet, magenta/cyan neon, harlequin diamonds), solid — controlled by `material`, `glass_blur` and `glass_alpha` in the UI profile. All are pure CSS (no remote assets, no injected styles).
 - A **Token radar** for 10 providers and 20 models, using the public models.dev list-price catalog; it polls every 60 seconds, persists daily OHLC candles, and explicitly distinguishes DeepSeek peak/off-peak pricing from flat providers.
-- An **offline food manual** room (食用手册): coupon-acquisition tips and public coupon codes for 美团/饿了么/京东外卖/淘宝闪购/抖音 with official platform entry links, nationwide chain-brand delivery picks with platform, coupon and delivery/pickup notes, a random "今天吃什么" draw (49 dishes, recent draws excluded) that attaches a platform, coupon, price hint and arrival note, and a usage guide for the original 隔离食用手册 recipe site. Data is a bundled editorial snapshot: no platform scraping, no live prices, no real store addresses, no ordering.
+- An **offline food manual** room (食用手册): coupon-acquisition tips and public coupon codes for 美团/饿了么/京东外卖/淘宝闪购/抖音 with official platform entry links, nationwide chain-brand delivery picks with platform, coupon and delivery/pickup notes, a random "今天吃什么" draw (49 dishes, recent draws excluded) that attaches a platform, coupon, price hint and arrival note, a usage guide for the original 隔离食用手册 recipe site, and a **找菜谱** replica of that site: 887 bundled recipes matched by ingredients and cookware in loose / strict / survival mode, with Bilibili or source links. Data is a bundled editorial snapshot: no platform scraping, no live prices, no real store addresses, no ordering.
 - A versioned Steam sale calendar snapshot sourced from Steamworks, with current/next event, next seasonal sale, local countdowns, and an official schedule link.
 - A two-provider search chain: N.E.K.O `web_search` first, fixed Bing RSS fallback second.
 - Steam sign-in through Steam OpenID with a loopback callback; the UI states the flow and never asks for a password. Steam++ (Watt Toolkit) acceleration is detected and surfaced.
@@ -91,7 +91,8 @@ from the first version.
 - free shelf: versioned `steam_catalog.py` list of permanently free titles
 - sale calendar: versioned `steam_sales.py` snapshot from Steamworks; dates shown in local time; Valve can change them
 - food manual: versioned `food_manual.py` offline snapshot (5 platforms, 16 chain brands, 24 dish choices); `runtime.draw_food()` picks one dish and attaches platform, coupon, price and arrival notes; no network, no store addresses
-- UI profile: `ui_profile.py` schema, persisted to `data/ui_profile.json`, exported as `ama.ui.profile` JSON
+- cook catalog: bundled `cook_recipes.json` snapshot of the open-source 食用手册 dataset (887 recipes, 87 ingredients, 8 tools); `runtime.search_recipes(foods, tool, mode, limit)` and `runtime.random_recipe()`; recipe rows stay out of the snapshot
+- UI profile: `ui_profile.py` schema, persisted to `data/ui_profile.json`, exported as `ama.ui.profile` JSON, plus `ama.ui.theme` theme-pack export/import
 - UI surfaces: one `panel` (`ui/panel.tsx`), five Markdown guides, one Markdown docs page
 - state/config: read-only snapshot plus in-memory last search and price lookup; no persistent config in 0.7.0
 - lifecycle/background work: startup/shutdown only; no timers or background tasks
@@ -144,6 +145,10 @@ plugins such as `lifekit` and `mcp_adapter`.
   codes expire, platform entry links are plain https links opened by the user,
   and the original 隔离食用手册 recipe site is a third-party service with no
   affiliation to this plugin (only its usage is documented).
+- The cook catalog is bundled from the open-source 食用手册 data; Bilibili and
+  source links can expire and are opened by the user. Matching is a local
+  heuristic (the upstream loose / strict / survival rules), not a guarantee that
+  the recipe fits the user's kitchen.
 - Window chrome controls are presentation state inside one hosted panel; they
   do not control the N.E.K.O application window.
 - Version `0.7.0` is a Stable release; the user publishes manually with their

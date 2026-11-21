@@ -194,6 +194,38 @@ FOOD_DRAW_SCHEMA: dict[str, Any] = {
     },
 }
 
+COOK_SEARCH_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "foods": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Selected ingredients, e.g. 土豆, 鸡肉, 米.",
+        },
+        "tool": {
+            "type": "string",
+            "description": "Optional cookware filter, e.g. 电饭煲 or 空气炸锅.",
+        },
+        "mode": {
+            "type": "string",
+            "enum": ["loose", "strict", "survival"],
+            "default": "loose",
+            "description": (
+                "loose (模糊) allows up to two missing ingredients; strict (严格) "
+                "requires every selected ingredient; survival (生存) may only use "
+                "selected ingredients."
+            ),
+        },
+        "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 160,
+        },
+    },
+    "required": ["foods"],
+}
+
 
 @neko_plugin
 class AmaMonsterOsPlugin(NekoPluginBase):
@@ -850,6 +882,74 @@ class AmaMonsterOsPlugin(NekoPluginBase):
             )
             .replace("{dish}", str(dish.get("name") or ""))
             .replace("{platform}", str(platform.get("name") or ""))
+        )
+        return Ok({**result, "summary": summary})
+
+    @ui.action(
+        id="ama_cook_search",
+        label=tr("actions.cook_search.label", default="找菜谱"),
+        icon="search",
+        tone="default",
+        order=44,
+        refresh_context=False,
+    )
+    @plugin_entry(
+        id="ama_cook_search",
+        name=tr("entries.cook_search.name", default="找菜谱"),
+        description=tr(
+            "entries.cook_search.description",
+            default=(
+                "Match the bundled 食用手册 recipe catalog against selected "
+                "ingredients and cookware in loose, strict, or survival mode."
+            ),
+        ),
+        input_schema=COOK_SEARCH_SCHEMA,
+        llm_result_fields=["summary"],
+        timeout=15,
+    )
+    async def ama_cook_search(self, foods: Any = None, tool: Any = "", mode: Any = "loose", limit: Any = 160, **_):
+        selected = [str(item) for item in foods] if isinstance(foods, (list, tuple)) else []
+        try:
+            max_results = int(limit)
+        except (TypeError, ValueError):
+            max_results = 160
+        result = self._runtime.search_recipes(selected, str(tool or ""), str(mode or "loose"), max_results)
+        count = int(result.get("count") or 0)
+        summary = (
+            self.i18n.t(
+                "entries.cook_search.summary",
+                default="Recipes you can cook: {count}.",
+            ).replace("{count}", str(count))
+        )
+        return Ok({**result, "summary": summary})
+
+    @ui.action(
+        id="ama_cook_random",
+        label=tr("actions.cook_random.label", default="随机一道"),
+        icon="refresh",
+        tone="primary",
+        order=45,
+        refresh_context=False,
+    )
+    @plugin_entry(
+        id="ama_cook_random",
+        name=tr("entries.cook_random.name", default="随机一道"),
+        description=tr(
+            "entries.cook_random.description",
+            default="Return one random recipe from the bundled 食用手册 catalog.",
+        ),
+        input_schema=PULSE_SCHEMA,
+        llm_result_fields=["summary"],
+        timeout=10,
+    )
+    async def ama_cook_random(self, **_):
+        result = self._runtime.random_recipe()
+        recipe = result.get("recipe") or {}
+        summary = (
+            self.i18n.t(
+                "entries.cook_random.summary",
+                default="Today's recipe: {name}.",
+            ).replace("{name}", str(recipe.get("name") or ""))
         )
         return Ok({**result, "summary": summary})
 

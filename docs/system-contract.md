@@ -357,6 +357,17 @@ the runtime remembers the previous eight dish ids so consecutive draws rotate;
 it performs no network I/O. A future desktop build can reuse `food_manual.py`
 directly.
 
+### Cook catalog
+
+`cook_catalog.py` bundles the offline 887-recipe 食用手册 dataset from
+YunYouJun/cook (`cook_recipes.json`) together with the ingredient sections,
+cookware names, and the three matching modes (`loose` / `strict` /
+`survival`). `runtime.search_recipes(foods, tool, mode, limit)` and
+`runtime.random_recipe()` return recipe cards with matched and missing
+ingredients, tools, difficulty, tags, methods, and a Bilibili or source link.
+The catalog is read-only and performs no network I/O; the snapshot carries only
+its metadata (`cook`: count, foods, tools, modes), not the 887 rows.
+
 ### `record_event()`
 
 Best-effort host journal. It must never raise. A failing journal must not break
@@ -402,6 +413,8 @@ Release provider resources. Must be idempotent.
     "steam_deals": "ama_steam_deals",
     "food_manual": "ama_food_manual",
     "food_draw": "ama_food_draw",
+    "cook_search": "ama_cook_search",
+    "cook_random": "ama_cook_random",
     "ui_profile": "ama_ui_profile_save",
     "contract": "ama_system_contract"
   }

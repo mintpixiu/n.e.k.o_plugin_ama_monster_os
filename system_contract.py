@@ -95,6 +95,8 @@ ENTRYPOINTS = {
     "token_prices": "ama_token_prices",
     "food_manual": "ama_food_manual",
     "food_draw": "ama_food_draw",
+    "cook_search": "ama_cook_search",
+    "cook_random": "ama_cook_random",
     "ui_profile": "ama_ui_profile_save",
     "contract": "ama_system_contract",
 }
@@ -231,6 +233,8 @@ def validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
             "token_prices",
             "food_manual",
             "food_draw",
+            "cook_search",
+            "cook_random",
             "ui_profile",
             "contract",
         ):

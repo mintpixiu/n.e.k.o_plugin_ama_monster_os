@@ -16,6 +16,8 @@ from typing import Any, Mapping
 
 UI_PROFILE_FORMAT = "ama.ui.profile"
 UI_PROFILE_VERSION = 1
+UI_THEME_FORMAT = "ama.ui.theme"
+UI_THEME_VERSION = 1
 MAX_UI_PROFILE_BYTES = 4_000_000
 MAX_WINDOW_IMAGE_BYTES = 1_200_000
 MAX_SOUND_BYTES = 1_000_000
@@ -24,7 +26,7 @@ WINDOW_BACKGROUNDS = ("paper", "mist", "sakura", "glass", "gradient", "image", "
 SOUND_MODES = ("steam", "soft", "mechanical", "custom")
 DENSITIES = ("comfortable", "compact")
 THEMES = ("light", "dark")
-MATERIALS = ("glass", "solid", "metal", "cream", "ink")
+MATERIALS = ("glass", "solid", "metal", "cream", "ink", "elation")
 _ACCENT_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 _IMAGE_RE = re.compile(r"^data:image/(png|jpeg|jpg|webp|gif);base64,([A-Za-z0-9+/=\s]+)$")
 _AUDIO_RE = re.compile(r"^data:audio/(wav|mpeg|mp3|ogg);base64,([A-Za-z0-9+/=\s]+)$")
@@ -237,11 +239,27 @@ def export_ui_profile(profile: Any = None) -> dict[str, Any]:
     }
 
 
+def export_ui_theme(profile: Any = None) -> dict[str, Any]:
+    """Export a shareable theme pack (material, colours, sound, identity).
+
+    The payload carries no host paths or data; importing it is the same as
+    importing a profile, so a theme pack can be shared as a single JSON file.
+    """
+
+    return {
+        "format": UI_THEME_FORMAT,
+        "version": UI_THEME_VERSION,
+        "exported_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "theme": normalize_ui_profile(profile),
+    }
+
+
 def parse_ui_profile_payload(payload: Any) -> tuple[dict[str, Any] | None, str]:
-    """Parse a direct profile or an exported envelope.
+    """Parse a direct profile, an exported profile, or an exported theme pack.
 
     Returns ``(profile, "")`` on success or ``(None, reason)`` when the payload
-    is not a profile envelope.  Field-level problems are clamped, not rejected.
+    is not a profile/theme envelope.  Field-level problems are clamped, not
+    rejected.
     """
 
     data = payload
@@ -254,11 +272,13 @@ def parse_ui_profile_payload(payload: Any) -> tuple[dict[str, Any] | None, str]:
             return None, "invalid_json"
     if not isinstance(data, Mapping):
         return None, "invalid_profile"
-    if "format" in data and str(data.get("format")) != UI_PROFILE_FORMAT:
+    if "format" in data and str(data.get("format")) not in (UI_PROFILE_FORMAT, UI_THEME_FORMAT):
         return None, "unsupported_format"
-    candidate = data.get("profile") if isinstance(data.get("profile"), Mapping) else data
+    candidate = data.get("profile")
     if not isinstance(candidate, Mapping):
-        return None, "invalid_profile"
+        candidate = data.get("theme")
+    if not isinstance(candidate, Mapping):
+        candidate = data
     return normalize_ui_profile(candidate), ""
 
 
@@ -273,9 +293,12 @@ __all__ = [
     "THEMES",
     "UI_PROFILE_FORMAT",
     "UI_PROFILE_VERSION",
+    "UI_THEME_FORMAT",
+    "UI_THEME_VERSION",
     "WALLPAPERS",
     "WINDOW_BACKGROUNDS",
     "export_ui_profile",
+    "export_ui_theme",
     "normalize_ui_profile",
     "parse_ui_profile_payload",
 ]
