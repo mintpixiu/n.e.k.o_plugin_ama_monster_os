@@ -34,6 +34,7 @@ try:  # package-relative import used by the N.E.K.O plugin
         SystemPort,
         utc_now_iso,
     )
+    from .ui_art import ui_art_payload
     from .ui_profile import DEFAULT_UI_PROFILE, normalize_ui_profile
 except ImportError:  # pragma: no cover - direct test import fallback
     import cook_catalog  # type: ignore[no-redef]
@@ -55,6 +56,7 @@ except ImportError:  # pragma: no cover - direct test import fallback
         SystemPort,
         utc_now_iso,
     )
+    from ui_art import ui_art_payload  # type: ignore[no-redef]
     from ui_profile import DEFAULT_UI_PROFILE, normalize_ui_profile  # type: ignore[no-redef]
 
 SHELL_NAME = "Ama Monster OS"
@@ -484,6 +486,7 @@ class AmaOsRuntime:
             },
             "events": [event.as_dict() for event in self._events[-8:]],
             "ui_profile": dict(self._ui_profile),
+            "art": ui_art_payload(),
             "token_radar": dict(self._token_radar),
             "codex": dict(self._codex),
             "food": dict(self._food),

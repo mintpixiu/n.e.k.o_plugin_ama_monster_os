@@ -49,8 +49,10 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
   backdrop blur and rim light), **metal** (brushed steel with chamfered
   highlights), **cream** (cartoon cream with thick outlines and sticker
   shadows), **ink** (rice-paper watercolour with soft corners), **elation**
-  (Aha-style deep violet, magenta / cyan neon and harlequin diamonds), and
-  **solid** for low-end machines. Blur and density stay adjustable for glass.
+  (Aha-style full-window skin: original SVG artwork with storm, red/black
+  playing cards, ribbons and page glow; import your own image through the
+  Studio window background if you prefer), and **solid** for low-end
+  machines. Blur and density stay adjustable for glass.
 - **Continuous-curvature corners**: every rounded rectangle — window, cards,
   buttons, inputs, chips — is a superellipse (`corner-shape: squircle`), so the
   straight edges flow into the corners with continuous curvature (G2) instead of

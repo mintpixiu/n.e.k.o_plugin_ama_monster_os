@@ -861,6 +861,7 @@ type ShellState = {
   token_radar?: TokenRadar
   codex?: CodexSummary
   food?: FoodManual
+  art?: { elation?: string }
   ui_profile?: UiProfile
   events?: BootEvent[]
   preview?: boolean
@@ -2893,6 +2894,8 @@ const STYLES = `
   --elation-magenta: #ff3ea5;
   --elation-cyan: #4ce6ff;
   --elation-gold: #ffd166;
+  --elation-cream: #f7f1e6;
+  --elation-ink: #17111f;
   --ink: #f6e9ff;
   --ink-soft: #dcc6f2;
   --muted: #a98ac6;
@@ -2908,8 +2911,8 @@ const STYLES = `
   --lilac-ink: #e7d6ff;
   --paper: #1a0f2e;
   --paper-2: #120a1e;
-  --card: rgb(32 18 52 / 0.86);
-  --panel-2: rgb(42 22 68 / 0.72);
+  --card: rgb(32 18 52 / 0.66);
+  --panel-2: rgb(42 22 68 / 0.5);
   --line: rgb(255 62 165 / 0.24);
   --line-strong: rgb(76 230 255 / 0.36);
   --hover: rgb(255 62 165 / 0.14);
@@ -2935,31 +2938,83 @@ const STYLES = `
   color-scheme: dark;
 }
 .ama-root[data-material="elation"].ama-theme-dark {
-  --card: rgb(24 13 41 / 0.92);
-  --panel-2: rgb(32 17 54 / 0.84);
+  --card: rgb(24 13 41 / 0.8);
+  --panel-2: rgb(32 17 54 / 0.62);
   --hover: rgb(255 62 165 / 0.2);
 }
 .ama-root[data-material="elation"] .ama-desktop {
   background:
-    radial-gradient(circle at 16% 12%, rgb(255 62 165 / 0.28), transparent 42%),
-    radial-gradient(circle at 84% 8%, rgb(76 230 255 / 0.22), transparent 40%),
-    radial-gradient(circle at 50% 100%, rgb(255 209 102 / 0.16), transparent 46%),
-    repeating-linear-gradient(45deg, rgb(255 62 165 / 0.06) 0 2px, transparent 2px 26px),
-    repeating-linear-gradient(-45deg, rgb(76 230 255 / 0.05) 0 2px, transparent 2px 26px),
+    linear-gradient(180deg, rgb(6 4 12 / 0.38), rgb(6 4 12 / 0.76)),
+    var(--elation-art, none),
+    radial-gradient(circle at 16% 12%, rgb(255 47 85 / 0.3), transparent 42%),
     linear-gradient(160deg, var(--desktop-1), var(--desktop-3));
+  background-size: 100% 100%, cover, 100% 100%, cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.ama-root[data-material="elation"] .ama-desktop::before {
+  display: block;
+  background:
+    linear-gradient(180deg, rgb(6 4 12 / 0.32), rgb(6 4 12 / 0.72)),
+    var(--elation-art, none);
+  background-size: 100% 100%, cover;
+  background-position: center;
+  mask-image: none;
+  opacity: 1;
+}
+.ama-root[data-material="elation"] .ama-desktop::after {
+  background:
+    radial-gradient(ellipse at center, transparent 42%, rgb(255 47 85 / 0.12) 100%),
+    repeating-linear-gradient(90deg, rgb(247 241 230 / 0.02) 0 26px, transparent 26px 52px);
 }
 .ama-root[data-material="elation"] .ama-window {
-  border: 1px solid rgb(255 62 165 / 0.5);
+  border: 1px solid rgb(255 59 92 / 0.55);
   background:
-    radial-gradient(circle at 12% 0%, rgb(255 62 165 / 0.2), transparent 42%),
-    radial-gradient(circle at 90% 6%, rgb(76 230 255 / 0.16), transparent 38%),
-    repeating-conic-gradient(from 45deg at 88% 82%, rgb(255 62 165 / 0.08) 0 8deg, transparent 8deg 16deg),
+    linear-gradient(180deg, rgb(8 5 16 / 0.38), rgb(8 5 16 / 0.72)),
+    var(--elation-art, none),
+    radial-gradient(circle at 12% 0%, rgb(255 59 92 / 0.24), transparent 42%),
     linear-gradient(165deg, var(--elation-void-2), var(--elation-void));
-  box-shadow: var(--window-shadow), inset 0 0 0 1px rgb(76 230 255 / 0.11);
+  background-size: 100% 100%, cover, 100% 100%, cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: var(--window-shadow), inset 0 0 0 1px rgb(255 214 228 / 0.16);
 }
 .ama-root[data-material="elation"] .ama-titlebar {
-  border-bottom: 1px solid rgb(255 62 165 / 0.34);
-  background: linear-gradient(180deg, rgb(255 62 165 / 0.16), rgb(18 10 30 / 0.36));
+  position: relative;
+  border-bottom: 6px solid transparent;
+  border-image: repeating-linear-gradient(90deg, var(--elation-cream) 0 14px, var(--elation-ink) 14px 28px) 6;
+  background: linear-gradient(180deg, rgb(255 59 92 / 0.2), rgb(12 7 22 / 0.44));
+  padding-bottom: 10px;
+  box-shadow: 0 2px 0 rgb(255 59 92 / 0.35);
+}
+.ama-root[data-material="elation"] .ama-titlebar::after {
+  content: "♠ ♥ ♦ ♣";
+  position: absolute;
+  right: 124px;
+  top: 2px;
+  color: rgb(255 59 92 / 0.42);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  letter-spacing: .22em;
+  pointer-events: none;
+}
+.ama-root[data-material="elation"] .ama-brand-name {
+  font-family: Georgia, "Times New Roman", "Songti SC", "SimSun", serif;
+  letter-spacing: .02em;
+  text-shadow: 0 0 16px rgb(255 59 92 / 0.35);
+}
+.ama-root[data-material="elation"] .ama-logo {
+  background: linear-gradient(145deg, #ff3b5c, #7d1a34 58%, #151020);
+  color: #fff2ec;
+  box-shadow: 0 0 0 2px rgb(247 241 230 / 0.75), 0 0 22px rgb(255 59 92 / 0.55);
+}
+.ama-root[data-material="elation"] .ama-title-pills::before {
+  content: "♣ ♥";
+  margin-right: 5px;
+  color: rgb(255 214 228 / 0.65);
+  font-family: Georgia, serif;
+  font-size: 11px;
+  letter-spacing: .16em;
 }
 .ama-root[data-material="elation"] .ama-sidebar {
   border-right: 1px solid rgb(255 62 165 / 0.24);
@@ -2979,15 +3034,59 @@ const STYLES = `
 .ama-root[data-material="elation"] .ama-deal-card,
 .ama-root[data-material="elation"] .ama-free-card,
 .ama-root[data-material="elation"] .ama-profile {
-  border-color: rgb(255 62 165 / 0.24);
-  background: linear-gradient(150deg, rgb(42 22 68 / 0.82), rgb(22 12 38 / 0.9));
+  border-color: rgb(255 59 92 / 0.28);
+  background: linear-gradient(150deg, rgb(32 18 52 / 0.68), rgb(15 9 26 / 0.8));
+  box-shadow: 0 10px 26px rgb(0 0 0 / 0.22), inset 0 0 0 1px rgb(247 241 230 / 0.05);
+}
+.ama-root[data-material="elation"] .ama-panel-title::before {
+  content: "♦ ";
+  color: rgb(255 59 92 / 0.8);
+  font-size: .82em;
+}
+.ama-root[data-material="elation"] .ama-hero::after {
+  content: "♠ ♥ ♦ ♣";
+  position: absolute;
+  width: auto;
+  height: auto;
+  top: auto;
+  right: 22px;
+  bottom: 12px;
+  left: auto;
+  border-radius: 0;
+  background: none;
+  color: rgb(247 241 230 / 0.18);
+  font-family: Georgia, serif;
+  font-size: 26px;
+  letter-spacing: .34em;
+  pointer-events: none;
+}
+.ama-root[data-material="elation"] .ama-cloud { border-radius: 10px; background: linear-gradient(150deg, var(--elation-cream), #d9c7ad); border: 2px solid rgb(255 59 92 / 0.8); filter: none; opacity: .5; box-shadow: 0 14px 30px rgb(0 0 0 / 0.45); display: grid; place-items: center; }
+.ama-root[data-material="elation"] .ama-cloud::before { content: "♠"; color: var(--elation-ink); font-family: Georgia, serif; font-size: 20px; }
+.ama-root[data-material="elation"] .ama-cloud.c1 { width: 84px; height: 118px; left: 2%; top: 58%; transform: rotate(-15deg); }
+.ama-root[data-material="elation"] .ama-cloud.c1::before { content: "♠"; }
+.ama-root[data-material="elation"] .ama-cloud.c2 { width: 74px; height: 104px; right: 2%; top: 24%; transform: rotate(12deg); box-shadow: 0 14px 30px rgb(0 0 0 / 0.45); }
+.ama-root[data-material="elation"] .ama-cloud.c2::before { content: "♥"; color: #d21f3c; }
+.ama-root[data-material="elation"] .ama-cloud.c3 { width: 92px; height: 128px; right: 6%; bottom: 5%; left: auto; opacity: .34; }
+.ama-root[data-material="elation"] .ama-cloud.c3::before { content: "♦"; color: #d21f3c; }
+.ama-root[data-material="elation"] .ama-spark { color: var(--elation-gold); opacity: .7; font-family: Georgia, serif; font-size: 0; }
+.ama-root[data-material="elation"] .ama-spark::before { font-size: 17px; }
+.ama-root[data-material="elation"] .ama-spark.s1::before { content: "♣"; }
+.ama-root[data-material="elation"] .ama-spark.s2::before { content: "♠"; }
+.ama-root[data-material="elation"] .ama-spark.s3::before { content: "♥"; }
+.ama-root[data-material="elation"] .ama-nav-btn.is-active::after {
+  content: "♥";
+  margin-left: auto;
+  color: rgb(255 59 92 / 0.85);
+  font-size: 9px;
 }
 .ama-root[data-material="elation"] .ama-nav-btn.is-active {
-  border: 1px solid rgb(255 62 165 / 0.5);
-  background: linear-gradient(135deg, rgb(255 62 165 / 0.28), rgb(76 230 255 / 0.12));
-  box-shadow: 0 0 18px rgb(255 62 165 / 0.25);
-  color: #ffe9f8;
+  border: 1px solid rgb(255 59 92 / 0.55);
+  background: linear-gradient(135deg, rgb(255 59 92 / 0.3), rgb(21 16 32 / 0.6));
+  box-shadow: 0 0 18px rgb(255 59 92 / 0.28);
+  color: #fff1ee;
 }
+.ama-root[data-material="elation"] .ama-win-btn:hover { background: rgb(255 59 92 / 0.24); color: #fff2ec; }
+.ama-root[data-material="elation"] .ama-win-btn.is-close:hover { background: #ff3b5c; color: #fff6f2; }
 .ama-root[data-material="elation"] .ama-btn-primary {
   background: linear-gradient(135deg, #ff3ea5 0%, #b52cf0 52%, #4ce6ff 130%);
   box-shadow: 0 8px 22px rgb(255 62 165 / 0.32);
@@ -3002,7 +3101,11 @@ const STYLES = `
 .ama-root[data-material="elation"] .ama-badge.is-peach { color: #ffe1b8; background: rgb(255 209 102 / 0.16); }
 .ama-root[data-material="elation"] .ama-chip { border-color: rgb(76 230 255 / 0.22); background: rgb(255 62 165 / 0.1); color: #e6c9f7; }
 .ama-root[data-material="elation"] .ama-nav-glyph { background: rgb(255 255 255 / 0.1); }
-.ama-root[data-material="elation"] .ama-footer { border-top: 1px dashed rgb(255 62 165 / 0.28); }
+.ama-root[data-material="elation"] .ama-footer {
+  border-top: 4px solid transparent;
+  border-image: repeating-linear-gradient(90deg, var(--elation-cream) 0 10px, var(--elation-ink) 10px 20px) 4;
+  background: rgb(10 6 18 / 0.4);
+}
 
 /* Food room: 食用手册. Layout and typography only; panels inherit the
    material, theme and corner rules from the shared .ama-panel / .ama-chip
@@ -3130,6 +3233,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const safeState: ShellState = state || {}
   const shell = safeState.shell || {}
   const bridge = safeState.bridge || {}
+  const artPayload = safeState.art || {}
   const telemetry = safeState.telemetry || {}
   const pulseInfo = safeState.pulse || {}
   const webInfo = safeState.web || {}
@@ -6666,6 +6770,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     "--sky-deep": `color-mix(in srgb, ${uiProfile.accent} 58%, var(--ink))`,
     "--ui-radius": `${uiProfile.radius}px`,
     "--window-bg": windowBackgroundValue(uiProfile),
+    "--elation-art": artPayload.elation ? `url("${artPayload.elation}")` : "none",
   } as any
 
   const footer = (
