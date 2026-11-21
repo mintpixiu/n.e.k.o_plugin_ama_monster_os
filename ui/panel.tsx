@@ -1,7 +1,7 @@
 import { FileDownload, useEffect, useState } from "@neko/plugin-ui"
 import type { HostedAction, PluginSurfaceProps } from "@neko/plugin-ui"
 
-type ViewId = "home" | "web" | "steam" | "codex" | "tokens" | "studio" | "core" | "bridge" | "about"
+type ViewId = "home" | "web" | "steam" | "codex" | "tokens" | "food" | "studio" | "core" | "bridge" | "about"
 type ChromeMode = "normal" | "max" | "min" | "asleep"
 type ThemeMode = "light" | "dark"
 type UiWallpaper = "grid" | "dots" | "aurora" | "stars" | "plain"
@@ -743,6 +743,49 @@ type TokenRadar = {
   time_note?: string
 }
 
+type FoodCoupon = { title?: string; how?: string; note?: string }
+
+type FoodEntry = {
+  id?: string
+  name?: string
+  category?: string
+  price?: string
+  platforms?: string[]
+  coupon?: string
+  arrival?: string
+}
+
+type FoodPlatform = {
+  id?: string
+  name?: string
+  short?: string
+  entry?: string
+  caution?: string
+  coupons?: FoodCoupon[]
+}
+
+type FoodManual = {
+  ok?: boolean
+  name?: string
+  version?: string
+  updated?: string
+  disclaimer?: string
+  categories?: string[]
+  platforms?: FoodPlatform[]
+  brands?: FoodEntry[]
+  dishes?: FoodEntry[]
+  summary?: { platforms?: number; brands?: number; dishes?: number }
+}
+
+type FoodDraw = {
+  ok?: boolean
+  dish?: FoodEntry
+  platform?: { id?: string; name?: string; short?: string }
+  coupon?: FoodCoupon
+  arrival?: string
+  price?: string
+}
+
 type BootEvent = { name?: string; at?: string; detail?: string }
 
 type ShellState = {
@@ -756,6 +799,7 @@ type ShellState = {
   steam?: SteamInfo
   token_radar?: TokenRadar
   codex?: CodexSummary
+  food?: FoodManual
   ui_profile?: UiProfile
   events?: BootEvent[]
   preview?: boolean
@@ -770,6 +814,7 @@ const VIEWS: Array<{ id: ViewId; key: string; glyph: string }> = [
   { id: "steam", key: "nav.steam", glyph: "◈" },
   { id: "codex", key: "nav.codex", glyph: "▤" },
   { id: "tokens", key: "nav.tokens", glyph: "₮" },
+  { id: "food", key: "nav.food", glyph: "筷" },
   { id: "studio", key: "nav.studio", glyph: "✎" },
   { id: "core", key: "nav.core", glyph: "✦" },
   { id: "bridge", key: "nav.bridge", glyph: "⇄" },
@@ -2777,6 +2822,36 @@ const STYLES = `
     linear-gradient(170deg, #fdfbf6, #f3ecdf);
 }
 
+/* Food room: 隔离食用手册. Layout and typography only; panels inherit the
+   material, theme and corner rules from the shared .ama-panel / .ama-chip
+   classes, and .ama-web-chip.is-active is the only state added here. */
+.ama-food-hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 12px; align-items: start; }
+.ama-food-draw-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.ama-food-draw-result { margin-top: 12px; }
+.ama-food-dish { font-size: 30px; font-weight: 900; letter-spacing: -.03em; line-height: 1.1; }
+.ama-food-draw-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.ama-food-draw-block { min-width: 0; padding: 10px 12px; border: 1px dashed var(--line-strong); border-radius: 12px; background: color-mix(in srgb, var(--sky-soft) 40%, transparent); }
+.ama-food-label { display: block; color: var(--muted); font-size: 8.5px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.ama-food-text { margin: 5px 0 0; color: var(--ink-soft); font-size: 10px; line-height: 1.62; overflow-wrap: anywhere; }
+.ama-food-meta { margin: 6px 0 0; color: var(--muted); font-size: 9px; line-height: 1.55; overflow-wrap: anywhere; }
+.ama-food-draw-empty { display: grid; place-items: center; gap: 4px; padding: 26px 0 14px; }
+.ama-food-draw-glyph { color: color-mix(in srgb, var(--sky) 62%, var(--ink)); font-size: 36px; font-weight: 900; line-height: 1; }
+.ama-food-split { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 12px; align-items: start; margin-top: 12px; }
+.ama-food-filters { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.ama-web-chip.is-active { border-color: color-mix(in srgb, var(--sky) 55%, var(--line)); background: var(--sky-soft); color: var(--sky-deep); }
+.ama-food-brands { display: grid; gap: 8px; }
+.ama-food-brand { min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2); }
+.ama-food-brand-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ama-food-brand-name { font-size: 11.5px; font-weight: 850; letter-spacing: -.01em; }
+.ama-food-coupon { padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.ama-food-coupon:last-child { border-bottom: 0; }
+.ama-food-coupon-title { font-size: 10px; font-weight: 800; }
+@media (max-width: 760px) {
+  .ama-food-hero,
+  .ama-food-split,
+  .ama-food-draw-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* Continuous-curvature corners (G2).
    A plain border-radius joins a straight edge to a circular arc, so curvature
    jumps from 0 to 1/r at the seam -- the outline is tangent-continuous (G1) but
@@ -2851,7 +2926,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const reserved = Array.isArray(bridge.reserved) ? bridge.reserved : []
   const activity = bridge.activity || {}
   const contractVersion = bridge.contract_version || "1.0.0"
-  const version = shell.version || "0.6.12"
+  const version = shell.version || "0.7.0"
   const shellName = shell.name || "Ama Monster OS"
   const hosted = shell.hosted !== false
   const pulseAction = actionById(actions || [], "ama_pulse")
@@ -2905,6 +2980,24 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   const [codexDetailLoading, setCodexDetailLoading] = useState(false)
   const [codexSyncing, setCodexSyncing] = useState(false)
   const [codexSyncNote, setCodexSyncNote] = useState("")
+  const initialFood = safeState.food || {}
+  const initialFoodPlatforms = Array.isArray(initialFood.platforms) ? initialFood.platforms : []
+  const initialFoodBrands = Array.isArray(initialFood.brands) ? initialFood.brands : []
+  const [foodPlatforms, setFoodPlatforms] = useState<FoodPlatform[]>(initialFoodPlatforms)
+  const [foodBrands, setFoodBrands] = useState<FoodEntry[]>(initialFoodBrands)
+  const [foodCategories, setFoodCategories] = useState<string[]>(
+    Array.isArray(initialFood.categories) ? initialFood.categories.map((item: any) => String(item)) : [],
+  )
+  const [foodSummary, setFoodSummary] = useState<{ platforms?: number; brands?: number; dishes?: number }>(
+    initialFood.summary || {},
+  )
+  const [foodUpdated, setFoodUpdated] = useState(String(initialFood.updated || ""))
+  const [foodDisclaimer, setFoodDisclaimer] = useState(String(initialFood.disclaimer || ""))
+  const [foodPlatform, setFoodPlatform] = props.useLocalState<string>("ama.food.platform", String(initialFoodPlatforms[0]?.id || ""))
+  const [foodCategory, setFoodCategory] = props.useLocalState<string>("ama.food.category", "all")
+  const [foodDraw, setFoodDraw] = props.useLocalState<FoodDraw | null>("ama.food.draw", null)
+  const [foodBusy, setFoodBusy] = useState(false)
+  const [foodMessage, setFoodMessage] = useState("")
   const [uiSaving, setUiSaving] = useState(false)
 
   useEffect(() => {
@@ -2917,6 +3010,12 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     const timer = setInterval(() => { void loadTokenPrices(false) }, 60000)
     return () => clearInterval(timer)
   }, [view, tokenAuto, tokenLoading])
+
+  useEffect(() => {
+    if (view !== "food") return
+    if (foodPlatforms.length > 0 && foodBrands.length > 0) return
+    void loadFoodManual()
+  }, [view, foodPlatforms.length, foodBrands.length])
   const [uiDirty, setUiDirty] = useState(false)
   const [uiMessage, setUiMessage] = useState("")
   const [recentColors, setRecentColors] = props.useLocalState<string[]>("ama.studio.recent", [])
@@ -2984,7 +3083,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     return value && value !== key ? value : fallback
   }
 
-  const validViews: ViewId[] = ["home", "web", "steam", "codex", "tokens", "studio", "core", "bridge", "about"]
+  const validViews: ViewId[] = ["home", "web", "steam", "codex", "tokens", "food", "studio", "core", "bridge", "about"]
   const activeView: ViewId = validViews.indexOf(view) >= 0 ? view : "home"
   const validChrome: ChromeMode[] = ["normal", "max", "min", "asleep"]
   const activeChrome: ChromeMode = validChrome.indexOf(chrome) >= 0 ? chrome : "normal"
@@ -3440,6 +3539,54 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
       // Keep the previous detail panel.
     } finally {
       setCodexDetailLoading(false)
+    }
+  }
+
+  async function loadFoodManual() {
+    const action = actionById(actions || [], "ama_food_manual")
+    if (!action || foodBusy) return
+    setFoodBusy(true)
+    setFoodMessage("")
+    try {
+      const result = unwrapResult(await props.api.call(action.id || "ama_food_manual", {}, { timeoutMs: 15000 }))
+      const manual = result && typeof result === "object" ? result as FoodManual : {}
+      const platforms = Array.isArray(manual.platforms) ? manual.platforms : []
+      const brands = Array.isArray(manual.brands) ? manual.brands : []
+      setFoodPlatforms(platforms)
+      setFoodBrands(brands)
+      setFoodCategories(Array.isArray(manual.categories) ? manual.categories.map((item: any) => String(item)) : [])
+      setFoodSummary(manual.summary && typeof manual.summary === "object" ? manual.summary : {})
+      setFoodUpdated(String(manual.updated || ""))
+      setFoodDisclaimer(String(manual.disclaimer || ""))
+      if (platforms.length > 0 && !platforms.some((item) => item.id === foodPlatform)) {
+        setFoodPlatform(String(platforms[0].id || ""))
+      }
+    } catch (_error) {
+      setFoodMessage(tr("food.loadError", "Could not load the food manual."))
+    } finally {
+      setFoodBusy(false)
+    }
+  }
+
+  async function drawFood() {
+    const action = actionById(actions || [], "ama_food_draw")
+    if (!action || foodBusy) return
+    setFoodBusy(true)
+    setFoodMessage("")
+    try {
+      const result = unwrapResult(await props.api.call(action.id || "ama_food_draw", {
+        avoid: foodDraw?.dish?.id || "",
+        category: foodCategory === "all" ? "" : foodCategory,
+      }, { timeoutMs: 15000 }))
+      if (result && result.dish && typeof result.dish === "object") {
+        setFoodDraw(result as FoodDraw)
+      } else {
+        setFoodMessage(tr("food.drawError", "Could not draw a meal. Try again."))
+      }
+    } catch (_error) {
+      setFoodMessage(tr("food.drawError", "Could not draw a meal. Try again."))
+    } finally {
+      setFoodBusy(false)
     }
   }
 
@@ -5194,6 +5341,177 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     </>
   )
 
+  const foodPlatformData = foodPlatforms.find((item) => item.id === foodPlatform) || foodPlatforms[0]
+  const foodFilteredBrands = foodBrands.filter((brand) => foodCategory === "all" || brand.category === foodCategory)
+  const foodDrawDish = foodDraw?.dish || {}
+  const foodDrawPlatform = foodDraw?.platform || {}
+  const foodDrawCoupon = foodDraw?.coupon || {}
+  const foodDrawPrice = foodDraw?.price || foodDrawDish.price || ""
+
+  const foodView = (
+    <>
+      <div className="ama-view-head">
+        <div>
+          <div className="ama-kicker"><span className="ama-kicker-line" />{tr("food.kicker", "FOOD")}</div>
+          <h1 className="ama-view-title">{tr("food.title", "隔离食用手册")}</h1>
+          <p className="ama-view-sub">{tr("food.subtitle", "优惠券攻略、外卖推荐，还有今天吃什么的随机抽签。")}</p>
+        </div>
+        <span className="ama-badge is-mint">{tr("food.badge.offline", "离线快照")}{foodUpdated ? ` · ${foodUpdated}` : ""}</span>
+      </div>
+
+      <div className="ama-food-hero">
+        <section className="ama-panel ama-food-draw-panel">
+          <div className="ama-food-draw-head">
+            <div>
+              <div className="ama-kicker"><span className="ama-kicker-line" />{tr("food.draw.title", "今天吃什么")}</div>
+              <p className="ama-panel-hint">{tr("food.draw.hint", "抽一道菜，顺带告诉你上哪个平台点、先领什么券。")}</p>
+            </div>
+            <button
+              type="button"
+              className="ama-btn ama-btn-primary"
+              disabled={foodBusy}
+              aria-busy={foodBusy}
+              onClick={() => { void drawFood() }}
+            >
+              {foodBusy
+                ? tr("food.draw.busy", "抽签中...")
+                : foodDrawDish.name
+                  ? tr("food.draw.again", "再抽一次")
+                  : tr("food.draw.button", "抽一个")}
+            </button>
+          </div>
+          {foodDrawDish.name ? (
+            <div className="ama-food-draw-result">
+              <div className="ama-food-dish">{foodDrawDish.name}</div>
+              <div className="ama-chips">
+                {foodDrawDish.category ? <span className="ama-chip">{foodDrawDish.category}</span> : null}
+                {foodDrawPrice ? <span className="ama-chip">{foodDrawPrice}</span> : null}
+                {foodDrawPlatform.name ? <span className="ama-chip">{tr("food.draw.platform", "点单平台")}: {foodDrawPlatform.name}</span> : null}
+              </div>
+              <div className="ama-food-draw-grid">
+                <div className="ama-food-draw-block">
+                  <span className="ama-food-label">{tr("food.draw.coupon", "券怎么领")}</span>
+                  {foodDrawCoupon.title ? <p className="ama-food-text">{foodDrawCoupon.title}</p> : null}
+                  <p className="ama-food-text">{foodDrawCoupon.how || ""}</p>
+                  {foodDrawCoupon.note ? <p className="ama-food-meta">{foodDrawCoupon.note}</p> : null}
+                </div>
+                <div className="ama-food-draw-block">
+                  <span className="ama-food-label">{tr("food.draw.arrival", "怎么到")}</span>
+                  <p className="ama-food-text">{foodDraw?.arrival || foodDrawDish.arrival || ""}</p>
+                  <p className="ama-food-meta">{tr("food.draw.arrivalNote", "到店路线用地图 App 查最近门店；配送时效以下单页为准。")}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="ama-food-draw-empty">
+              <span className="ama-food-draw-glyph" aria-hidden="true">筷</span>
+              <p className="ama-empty">{tr("food.draw.idle", "还没抽，点一下看看今天吃什么。")}</p>
+            </div>
+          )}
+          {foodMessage ? <div className="ama-note">{foodMessage}</div> : null}
+        </section>
+        <aside className="ama-panel">
+          <div className="ama-panel-head">
+            <div>
+              <h2 className="ama-panel-title">{tr("food.stats.title", "手册一览")}</h2>
+              <p className="ama-panel-hint">{tr("food.stats.hint", "全部离线整理，随时可查。")}</p>
+            </div>
+          </div>
+          <div className="ama-rows">
+            <div className="ama-row"><span className="ama-row-key">{tr("food.stats.platforms", "平台")}</span><span className="ama-row-val">{Number(foodSummary.platforms) || foodPlatforms.length}</span></div>
+            <div className="ama-row"><span className="ama-row-key">{tr("food.stats.brands", "品牌")}</span><span className="ama-row-val">{Number(foodSummary.brands) || foodBrands.length}</span></div>
+            <div className="ama-row"><span className="ama-row-key">{tr("food.stats.dishes", "菜品")}</span><span className="ama-row-val">{Number(foodSummary.dishes) || "—"}</span></div>
+            <div className="ama-row"><span className="ama-row-key">{tr("food.stats.updated", "快照日期")}</span><span className="ama-row-val">{foodUpdated || "—"}</span></div>
+          </div>
+          <div className="ama-note">{tr("food.stats.note", "不抓取平台数据，也不含真实门店地址。")}</div>
+        </aside>
+      </div>
+
+      <div className="ama-food-split">
+        <section className="ama-panel">
+          <div className="ama-panel-head">
+            <div>
+              <h2 className="ama-panel-title">{tr("food.coupons.title", "优惠券获取方式")}</h2>
+              <p className="ama-panel-hint">{tr("food.coupons.hint", "按平台整理：先进入口领券，再回下单页核对。")}</p>
+            </div>
+            <span className="ama-badge is-muted">{foodPlatforms.length}</span>
+          </div>
+          <div className="ama-steam-tabs">
+            {foodPlatforms.map((platform) => (
+              <button
+                type="button"
+                key={platform.id}
+                className={`ama-steam-tab${platform.id === foodPlatformData?.id ? " is-active" : ""}`}
+                onClick={() => setFoodPlatform(String(platform.id || ""))}
+              >{platform.name || platform.id}</button>
+            ))}
+          </div>
+          {foodPlatformData ? (
+            <>
+              <div className="ama-rows">
+                {(foodPlatformData.coupons || []).map((coupon) => (
+                  <div className="ama-food-coupon" key={coupon.title || coupon.how}>
+                    <div className="ama-food-coupon-title">{coupon.title}</div>
+                    <p className="ama-food-text">{coupon.how}</p>
+                    {coupon.note ? <p className="ama-food-meta">{tr("food.coupons.note", "提醒")}: {coupon.note}</p> : null}
+                  </div>
+                ))}
+              </div>
+              {foodPlatformData.entry ? <div className="ama-note">{tr("food.coupons.entry", "入口")}: {foodPlatformData.entry}</div> : null}
+              {foodPlatformData.caution ? <p className="ama-food-meta">{foodPlatformData.caution}</p> : null}
+            </>
+          ) : <div className="ama-empty">{tr("food.coupons.empty", "还没有优惠券数据。")}</div>}
+        </section>
+        <section className="ama-panel">
+          <div className="ama-panel-head">
+            <div>
+              <h2 className="ama-panel-title">{tr("food.picks.title", "外卖推荐")}</h2>
+              <p className="ama-panel-hint">{tr("food.picks.hint", "全国连锁品牌，标注平台、优惠和取送方式。")}</p>
+            </div>
+            <span className="ama-badge is-muted">{foodFilteredBrands.length}</span>
+          </div>
+          <div className="ama-food-filters">
+            <button
+              type="button"
+              className={`ama-web-chip${foodCategory === "all" ? " is-active" : ""}`}
+              onClick={() => setFoodCategory("all")}
+            >{tr("food.picks.all", "全部")}</button>
+            {foodCategories.map((category) => (
+              <button
+                type="button"
+                key={category}
+                className={`ama-web-chip${foodCategory === category ? " is-active" : ""}`}
+                onClick={() => setFoodCategory(category)}
+              >{category}</button>
+            ))}
+          </div>
+          <div className="ama-food-brands">
+            {foodFilteredBrands.map((brand) => (
+              <article className="ama-food-brand" key={brand.id || brand.name}>
+                <div className="ama-food-brand-head">
+                  <span className="ama-food-brand-name">{brand.name}</span>
+                  {brand.price ? <span className="ama-chip">{brand.price}</span> : null}
+                </div>
+                <div className="ama-chips">
+                  {brand.category ? <span className="ama-chip">{brand.category}</span> : null}
+                  {(brand.platforms || []).map((platformId) => {
+                    const platformName = foodPlatforms.find((item) => item.id === platformId)?.name || platformId
+                    return <span className="ama-chip" key={platformId}>{platformName}</span>
+                  })}
+                </div>
+                {brand.coupon ? <p className="ama-food-text"><strong>{tr("food.picks.coupon", "优惠")}:</strong> {brand.coupon}</p> : null}
+                {brand.arrival ? <p className="ama-food-meta"><strong>{tr("food.picks.arrival", "取送")}:</strong> {brand.arrival}</p> : null}
+              </article>
+            ))}
+            {foodFilteredBrands.length === 0 ? <div className="ama-empty">{tr("food.picks.empty", "没有匹配的推荐。")}</div> : null}
+          </div>
+        </section>
+      </div>
+
+      <div className="ama-note">{foodDisclaimer || tr("food.disclaimer", "离线快照，不是实时价格或活动；具体以下单页为准。")}</div>
+    </>
+  )
+
   const coreView = (
     <>
       <div className="ama-view-head">
@@ -5800,7 +6118,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     </>
   )
 
-  const content = activeView === "web" ? webView : activeView === "steam" ? steamView : activeView === "codex" ? codexView : activeView === "tokens" ? tokenView : activeView === "studio" ? studioView : activeView === "core" ? coreView : activeView === "bridge" ? bridgeView : activeView === "about" ? aboutView : homeView
+  const content = activeView === "web" ? webView : activeView === "steam" ? steamView : activeView === "codex" ? codexView : activeView === "tokens" ? tokenView : activeView === "food" ? foodView : activeView === "studio" ? studioView : activeView === "core" ? coreView : activeView === "bridge" ? bridgeView : activeView === "about" ? aboutView : homeView
 
   const uiStyle = {
     "--sky": uiProfile.accent,

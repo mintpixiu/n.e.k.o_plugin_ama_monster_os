@@ -6,7 +6,7 @@
 - name: `N.E.K.O Ama Monster OS`
 - entry: `plugin.plugins.ama_monster_os:AmaMonsterOsPlugin`
 - main class: `AmaMonsterOsPlugin`
-- version: `0.6.12` (displayed as **0.6.12**)
+- version: `0.7.0` (displayed as **0.7.0**)
 
 ## Purpose
 
@@ -33,6 +33,7 @@ from the first version.
 - An **offline Arknights operator codex** (81 entries) with class, rarity, faction, race and tags. Data is bundled text only: no official artwork, voice lines, story text or wiki copy, and no runtime fetching.
 - **Five materials** — glass, metal, cream, ink, solid — controlled by `material`, `glass_blur` and `glass_alpha` in the UI profile. All are pure CSS (no remote assets, no injected styles).
 - A **Token radar** for 10 providers and 20 models, using the public models.dev list-price catalog; it polls every 60 seconds, persists daily OHLC candles, and explicitly distinguishes DeepSeek peak/off-peak pricing from flat providers.
+- An **offline food manual** room (隔离食用手册): coupon-acquisition tips for 美团/饿了么/京东外卖/淘宝闪购/抖音, nationwide chain-brand delivery picks with platform, coupon and delivery/pickup notes, and a random "今天吃什么" draw that attaches a platform, coupon, price hint and arrival note. Data is a bundled editorial snapshot: no platform scraping, no live prices, no real store addresses, no ordering.
 - A versioned Steam sale calendar snapshot sourced from Steamworks, with current/next event, next seasonal sale, local countdowns, and an official schedule link.
 - A two-provider search chain: N.E.K.O `web_search` first, fixed Bing RSS fallback second.
 - Steam sign-in through Steam OpenID with a loopback callback; the UI states the flow and never asks for a password. Steam++ (Watt Toolkit) acceleration is detected and surfaced.
@@ -73,7 +74,8 @@ from the first version.
 ## Out of Scope
 
 - A general browser or arbitrary-URL reader; only search is implemented.
-- Steam library, achievements, wallet, friends, or inventory in 0.6.12. Sign-in is limited to the public OpenID profile.
+- Live food-delivery prices, coupon scraping, real store addresses, route planning, or automatic coupon claiming/ordering.
+- Steam library, achievements, wallet, friends, or inventory in 0.7.0. Sign-in is limited to the public OpenID profile.
 - Native desktop windows, process control, filesystem browsing, voice pipeline, real chat/memory/tool/style modules.
 - Any claim that the preview is a complete operating system.
 - Publishing to the N.E.K.O Market. The repository owner publishes manually.
@@ -88,9 +90,10 @@ from the first version.
 - sale picks: fixed CheapShark deals endpoint, filtered and enriched; no paid placement
 - free shelf: versioned `steam_catalog.py` list of permanently free titles
 - sale calendar: versioned `steam_sales.py` snapshot from Steamworks; dates shown in local time; Valve can change them
+- food manual: versioned `food_manual.py` offline snapshot (5 platforms, 16 chain brands, 24 dish choices); `runtime.draw_food()` picks one dish and attaches platform, coupon, price and arrival notes; no network, no store addresses
 - UI profile: `ui_profile.py` schema, persisted to `data/ui_profile.json`, exported as `ama.ui.profile` JSON
-- UI surfaces: one `panel` (`ui/panel.tsx`), one Markdown guide, one Markdown docs page
-- state/config: read-only snapshot plus in-memory last search and price lookup; no persistent config in 0.6.12
+- UI surfaces: one `panel` (`ui/panel.tsx`), five Markdown guides, one Markdown docs page
+- state/config: read-only snapshot plus in-memory last search and price lookup; no persistent config in 0.7.0
 - lifecycle/background work: startup/shutdown only; no timers or background tasks
 - external integrations: N.E.K.O web search plugin, Bing RSS fallback, CheapShark price API
 
@@ -134,7 +137,11 @@ plugins such as `lifekit` and `mcp_adapter`.
   data URLs; profiles are validated server-side before persistence.
 - The sale calendar is a static snapshot, not a live feed. It is marked with an
   update date and an official Steamworks link so users can verify changed dates.
+- The food manual is an editorial offline snapshot: platform coupon rules and
+  brand campaigns change often, and no real store addresses or live prices are
+  included. It never scrapes a delivery platform, never signs in, and never
+  claims a coupon will apply; the checkout page stays authoritative.
 - Window chrome controls are presentation state inside one hosted panel; they
   do not control the N.E.K.O application window.
-- Version `0.6.12` is a Stable release; the user publishes manually with their
+- Version `0.7.0` is a Stable release; the user publishes manually with their
   own tag and Market confirmation.

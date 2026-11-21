@@ -343,6 +343,17 @@ versioned snapshot from Valve's Steamworks documentation, not a live feed:
 A future desktop build can reuse `steam_sales.py` directly; it has no host or
 network dependency.
 
+### Food manual
+
+The runtime adds `food` to the snapshot from `food_manual.food_manual_payload()`.
+It is a bundled, versioned editorial snapshot (five delivery platforms,
+nationwide chain brands, and dish choices) containing coupon-acquisition tips,
+price hints, platform names, and delivery/pickup notes. It contains no live
+prices, promotions, or real store addresses, and it never scrapes a delivery
+platform. `runtime.draw_food(avoid, category)` returns one random dish with a
+platform, coupon tip, price hint, and arrival note; it performs no network I/O.
+A future desktop build can reuse `food_manual.py` directly.
+
 ### `record_event()`
 
 Best-effort host journal. It must never raise. A failing journal must not break
@@ -386,6 +397,8 @@ Release provider resources. Must be idempotent.
     "web_search": "ama_web_search",
     "steam_search": "ama_steam_search",
     "steam_deals": "ama_steam_deals",
+    "food_manual": "ama_food_manual",
+    "food_draw": "ama_food_draw",
     "ui_profile": "ama_ui_profile_save",
     "contract": "ama_system_contract"
   }
@@ -426,7 +439,8 @@ capability it cannot serve.
 5. Call `runtime.pulse()` for the pulse button, `runtime.search_web(query)` for
    the Web room, `runtime.search_game_prices(query)` for the Steam price room,
    `runtime.steam_deals()` for sale picks, `runtime.set_ui_profile(profile)` for
-   the appearance studio, and `runtime.contract()` for the bridge page.
+   the appearance studio, `runtime.draw_food()` for the food room, and
+   `runtime.contract()` for the bridge page.
 6. Call `await runtime.stop()` before exiting.
 7. Keep `contract_version` at `1.0.0` for additions that do not break v1. Bump
    the major version and update the schema for breaking changes.

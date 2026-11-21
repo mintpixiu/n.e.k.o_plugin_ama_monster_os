@@ -19,7 +19,7 @@ def test_identity_is_locked() -> None:
     assert ROOT.name == "ama_monster_os"
     assert plugin["id"] == "ama_monster_os"
     assert plugin["name"] == "N.E.K.O Ama Monster OS"
-    assert plugin["version"] == "0.6.12"
+    assert plugin["version"] == "0.7.0"
     assert plugin["type"] == "plugin"
     assert plugin["author"]["name"] == "呆萌貔貅"
     assert plugin["entry"] == "plugin.plugins.ama_monster_os:AmaMonsterOsPlugin"
@@ -58,6 +58,7 @@ def test_hosted_ui_surfaces_exist() -> None:
         "docs/quickstart.md",
         "docs/codex.md",
         "docs/token-radar.md", "docs/ui-studio.md",
+        "docs/food-manual.md",
         "docs/system-contract.md",
     }
     for item in guides:

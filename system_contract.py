@@ -93,6 +93,8 @@ ENTRYPOINTS = {
     "steam_account": "ama_steam_account",
     "steam_logout": "ama_steam_logout",
     "token_prices": "ama_token_prices",
+    "food_manual": "ama_food_manual",
+    "food_draw": "ama_food_draw",
     "ui_profile": "ama_ui_profile_save",
     "contract": "ama_system_contract",
 }
@@ -227,6 +229,8 @@ def validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
             "steam_account",
             "steam_logout",
             "token_prices",
+            "food_manual",
+            "food_draw",
             "ui_profile",
             "contract",
         ):

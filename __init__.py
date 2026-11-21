@@ -25,6 +25,7 @@ from plugin.sdk.plugin import (
 
 from .arknights_codex import codex_detail, codex_operators, codex_payload, codex_summary, tools_payload
 from .arknights_sync import sync_index
+from .food_manual import food_manual_payload
 from .shell_runtime import SHELL_CHANNEL, SHELL_DISPLAY_VERSION, SHELL_NAME, AmaOsRuntime
 from .steam_account import SteamAccountService
 from .system_port import NekoHostSystemPort
@@ -179,6 +180,20 @@ TOKEN_PRICES_SCHEMA: dict[str, Any] = {
     },
 }
 
+FOOD_DRAW_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "avoid": {
+            "type": "string",
+            "description": "Optional dish id from the previous draw, to avoid repeating it.",
+        },
+        "category": {
+            "type": "string",
+            "description": "Optional dish category filter, e.g. 中式热食 or 面食粉类.",
+        },
+    },
+}
+
 
 @neko_plugin
 class AmaMonsterOsPlugin(NekoPluginBase):
@@ -222,6 +237,7 @@ class AmaMonsterOsPlugin(NekoPluginBase):
             self._runtime.set_codex(codex_summary(codex_operators(self.data_path())))
         except Exception as exc:
             self.logger.warning("Could not build the codex summary: %s", exc)
+        self._runtime.set_food(food_manual_payload())
         try:
             self._runtime.set_steam_account(self._steam_account().status())
         except Exception as exc:
@@ -756,6 +772,86 @@ class AmaMonsterOsPlugin(NekoPluginBase):
                 default="Token prices updated: {count} models.",
             ).replace("{count}", str(model_count)),
         })
+
+    @ui.action(
+        id="ama_food_manual",
+        label=tr("actions.food_manual.label", default="隔离食用手册"),
+        icon="search",
+        tone="default",
+        order=42,
+        refresh_context=True,
+    )
+    @plugin_entry(
+        id="ama_food_manual",
+        name=tr("entries.food_manual.name", default="隔离食用手册"),
+        description=tr(
+            "entries.food_manual.description",
+            default=(
+                "Read the offline food manual: coupon-acquisition tips for the "
+                "main delivery platforms, recommended nationwide brands, and "
+                "delivery or pickup notes. Not a live price or promotion feed."
+            ),
+        ),
+        input_schema=PULSE_SCHEMA,
+        llm_result_fields=["summary"],
+        timeout=10,
+    )
+    async def ama_food_manual(self, **_):
+        payload = food_manual_payload()
+        self._runtime.set_food(payload)
+        counts = payload.get("summary") or {}
+        summary = (
+            self.i18n.t(
+                "entries.food_manual.summary",
+                default="Food manual loaded: {platforms} platforms, {brands} brands, {dishes} dishes.",
+            )
+            .replace("{platforms}", str(counts.get("platforms", 0)))
+            .replace("{brands}", str(counts.get("brands", 0)))
+            .replace("{dishes}", str(counts.get("dishes", 0)))
+        )
+        return Ok({
+            **payload,
+            # `summary` must stay a string for the LLM/tool result contract, so
+            # the structured counts travel under their own key.
+            "food_summary": payload.get("summary") or {},
+            "summary": summary,
+        })
+
+    @ui.action(
+        id="ama_food_draw",
+        label=tr("actions.food_draw.label", default="今天吃什么"),
+        icon="refresh",
+        tone="primary",
+        order=43,
+        refresh_context=True,
+    )
+    @plugin_entry(
+        id="ama_food_draw",
+        name=tr("entries.food_draw.name", default="今天吃什么"),
+        description=tr(
+            "entries.food_draw.description",
+            default=(
+                "Draw one random meal choice and attach a delivery platform, a "
+                "coupon tip, a price hint, and delivery or pickup notes."
+            ),
+        ),
+        input_schema=FOOD_DRAW_SCHEMA,
+        llm_result_fields=["summary"],
+        timeout=10,
+    )
+    async def ama_food_draw(self, avoid: Any = "", category: Any = "", **_):
+        result = self._runtime.draw_food(str(avoid or ""), str(category or ""))
+        dish = result.get("dish") or {}
+        platform = result.get("platform") or {}
+        summary = (
+            self.i18n.t(
+                "entries.food_draw.summary",
+                default="Today: {dish} via {platform}. Claim a coupon before ordering.",
+            )
+            .replace("{dish}", str(dish.get("name") or ""))
+            .replace("{platform}", str(platform.get("name") or ""))
+        )
+        return Ok({**result, "summary": summary})
 
     # ------------------------------------------------------------------
     # Future integration surface

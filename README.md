@@ -1,18 +1,18 @@
 # N.E.K.O Ama Monster OS
 
-> **0.6.12 Stable** · a NEKO-styled shell window for Project N.E.K.O, with live
-> web search, a Steam price radar, a token price radar, and a versioned system
-> bridge reserved for a future standalone build.
+> **0.7.0 Stable** · a NEKO-styled shell window for Project N.E.K.O, with live
+> web search, a Steam price radar, a token price radar, an offline food manual,
+> and a versioned system bridge reserved for a future standalone build.
 
 ![Ama Monster OS shell preview](docs/preview.png)
 
 This is the first window of **Ama Monster OS**, not a finished operating
 system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
-0.6.12 contains.
+0.7.0 contains.
 
 ## What is real in this version
 
-- A working Hosted TSX window: cat-ear title bar, Home/Web/Steam/Studio/Core/Bridge/About
+- A working Hosted TSX window: cat-ear title bar, Home/Web/Steam/Codex/Token/Food/Studio/Core/Bridge/About
   views, minimize, expand, sleep/wake, day/moon theme, and responsive layout.
 - A live snapshot from the plugin: uptime, boot count, bridge health, host
   platform, Python/SDK versions, and privacy-filtered activity.
@@ -35,6 +35,12 @@ system. It runs as a normal N.E.K.O Hosted TSX plugin and is honest about what
   sample skins, a data-only story brief, and a curated **helper-tools and
   download** panel are included. No official art, voice lines or story text is
   bundled.
+- An **offline food manual** room (隔离食用手册): coupon-acquisition tips for
+  美团, 饿了么, 京东外卖, 淘宝闪购 and 抖音, nationwide chain-brand delivery
+  picks with platform, coupon and delivery/pickup notes, and a random
+  **今天吃什么** draw that attaches a platform, coupon, price hint and arrival
+  note. It is a bundled editorial snapshot: no platform scraping, no live
+  prices, no real store addresses, no sign-in and no ordering.
 - **Five materials**: **glass** (Apple / Xiaomi style translucent panels with
   backdrop blur and rim light), **metal** (brushed steel with chamfered
   highlights), **cream** (cartoon cream with thick outlines and sticker
@@ -170,6 +176,24 @@ The all-time low is CheapShark's cross-store record, not an official Steam
 regional low. Steam Community and the Steam Store API were unreachable from the
 test network, so they are not used.
 
+## Food manual
+
+The **食** room is an offline food manual, not a delivery integration:
+
+- **今天吃什么** draws one dish from 24 bundled choices and attaches a delivery
+  platform, the coupon to claim first, a price hint, and a delivery/pickup note.
+  Drawing again never repeats the previous dish.
+- **优惠券获取方式** documents claim paths and stacking cautions for 美团,
+  饿了么, 京东外卖, 淘宝闪购 and 抖音.
+- **外卖推荐** lists 16 nationwide chain brands with their usual platforms,
+  coupon tips, delivery/pickup notes and a price range.
+- Data boundary: the manual is a 2026-11-21 editorial snapshot. It is not live
+  pricing, stock or promotions, it contains no real store addresses, and it
+  never scrapes a platform, signs in to a delivery account or places an order.
+  Use a map app for the nearest store; the checkout page is authoritative.
+
+Step-by-step guide: [docs/food-manual.md](docs/food-manual.md).
+
 ## Appearance studio
 
 The **Studio** room is a safe, declarative appearance editor:
@@ -259,8 +283,11 @@ continuously into the straight edge (G2).
 - Native windows, process control, filesystem access, voice pipeline.
 - Real chat/memory/tool/style modules. They are shown as **Reserved**, not
   faked as working.
-- Any Market publication. The **0.6.12** GitHub Release is live; the Market
-  Stable submission remains manual.
+- Live food-delivery prices, coupon scraping, real store addresses, route
+  planning, or automatic coupon claiming/ordering. The food room is an offline
+  editorial snapshot.
+- Any Market publication. The **0.6.12** GitHub Release is live; the 0.7.0
+  release and the Market Stable submission remain manual.
 
 ## Install and open the window
 
@@ -306,6 +333,7 @@ ama_monster_os/
 ├── __init__.py                 SDK facade, context, entries, lifecycle
 ├── shell_runtime.py            host-free shell runtime
 ├── arknights_codex.py          offline operator codex data
+├── food_manual.py              offline food manual + meal draw
 ├── steam_catalog.py            versioned free-to-play shelf
 ├── steam_sales.py              versioned Steam sale calendar
 ├── ui_profile.py               validated UI profile + import/export
@@ -337,8 +365,9 @@ ama_monster_os/
 ├── docs/preview-studio-io.png   appearance import/export preview
 ├── docs/preview-studio-image.png imported window image preview
 ├── docs/ui-studio.md            appearance & import/export tutorial
+├── docs/food-manual.md          offline food manual and coupon guide
 ├── i18n/                       8 locale files
-└── tests/                      contract, runtime, web, manifest, i18n, UI checks
+└── tests/                      contract, runtime, web, manifest, food, i18n, UI checks
 ```
 
 ## Development
@@ -367,14 +396,16 @@ python -m pytest tests
 ```
 
 See [PUBLISHING.md](PUBLISHING.md) for the Stable release and Market submission
-notes. The latest GitHub Release is `v0.6.12`; Market notification remains manual.
+notes. The latest GitHub Release is `v0.6.12`; 0.7.0 is prepared but not yet
+tagged. Market notification remains manual.
 
 ## Versioning and release
 
-- Manifest version: `0.6.12`
-- Display version: **0.6.12**
+- Manifest version: `0.7.0`
+- Display version: **0.7.0**
 - Release channel: **Stable**
-- Published GitHub Release: **v0.6.12**
+- Latest published GitHub Release: **v0.6.12**
+- Next release: **v0.7.0** (prepared, not tagged)
 - Market: **not submitted**; the Stable channel submission is manual
 
 ## Credits

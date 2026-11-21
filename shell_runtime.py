@@ -15,6 +15,12 @@ from datetime import datetime
 from typing import Any, Mapping
 
 try:  # package-relative import used by the N.E.K.O plugin
+    from .food_manual import (
+        DISCLAIMER as FOOD_DISCLAIMER,
+        FOOD_MANUAL_NAME,
+        FOOD_MANUAL_UPDATED,
+        draw_meal,
+    )
     from .steam_catalog import (
         FREE_TO_PLAY,
         FREE_TO_PLAY_GROUP_SIZE,
@@ -29,6 +35,12 @@ try:  # package-relative import used by the N.E.K.O plugin
     )
     from .ui_profile import DEFAULT_UI_PROFILE, normalize_ui_profile
 except ImportError:  # pragma: no cover - direct test import fallback
+    from food_manual import (  # type: ignore[no-redef]
+        DISCLAIMER as FOOD_DISCLAIMER,
+        FOOD_MANUAL_NAME,
+        FOOD_MANUAL_UPDATED,
+        draw_meal,
+    )
     from steam_catalog import (  # type: ignore[no-redef]
         FREE_TO_PLAY,
         FREE_TO_PLAY_GROUP_SIZE,
@@ -44,8 +56,8 @@ except ImportError:  # pragma: no cover - direct test import fallback
     from ui_profile import DEFAULT_UI_PROFILE, normalize_ui_profile  # type: ignore[no-redef]
 
 SHELL_NAME = "Ama Monster OS"
-SHELL_VERSION = "0.6.12"
-SHELL_DISPLAY_VERSION = "0.6.12"
+SHELL_VERSION = "0.7.0"
+SHELL_DISPLAY_VERSION = "0.7.0"
 SHELL_CHANNEL = "Stable"
 SHELL_CODENAME = "Ama-01"
 _MAX_QUERY_CHARS = 200
@@ -176,6 +188,18 @@ class AmaOsRuntime:
         }
         self._ui_profile = normalize_ui_profile(DEFAULT_UI_PROFILE)
         self._codex: dict[str, Any] = {"version": "", "updated": "", "total": 0, "classes": {}, "rarities": {}, "factions": [], "disclaimer": ""}
+        self._food: dict[str, Any] = {
+            "ok": True,
+            "name": FOOD_MANUAL_NAME,
+            "version": "",
+            "updated": FOOD_MANUAL_UPDATED,
+            "disclaimer": FOOD_DISCLAIMER,
+            "categories": [],
+            "platforms": [],
+            "brands": [],
+            "dishes": [],
+            "summary": {"platforms": 0, "brands": 0, "dishes": 0},
+        }
         self._deals_offset = 0
         self._free_shelf_offset = 0
         self._free_shelf: tuple[list[dict[str, Any]], int, int] = ([], 1, 1)
@@ -306,6 +330,25 @@ class AmaOsRuntime:
             self._codex = {str(key): value for key, value in summary.items()}
         return dict(self._codex)
 
+    def set_food(self, manual: Mapping[str, Any] | None) -> dict[str, Any]:
+        if isinstance(manual, Mapping):
+            self._food = {str(key): value for key, value in manual.items()}
+        return dict(self._food)
+
+    def draw_food(self, avoid: str = "", category: str = "") -> dict[str, Any]:
+        """Draw one meal choice and record it in the shell journal."""
+
+        result = draw_meal(avoid=avoid, category=category)
+        dish = result.get("dish") if isinstance(result.get("dish"), Mapping) else {}
+        platform = result.get("platform") if isinstance(result.get("platform"), Mapping) else {}
+        detail = f"{dish.get('name', '')} / {platform.get('name', '')}".strip(" /")[:200]
+        self._record("food.draw", detail)
+        try:
+            self._port.record_event("food.draw", detail)
+        except Exception:
+            self._degraded = True
+        return result
+
     def set_steam_account(self, value: Mapping[str, Any] | None) -> dict[str, Any]:
         if isinstance(value, Mapping):
             self._steam_account = {str(key): value for key, value in value.items()}
@@ -399,6 +442,7 @@ class AmaOsRuntime:
             "ui_profile": dict(self._ui_profile),
             "token_radar": dict(self._token_radar),
             "codex": dict(self._codex),
+            "food": dict(self._food),
             "preview": True,
         }
 
