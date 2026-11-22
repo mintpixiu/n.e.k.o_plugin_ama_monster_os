@@ -442,6 +442,49 @@ function uiThemeEnvelope(value: any): any {
   }
 }
 
+/**
+ * Open an http(s) URL from inside the hosted surface.
+ *
+ * Hosted panels run in a sandboxed iframe (`sandbox="allow-scripts"`) without
+ * allow-popups / allow-same-origin, so `window.open` and `<a target="_blank">`
+ * are silent no-ops there. The host listens for
+ * `neko-hosted-surface-open-external` and routes it through the system browser
+ * (Electron) or a new tab (plain browser). Keep the plain-anchor fallback for
+ * hosts that do allow popups.
+ */
+function openExternalUrl(url: any): void {
+  const text = typeof url === "string" ? url.trim() : ""
+  if (!/^https?:\/\//i.test(text)) return
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: "neko-hosted-surface-open-external", payload: { url: text } }, "*")
+      return
+    }
+    window.open(text, "_blank", "noopener,noreferrer")
+  } catch (_error) {
+    // Older host without the bridge: keep the anchor's own navigation.
+  }
+}
+
+function ExternalLink(props: { href?: any; className?: string; title?: string; children?: any }) {
+  const url = typeof props.href === "string" ? props.href : ""
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className={props.className}
+      title={props.title}
+      onClick={(event: any) => {
+        if (/^https?:\/\//i.test(url)) {
+          event.preventDefault()
+          openExternalUrl(url)
+        }
+      }}
+    >{props.children}</a>
+  )
+}
+
 type ModuleInfo = {
   id?: string
   name_key?: string
@@ -5216,7 +5259,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           )}
           <p className="ama-token-source">
             {tr("tokens.source", "数据源")}：
-            <a href="https://models.dev/" target="_blank" rel="noreferrer">models.dev</a>
+            <ExternalLink href="https://models.dev/">models.dev</ExternalLink>
             <span> · {tokenUpdatedAt ? new Date(tokenUpdatedAt).toLocaleString("zh-CN") : "—"}</span>
           </p>
         </section>
@@ -5767,9 +5810,9 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
           {[...(recipe.tools || []), ...(recipe.tags || [])].join(" · ")}
         </span>
         {recipe.url ? (
-          <a className="ama-food-link" href={recipe.url} target="_blank" rel="noreferrer">
+          <ExternalLink className="ama-food-link" href={recipe.url}>
             {recipe.video ? tr("food.cook.video", "B 站视频") : tr("food.cook.link", "查看来源")} ↗
-          </a>
+          </ExternalLink>
         ) : <span className="ama-food-meta">{tr("food.cook.noLink", "暂无视频")}</span>}
       </div>
     </article>
@@ -5896,7 +5939,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
         {cookCatalog?.source ? (
           <div className="ama-note">
             {tr("food.cook.source", "数据来源")}: {cookCatalog.source_name || "食用手册"} · {cookCatalog.updated || ""} ·{" "}
-            <a href={String(cookCatalog.source || "")} target="_blank" rel="noreferrer">{tr("food.cook.sourceLink", "原版数据仓库")} ↗</a>
+            <ExternalLink href={String(cookCatalog.source || "")}>{tr("food.cook.sourceLink", "原版数据仓库")} ↗</ExternalLink>
           </div>
         ) : null}
       </section>
@@ -6050,9 +6093,9 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
                 </div>
               ) : null}
               {foodPlatformData.url ? (
-                <a className="ama-food-link" href={foodPlatformData.url} target="_blank" rel="noreferrer">
+                <ExternalLink className="ama-food-link" href={foodPlatformData.url}>
                   {tr("food.coupons.open", "打开平台")} ↗
-                </a>
+                </ExternalLink>
               ) : null}
             </>
           ) : <div className="ama-empty">{tr("food.coupons.empty", "还没有优惠券数据。")}</div>}
@@ -6110,9 +6153,9 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
             <p className="ama-panel-hint">{foodOriginal?.summary || tr("food.original.hint", "原版是一个按现有食材和厨具找菜谱的网站。")}</p>
           </div>
           {foodOriginal?.url ? (
-            <a className="ama-btn ama-btn-ghost" href={foodOriginal.url} target="_blank" rel="noreferrer">
+            <ExternalLink className="ama-btn ama-btn-ghost" href={foodOriginal.url}>
               {tr("food.original.open", "打开原版网站")} ↗
-            </a>
+            </ExternalLink>
           ) : null}
         </div>
         <div className="ama-food-steps">
@@ -6131,7 +6174,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
         <div className="ama-note">
           {foodOriginal?.note || ""}
           {foodOriginal?.docs_url ? (
-            <> <a href={foodOriginal.docs_url} target="_blank" rel="noreferrer">{tr("food.original.docs", "作者说明")} ↗</a></>
+            <> <ExternalLink href={foodOriginal.docs_url}>{tr("food.original.docs", "作者说明")} ↗</ExternalLink></>
           ) : null}
         </div>
       </section>

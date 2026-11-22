@@ -211,7 +211,9 @@ The **食** room is an offline food manual, not a delivery integration:
   pricing, stock or promotions, coupon codes expire, it contains no real store
   addresses, and it never scrapes a platform, signs in to a delivery account or
   places an order. External recipe and video links are third-party and may
-  expire. The checkout page is authoritative.
+  expire. The hosted panel is a sandboxed iframe, so links are handed to
+  N.E.K.O's external-open bridge (system browser) instead of a plain
+  `target="_blank"` anchor. The checkout page is authoritative.
 
 Step-by-step guide: [docs/food-manual.md](docs/food-manual.md).
 
