@@ -110,8 +110,19 @@ def _fake_sdk() -> Iterator[None]:
 def _load_module():
     for name in [name for name in list(sys.modules) if name == "ama_monster_os" or name.startswith("ama_monster_os.")]:
         sys.modules.pop(name, None)
-    with _fake_sdk():
-        module = importlib.import_module("ama_monster_os")
+    # ``conftest`` puts the plugin directory itself on ``sys.path`` (top-level
+    # modules such as ``steam_account``), but the package import needs its
+    # parent directory instead.
+    parent = str(Path(__file__).resolve().parents[1].parent)
+    added = parent not in sys.path
+    if added:
+        sys.path.insert(0, parent)
+    try:
+        with _fake_sdk():
+            module = importlib.import_module("ama_monster_os")
+    finally:
+        if added and parent in sys.path:
+            sys.path.remove(parent)
     return module
 
 
