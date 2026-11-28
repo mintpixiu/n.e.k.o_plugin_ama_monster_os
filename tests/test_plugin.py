@@ -13,8 +13,9 @@ import importlib
 import logging
 import sys
 import types
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import pytest
 
@@ -88,12 +89,30 @@ def _install_fake_sdk() -> None:
     sys.modules["plugin.sdk"] = sdk_package
     sys.modules["plugin.sdk.plugin"] = sdk_module
 
-    importlib.import_module("ama_monster_os")
+
+@contextmanager
+def _fake_sdk() -> Iterator[None]:
+    """Install the fake SDK and put the host's real modules back afterwards."""
+
+    names = ("plugin", "plugin.sdk", "plugin.sdk.plugin")
+    saved = {name: sys.modules.get(name) for name in names}
+    _install_fake_sdk()
+    try:
+        yield
+    finally:
+        for name, module in saved.items():
+            if module is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = module
 
 
 def _load_module():
-    _install_fake_sdk()
-    return sys.modules["ama_monster_os"]
+    for name in [name for name in list(sys.modules) if name == "ama_monster_os" or name.startswith("ama_monster_os.")]:
+        sys.modules.pop(name, None)
+    with _fake_sdk():
+        module = importlib.import_module("ama_monster_os")
+    return module
 
 
 class RecordingSteamService:
