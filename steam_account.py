@@ -177,6 +177,16 @@ def steam_id_from_claimed_id(claimed_id: str) -> str:
     return match.group(1) if match else ""
 
 
+def _same_return_to(expected: str, returned: str) -> bool:
+    """Compare the loopback return URL without letting a query string pass."""
+
+    if not expected or not returned:
+        return False
+    left = urllib.parse.urlsplit(expected)
+    right = urllib.parse.urlsplit(returned)
+    return (left.scheme, left.netloc, left.path) == (right.scheme, right.netloc, right.path)
+
+
 def verify_assertion(
     params: Mapping[str, str],
     *,
@@ -371,6 +381,7 @@ class SteamAccountService:
         self._verifier = verifier or verify_assertion
         self._server: _CallbackServer | None = None
         self._state = ""
+        self._return_to = ""
         self._started_at = 0.0
         self._lock = threading.Lock()
 
@@ -415,6 +426,7 @@ class SteamAccountService:
             realm = return_to.rsplit("/steam/", 1)[0]
             self._server = server
             self._state = state
+            self._return_to = return_to
             self._started_at = datetime.now(timezone.utc).timestamp()
             url = build_login_url(return_to, realm, state)
         return {
@@ -437,6 +449,7 @@ class SteamAccountService:
         with self._lock:
             server = self._server
             state = self._state
+            expected_return_to = self._return_to
             started = self._started_at
         if server is None:
             return {"ok": True, "status": "idle", "account": self.load()}
@@ -445,19 +458,18 @@ class SteamAccountService:
         if not captured:
             age = datetime.now(timezone.utc).timestamp() - started if started else 0.0
             if age > LOGIN_TTL_SECONDS:
-                server.stop()
-                with self._lock:
-                    self._server = None
+                self.stop()
                 return {"ok": False, "status": "expired", "error": "login_expired"}
             return {"ok": True, "status": "pending"}
 
-        server.stop()
-        with self._lock:
-            self._server = None
+        self.stop()
 
         returned_state = captured.get("openid.state", "")
-        if state and returned_state and returned_state != state:
+        if not state or not returned_state or returned_state != state:
             return {"ok": False, "status": "error", "error": "state_mismatch"}
+
+        if not _same_return_to(expected_return_to, captured.get("openid.return_to", "")):
+            return {"ok": False, "status": "error", "error": "return_to_mismatch"}
 
         ok, steam_id, error = self._verifier(captured)
         if not ok:
@@ -487,6 +499,17 @@ class SteamAccountService:
             "accelerator": self._detector(),
             "login": "pending" if self._server is not None else "idle",
         }
+
+    def stop(self) -> None:
+        """Stop the loopback listener and invalidate the pending login state."""
+
+        with self._lock:
+            server, self._server = self._server, None
+            self._state = ""
+            self._return_to = ""
+            self._started_at = 0.0
+        if server is not None:
+            server.stop()
 
 
 __all__ = [

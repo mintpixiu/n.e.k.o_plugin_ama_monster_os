@@ -125,6 +125,14 @@ plugins such as `lifekit` and `mcp_adapter`.
   callback, `check_authentication` verification. Passwords are never collected
   by the plugin. When `steamcommunity.com` is unreachable the card reports the
   Steam++ detection result instead of pretending to be connected.
+- The Steam login listener is a plugin-lifetime singleton and `stop()` runs on
+  shutdown. The callback must echo the issued `openid.state` and
+  `openid.return_to`; a missing or foreign value rejects the login. Steam
+  probes (`status`, `start_login`, `poll_login`, `clear`) run through
+  `asyncio.to_thread` because the reachability probe can block for seconds.
+- Hosted TSX compiles a single entry file, so `ui/panel.tsx` stays one module.
+  Every action call goes through the shared `callAction` helper instead of
+  repeating `unwrapResult(await props.api.call(...))` at each site.
 - CheapShark prices are USD and its all-time low is cross-store, not an official
   Steam regional low. The UI carries both labels.
 - Steam China prices are current prices in CNY from Valve's store API, not CN

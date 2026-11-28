@@ -3499,6 +3499,16 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
         ? tr("pulse.last", "Last pulse #{count}").replace("{count}", String(pulseCount))
         : tr("pulse.never", "No pulse yet"))
 
+  async function callAction(
+    action: HostedAction | undefined,
+    fallbackId: string,
+    args: Record<string, any> = {},
+    timeoutMs?: number,
+  ): Promise<Record<string, any>> {
+    const options = timeoutMs ? { timeoutMs } : undefined
+    return unwrapResult(await props.api.call(action?.id || fallbackId, args, options))
+  }
+
   function changeView(next: ViewId) {
     setView(next)
   }
@@ -3570,13 +3580,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     }
     setUiSaving(true)
     try {
-      const result = unwrapResult(
-        await props.api.call(
-          uiProfileSaveAction.id || "ama_ui_profile_save",
-          { profile },
-          { timeoutMs: 15000 },
-        ),
-      )
+      const result = await callAction(uiProfileSaveAction, "ama_ui_profile_save", { profile }, 15000)
       if (result.ok === false) {
         setUiMessage(String(result.summary || "") || tr("studio.saveFailed", "Could not save appearance."))
       } else {
@@ -3812,9 +3816,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setTokenLoading(true)
     setTokenMessage("")
     try {
-      const result = unwrapResult(
-        await props.api.call(tokenAction.id || "ama_token_prices", { force }, { timeoutMs: 45000 }),
-      )
+      const result = await callAction(tokenAction, "ama_token_prices", { force }, 45000)
       const radar = result.token_radar && typeof result.token_radar === "object" ? result.token_radar : result
       const models = Array.isArray(radar.models) ? radar.models as TokenModel[] : []
       const history = radar.history && typeof radar.history === "object"
@@ -3845,9 +3847,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setCodexLoading(true)
     setCodexMessage("")
     try {
-      const result = unwrapResult(
-        await props.api.call(codexAction.id || "ama_arknights_codex", { query: "", classes: [], rarities: [], max_results: 1000 }, { timeoutMs: 15000 }),
-      )
+      const result = await callAction(codexAction, "ama_arknights_codex", { query: "", classes: [], rarities: [], max_results: 1000 }, 15000)
       if (result.ok === false) {
         setCodexMessage(tr("codex.error", "图鉴读取失败，可以重试。"))
         return
@@ -3878,9 +3878,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setCodexSyncing(true)
     setCodexSyncNote(tr("codex.syncing", "正在下载完整干员表…"))
     try {
-      const result = unwrapResult(
-        await props.api.call(codexSyncAction.id || "ama_arknights_sync", {}, { timeoutMs: 180000 }),
-      )
+      const result = await callAction(codexSyncAction, "ama_arknights_sync", {}, 180000)
       if (result.ok === false) {
         setCodexSyncNote(tr("codex.syncFailed", "同步失败，请检查网络后重试。"))
         return
@@ -3901,9 +3899,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     if (!codexDetailAction) return
     setCodexDetailLoading(true)
     try {
-      const result = unwrapResult(
-        await props.api.call(codexDetailAction.id || "ama_arknights_detail", { operator_id: operatorId }, { timeoutMs: 10000 }),
-      )
+      const result = await callAction(codexDetailAction, "ama_arknights_detail", { operator_id: operatorId }, 10000)
       if (result.ok === false) return
       setCodexDetail({
         skins: Array.isArray(result.skins) ? result.skins as CodexSkin[] : [],
@@ -3925,7 +3921,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setFoodBusy(true)
     setFoodMessage("")
     try {
-      const result = unwrapResult(await props.api.call(action.id || "ama_food_manual", {}, { timeoutMs: 15000 }))
+      const result = await callAction(action, "ama_food_manual", {}, 15000)
       const manual = result && typeof result === "object" ? result as FoodManual : {}
       const platforms = Array.isArray(manual.platforms) ? manual.platforms : []
       const brands = Array.isArray(manual.brands) ? manual.brands : []
@@ -3954,10 +3950,15 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setFoodBusy(true)
     setFoodMessage("")
     try {
-      const result = unwrapResult(await props.api.call(action.id || "ama_food_draw", {
-        avoid: foodDraw?.dish?.id || "",
-        category: foodCategory === "all" ? "" : foodCategory,
-      }, { timeoutMs: 15000 }))
+      const result = await callAction(
+        action,
+        "ama_food_draw",
+        {
+          avoid: foodDraw?.dish?.id || "",
+          category: foodCategory === "all" ? "" : foodCategory,
+        },
+        15000,
+      )
       if (result && result.dish && typeof result.dish === "object") {
         setFoodDraw(result as FoodDraw)
       } else {
@@ -3980,12 +3981,17 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setCookLoading(true)
     setCookMessage("")
     try {
-      const result = unwrapResult(await props.api.call(action.id || "ama_cook_search", {
-        foods: cookFoods,
-        tool: cookTool,
-        mode: cookMode,
-        limit: 160,
-      }, { timeoutMs: 20000 }))
+      const result = await callAction(
+        action,
+        "ama_cook_search",
+        {
+          foods: cookFoods,
+          tool: cookTool,
+          mode: cookMode,
+          limit: 160,
+        },
+        20000,
+      )
       const results = Array.isArray(result.results) ? result.results as CookRecipe[] : []
       setCookResults(results)
       setCookCount(Number(result.count) || results.length)
@@ -4005,7 +4011,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setCookLoading(true)
     setCookMessage("")
     try {
-      const result = unwrapResult(await props.api.call(action.id || "ama_cook_random", {}, { timeoutMs: 15000 }))
+      const result = await callAction(action, "ama_cook_random", {}, 15000)
       const recipe = result.recipe && typeof result.recipe === "object" ? result.recipe as CookRecipe : null
       if (recipe) {
         setCookRandom(recipe)
@@ -4039,9 +4045,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setPulse({ status: "running", message: tr("pulse.running", "Listening...") })
     const started = Date.now()
     try {
-      const result = unwrapResult(
-        await props.api.call(pulseAction.id || "ama_pulse", {}, { timeoutMs: 15000 }),
-      )
+      const result = await callAction(pulseAction, "ama_pulse", {}, 15000)
       if (result.ok === false) throw new Error(String(result.error || result.summary || "pulse failed"))
       const ms = Math.max(1, Date.now() - started)
       setPulse({
@@ -4088,13 +4092,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setSteamStatus("searching")
     setSteamMessage(tr("steam.searching", "Checking prices..."))
     try {
-      const result = unwrapResult(
-        await props.api.call(
-          steamSearchAction.id || "ama_steam_search",
-          { query, max_results: 3 },
-          { timeoutMs: 45000 },
-        ),
-      )
+      const result = await callAction(steamSearchAction, "ama_steam_search", { query, max_results: 3 }, 45000)
       if (result.ok === false) {
         setSteamResults([])
         setSteamStatus("error")
@@ -4133,13 +4131,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setDealStatus("searching")
     setDealMessage(tr("steam.deals.loading", "Finding the best deals..."))
     try {
-      const result = unwrapResult(
-        await props.api.call(
-          steamDealsAction.id || "ama_steam_deals",
-          { max_results: 6 },
-          { timeoutMs: 45000 },
-        ),
-      )
+      const result = await callAction(steamDealsAction, "ama_steam_deals", { max_results: 6 }, 45000)
       if (result.ok === false) {
         setDealResults([])
         setDealStatus("error")
@@ -4178,9 +4170,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setSteamLoginNote("")
     setSteamLoginError("")
     try {
-      const result = unwrapResult(
-        await props.api.call(steamLoginAction.id || "ama_steam_login", {}, { timeoutMs: 20000 }),
-      )
+      const result = await callAction(steamLoginAction, "ama_steam_login", {}, 20000)
       if (result.ok === false) {
         setSteamLoginError(tr("steam.login.failed", "无法启动 Steam 登录，请稍后再试。"))
         return
@@ -4210,9 +4200,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     }
     await new Promise((resolve) => setTimeout(resolve, 2000))
     try {
-      const result = unwrapResult(
-        await props.api.call(steamAccountAction.id || "ama_steam_account", { finish: true }, { timeoutMs: 30000 }),
-      )
+      const result = await callAction(steamAccountAction, "ama_steam_account", { finish: true }, 30000)
       const account = result.account && typeof result.account === "object" ? result.account as SteamAccount : {}
       if (result.accelerator && typeof result.accelerator === "object") {
         setSteamAccelerator(result.accelerator as SteamAccelerator)
@@ -4242,9 +4230,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
   async function signOutSteam() {
     if (!steamLogoutAction) return
     try {
-      const result = unwrapResult(
-        await props.api.call(steamLogoutAction.id || "ama_steam_logout", {}, { timeoutMs: 10000 }),
-      )
+      const result = await callAction(steamLogoutAction, "ama_steam_logout", {}, 10000)
       if (result.ok === false) return
       setSteamAccount({})
       setSteamLoginUrl("")
@@ -4270,9 +4256,7 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
         await props.api.refresh()
         return
       }
-      const result = unwrapResult(
-        await props.api.call(steamFreeAction.id || "ama_steam_free", {}, { timeoutMs: 15000 }),
-      )
+      const result = await callAction(steamFreeAction, "ama_steam_free", {}, 15000)
       if (result.ok === false) return
       const results = Array.isArray(result.results) ? result.results : []
       if (results.length > 0) setFreeGames(results)
@@ -4300,12 +4284,11 @@ export default function AmaMonsterOsPanel(props: PluginSurfaceProps<ShellState>)
     setWebStatus("searching")
     setWebMessage(tr("web.searching", "Searching..."))
     try {
-      const result = unwrapResult(
-        await props.api.call(
-          webSearchAction.id || "ama_web_search",
-          { query, max_results: 5 },
-          { timeoutMs: 60000 },
-        ),
+      const result = await callAction(
+        webSearchAction,
+        "ama_web_search",
+        { query, max_results: 5 },
+        60000,
       )
       if (result.ok === false) {
         const error = String(result.error || "")

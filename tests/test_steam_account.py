@@ -147,6 +147,7 @@ def test_login_flow_persists_profile(tmp_path: Path) -> None:
         "openid.mode": "id_res",
         "openid.claimed_id": f"https://steamcommunity.com/openid/id/{STEAM_ID}",
         "openid.state": service._state,  # noqa: SLF001
+        "openid.return_to": service._return_to,  # noqa: SLF001
     })
 
     done = service.poll_login()
@@ -177,12 +178,56 @@ def test_login_rejects_state_mismatch(tmp_path: Path) -> None:
     server._captured.update({  # noqa: SLF001
         "openid.mode": "id_res",
         "openid.claimed_id": f"https://steamcommunity.com/openid/id/{STEAM_ID}",
+        "openid.return_to": service._return_to,  # noqa: SLF001
         "openid.state": "wrong",
     })
 
     result = service.poll_login()
     assert result["ok"] is False
     assert result["error"] == "state_mismatch"
+
+
+def test_login_rejects_missing_state(tmp_path: Path) -> None:
+    service = SteamAccountService(
+        tmp_path,
+        detector=lambda: {"available": True, "note": "", "redirected": []},
+        verifier=lambda _params: (True, STEAM_ID, ""),
+        profile_fetcher=lambda steam_id: {"steam_id": steam_id},
+    )
+    service.start_login()
+    server = service._server  # noqa: SLF001
+    assert server is not None
+    server._captured.update({  # noqa: SLF001
+        "openid.mode": "id_res",
+        "openid.claimed_id": f"https://steamcommunity.com/openid/id/{STEAM_ID}",
+        "openid.return_to": service._return_to,  # noqa: SLF001
+    })
+
+    result = service.poll_login()
+    assert result["ok"] is False
+    assert result["error"] == "state_mismatch"
+
+
+def test_login_rejects_foreign_return_to(tmp_path: Path) -> None:
+    service = SteamAccountService(
+        tmp_path,
+        detector=lambda: {"available": True, "note": "", "redirected": []},
+        verifier=lambda _params: (True, STEAM_ID, ""),
+        profile_fetcher=lambda steam_id: {"steam_id": steam_id},
+    )
+    service.start_login()
+    server = service._server  # noqa: SLF001
+    assert server is not None
+    server._captured.update({  # noqa: SLF001
+        "openid.mode": "id_res",
+        "openid.claimed_id": f"https://steamcommunity.com/openid/id/{STEAM_ID}",
+        "openid.state": service._state,  # noqa: SLF001
+        "openid.return_to": "http://127.0.0.1:9/steam/openid/callback",
+    })
+
+    result = service.poll_login()
+    assert result["ok"] is False
+    assert result["error"] == "return_to_mismatch"
 
 
 def test_status_reports_account_and_accelerator(tmp_path: Path) -> None:

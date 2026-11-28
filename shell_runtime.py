@@ -538,6 +538,41 @@ class AmaOsRuntime:
             })
         return results
 
+    async def _port_call(
+        self,
+        method: str,
+        args: tuple[Any, ...],
+        *,
+        timeout: float,
+        defaults: Mapping[str, Any],
+        retry_args: tuple[Any, ...] | None = None,
+    ) -> Mapping[str, Any]:
+        """Call one port method with the shared timeout/invalid/failure policy.
+
+        Returns the raw mapping on success, or a failure mapping with the same
+        provider metadata the successful result would carry.
+        """
+
+        caller = getattr(self._port, method, None)
+        failure: dict[str, Any] = {**defaults, "ok": False, "available": False, "results": []}
+        if caller is None:
+            return {**failure, "error": "unavailable"}
+        try:
+            try:
+                coroutine = caller(*args)
+            except TypeError:
+                if retry_args is None:
+                    raise
+                coroutine = caller(*retry_args)
+            raw = await asyncio.wait_for(coroutine, timeout=timeout)
+        except asyncio.TimeoutError:
+            return {**failure, "error": "timeout"}
+        except Exception:
+            return {**failure, "error": "search_failed"}
+        if not isinstance(raw, Mapping):
+            return {**failure, "error": "invalid_response"}
+        return raw
+
     async def search_web(self, query: str, max_results: int = 5) -> dict[str, Any]:
         text = str(query or "").strip()
         if not text:
@@ -553,41 +588,12 @@ class AmaOsRuntime:
             }
         text = text[:_MAX_QUERY_CHARS]
         limit = max(3, min(8, int(max_results or 5)))
-        caller = getattr(self._port, "search_web", None)
-        if caller is None:
-            result: Mapping[str, Any] = {
-                "ok": False,
-                "available": False,
-                "provider": "none",
-                "error": "unavailable",
-                "results": [],
-            }
-        else:
-            try:
-                raw = await asyncio.wait_for(caller(text, limit), timeout=50.0)
-                result = raw if isinstance(raw, Mapping) else {
-                    "ok": False,
-                    "available": False,
-                    "provider": "none",
-                    "error": "invalid_response",
-                    "results": [],
-                }
-            except asyncio.TimeoutError:
-                result = {
-                    "ok": False,
-                    "available": False,
-                    "provider": "none",
-                    "error": "timeout",
-                    "results": [],
-                }
-            except Exception:
-                result = {
-                    "ok": False,
-                    "available": False,
-                    "provider": "none",
-                    "error": "search_failed",
-                    "results": [],
-                }
+        result = await self._port_call(
+            "search_web",
+            (text, limit),
+            timeout=50.0,
+            defaults={"provider": "none"},
+        )
 
         results = self._clean_results(result.get("results"))
         provider = str(result.get("provider") or "none")[:80]
@@ -645,51 +651,15 @@ class AmaOsRuntime:
 
     async def steam_deals(self, max_results: int = 6) -> dict[str, Any]:
         limit = max(3, min(8, int(max_results or 6)))
-        caller = getattr(self._port, "fetch_steam_deals", None)
         offset = int(self._deals_offset)
         self._deals_offset += 1
-        if caller is None:
-            result: Mapping[str, Any] = {
-                "ok": False,
-                "available": False,
-                "provider": "CheapShark",
-                "currency": "USD",
-                "error": "unavailable",
-                "results": [],
-            }
-        else:
-            try:
-                try:
-                    coroutine = caller(limit, offset)
-                except TypeError:
-                    coroutine = caller(limit)
-                raw = await asyncio.wait_for(coroutine, timeout=35.0)
-                result = raw if isinstance(raw, Mapping) else {
-                    "ok": False,
-                    "available": False,
-                    "provider": "CheapShark",
-                    "currency": "USD",
-                    "error": "invalid_response",
-                    "results": [],
-                }
-            except asyncio.TimeoutError:
-                result = {
-                    "ok": False,
-                    "available": False,
-                    "provider": "CheapShark",
-                    "currency": "USD",
-                    "error": "timeout",
-                    "results": [],
-                }
-            except Exception:
-                result = {
-                    "ok": False,
-                    "available": False,
-                    "provider": "CheapShark",
-                    "currency": "USD",
-                    "error": "search_failed",
-                    "results": [],
-                }
+        result = await self._port_call(
+            "fetch_steam_deals",
+            (limit, offset),
+            timeout=35.0,
+            defaults={"provider": "CheapShark", "currency": "USD"},
+            retry_args=(limit,),
+        )
 
         raw_results = result.get("results")
         results = [
@@ -766,45 +736,12 @@ class AmaOsRuntime:
             }
         text = text[:_MAX_QUERY_CHARS]
         limit = max(3, min(5, int(max_results or 3)))
-        caller = getattr(self._port, "search_game_prices", None)
-        if caller is None:
-            result: Mapping[str, Any] = {
-                "ok": False,
-                "available": False,
-                "provider": "CheapShark",
-                "currency": "USD",
-                "error": "unavailable",
-                "results": [],
-            }
-        else:
-            try:
-                raw = await asyncio.wait_for(caller(text, limit), timeout=35.0)
-                result = raw if isinstance(raw, Mapping) else {
-                    "ok": False,
-                    "available": False,
-                    "provider": "CheapShark",
-                    "currency": "USD",
-                    "error": "invalid_response",
-                    "results": [],
-                }
-            except asyncio.TimeoutError:
-                result = {
-                    "ok": False,
-                    "available": False,
-                    "provider": "CheapShark",
-                    "currency": "USD",
-                    "error": "timeout",
-                    "results": [],
-                }
-            except Exception:
-                result = {
-                    "ok": False,
-                    "available": False,
-                    "provider": "CheapShark",
-                    "currency": "USD",
-                    "error": "search_failed",
-                    "results": [],
-                }
+        result = await self._port_call(
+            "search_game_prices",
+            (text, limit),
+            timeout=35.0,
+            defaults={"provider": "CheapShark", "currency": "USD"},
+        )
 
         raw_results = result.get("results")
         results = [

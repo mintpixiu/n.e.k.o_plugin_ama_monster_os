@@ -2,7 +2,10 @@
 
 **Status: 0.7.0 Stable is prepared but not tagged yet.** The latest published
 release is 0.6.12; the Market submission is still manual and has not been
-created.
+created. The 0.7.0 tree also carries the post-review fixes: one long-lived
+Steam login service, non-blocking Steam probes, strict OpenID callback
+validation, panel-only entries hidden from the agent, and a plugin-level
+integration test.
 
 - Version: `0.7.0` (displayed as **0.7.0**)
 - Channel: **stable**

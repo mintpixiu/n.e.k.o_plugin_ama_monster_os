@@ -174,7 +174,9 @@ for a Steam password and never puts Steam's login page inside the iframe:
 it opens `steamcommunity.com/openid/login` in your browser, Steam redirects
 back to a loopback port owned by the plugin, the assertion is verified with
 `check_authentication`, and only the public SteamID plus the public profile are
-stored in the plugin data folder.
+stored in the plugin data folder. The plugin keeps one login listener for its
+whole lifetime; the callback must carry the same `state` and `return_to` it
+issued, or the login is rejected.
 
 Because `steamcommunity.com` is frequently unreachable in mainland China, the
 card also reports whether **Steam++ (Watt Toolkit / 瓦特工具箱)** acceleration is
@@ -316,7 +318,9 @@ continuously into the straight edge (G2).
 
 1. Open **N.E.K.O → Plugin Manager**.
 2. Install the package through **Import**, or use **Developer mode → Load
-   unpacked plugin** and point it at this repository folder.
+   unpacked plugin** and point it at this repository folder. In Developer mode
+   the folder name must equal the plugin id (`ama_monster_os`), because the
+   workbench derives the id from the folder name.
 3. Start **N.E.K.O Ama Monster OS**. Auto-start is off by design.
 4. Open the plugin's **UI** tab and choose the **Ama Monster OS** panel.
 

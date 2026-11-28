@@ -103,6 +103,10 @@ def test_ui_entry_contract() -> None:
     assert 'from "@neko/plugin-ui"' in text
     assert "props.api.call" in text
     assert "props.api.refresh" in text
+    # Every entry action goes through the shared helper instead of repeating
+    # unwrapResult(await props.api.call(...)) at each call site.
+    assert "async function callAction" in text
+    assert text.count("props.api.call") == 1
     assert "import(" not in text
     imports = [line for line in text.splitlines() if line.lstrip().startswith("import ")]
     for line in imports:

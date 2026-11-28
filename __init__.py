@@ -2,7 +2,7 @@
 
 The facade is intentionally thin: it owns the SDK lifecycle, the Hosted UI
 context/action bridge, and two callable entries.  All shell state lives in
-:mod:`app`, and all host-specific behaviour lives behind
+:mod:`shell_runtime`, and all host-specific behaviour lives behind
 :class:`system_port.NekoHostSystemPort` so a future built-in desktop build can
 reuse the window and runtime with a different system port.
 """
@@ -137,7 +137,7 @@ CODEX_SCHEMA: dict[str, Any] = {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
-            "default": 1000,
+            "default": 120,
         },
     },
 }
@@ -167,6 +167,18 @@ STEAM_ACCOUNT_SCHEMA: dict[str, Any] = {
             "description": "Check whether the browser already completed the OpenID login.",
         },
     },
+}
+
+# No-argument entries get their own empty schema instead of borrowing another
+# entry's parameter shape.
+STEAM_LOGOUT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {},
+}
+
+CODEX_SYNC_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {},
 }
 
 TOKEN_PRICES_SCHEMA: dict[str, Any] = {
@@ -234,12 +246,15 @@ class AmaMonsterOsPlugin(NekoPluginBase):
     def __init__(self, ctx: Any) -> None:
         super().__init__(ctx)
         self._runtime = AmaOsRuntime(NekoHostSystemPort(self))
+        # One long-lived service so the loopback listener opened by
+        # ``ama_steam_login`` is the same one polled by ``ama_steam_account``.
+        self._steam = SteamAccountService(self.data_path())
 
     def _ui_profile_path(self):
         return self.data_path("ui_profile.json")
 
     def _steam_account(self) -> SteamAccountService:
-        return SteamAccountService(self.data_path())
+        return self._steam
 
     def _load_ui_profile(self) -> None:
         try:
@@ -271,7 +286,8 @@ class AmaMonsterOsPlugin(NekoPluginBase):
             self.logger.warning("Could not build the codex summary: %s", exc)
         self._runtime.set_food(food_manual_payload())
         try:
-            self._runtime.set_steam_account(self._steam_account().status())
+            status = await asyncio.to_thread(self._steam_account().status)
+            self._runtime.set_steam_account(status)
         except Exception as exc:
             self.logger.warning("Could not read the Steam account: %s", exc)
         await self._runtime.start()
@@ -295,6 +311,10 @@ class AmaMonsterOsPlugin(NekoPluginBase):
     @lifecycle(id="shutdown")
     async def on_shutdown(self, **_):
         await self._runtime.stop()
+        try:
+            await asyncio.to_thread(self._steam_account().stop)
+        except Exception as exc:
+            self.logger.warning("Could not stop the Steam login listener: %s", exc)
         return Ok({"status": "sleeping"})
 
     # ------------------------------------------------------------------
@@ -494,7 +514,7 @@ class AmaMonsterOsPlugin(NekoPluginBase):
         try:
             limit = int(max_results)
         except (TypeError, ValueError):
-            limit = 1000
+            limit = 120
         payload = await asyncio.to_thread(
             codex_payload,
             str(query or ""),
@@ -531,9 +551,10 @@ class AmaMonsterOsPlugin(NekoPluginBase):
                 "only, and cache the full roster locally. No artwork is downloaded."
             ),
         ),
-        input_schema=CODEX_SCHEMA,
+        input_schema=CODEX_SYNC_SCHEMA,
         llm_result_fields=["summary"],
         timeout=180,
+        metadata={"agent_hidden": True},
     )
     async def ama_arknights_sync(self, **_):
         try:
@@ -617,11 +638,12 @@ class AmaMonsterOsPlugin(NekoPluginBase):
         input_schema=STEAM_LOGIN_SCHEMA,
         llm_result_fields=["summary"],
         timeout=20,
+        metadata={"agent_hidden": True},
     )
     async def ama_steam_login(self, **_):
         service = self._steam_account()
-        started = service.start_login()
-        self._runtime.set_steam_account(service.status())
+        started = await asyncio.to_thread(service.start_login)
+        self._runtime.set_steam_account(await asyncio.to_thread(service.status))
         accelerator = started.get("accelerator") or {}
         return Ok({
             **started,
@@ -653,6 +675,7 @@ class AmaMonsterOsPlugin(NekoPluginBase):
         input_schema=STEAM_ACCOUNT_SCHEMA,
         llm_result_fields=["summary"],
         timeout=30,
+        metadata={"agent_hidden": True},
     )
     async def ama_steam_account(self, finish: Any = True, **_):
         service = self._steam_account()
@@ -660,7 +683,7 @@ class AmaMonsterOsPlugin(NekoPluginBase):
         result: dict[str, Any] = {"ok": True, "status": "idle"}
         if should_finish:
             result = await asyncio.to_thread(service.poll_login)
-        status_payload = service.status()
+        status_payload = await asyncio.to_thread(service.status)
         if result.get("status") == "linked":
             status_payload["account"] = result.get("account") or status_payload.get("account") or {}
         self._runtime.set_steam_account(status_payload)
@@ -693,14 +716,16 @@ class AmaMonsterOsPlugin(NekoPluginBase):
             "entries.steam_logout.description",
             default="Forget the stored Steam OpenID profile on this machine.",
         ),
-        input_schema=STEAM_ACCOUNT_SCHEMA,
+        input_schema=STEAM_LOGOUT_SCHEMA,
         llm_result_fields=["summary"],
         timeout=10,
+        metadata={"agent_hidden": True},
     )
     async def ama_steam_logout(self, **_):
         service = self._steam_account()
-        service.clear()
-        status_payload = service.status()
+        await asyncio.to_thread(service.clear)
+        await asyncio.to_thread(service.stop)
+        status_payload = await asyncio.to_thread(service.status)
         self._runtime.set_steam_account(status_payload)
         return Ok({
             **status_payload,
@@ -726,6 +751,7 @@ class AmaMonsterOsPlugin(NekoPluginBase):
         input_schema=UI_PROFILE_SCHEMA,
         llm_result_fields=["summary"],
         timeout=10,
+        metadata={"agent_hidden": True},
     )
     async def ama_ui_profile_save(self, profile: Any = None, **_):
         normalized = normalize_ui_profile(profile)
